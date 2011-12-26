@@ -1,14 +1,14 @@
 use strict;
 use warnings;
 use Test::More tests => 2;
-use Blosxom::Headers;
+use Blosxom::Header;
 
 {
     package blosxom;
     our $header;
 }
 
-my $header = Blosxom::Headers->new();
+my $header = Blosxom::Header->new();
 is($header->get('type'), undef);
 
 $blosxom::header = { -type => 'text/html;' };

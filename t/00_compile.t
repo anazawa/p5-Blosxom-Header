@@ -1,13 +1,7 @@
 use strict;
-use Test::More tests => 3;
+use Test::More tests => 1;
 
 BEGIN {
-    use_ok 'Blosxom::Headers';
+    use_ok 'Blosxom::Header';
 }
-
-my @methods = qw(new get exists remove set);
-my $header  = Blosxom::Headers->new();
-
-isa_ok($header, 'Blosxom::Headers');
-can_ok($header, @methods);
 

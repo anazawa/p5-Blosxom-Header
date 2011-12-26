@@ -1,9 +1,11 @@
-package Blosxom::Headers;
+package Blosxom::Header;
 
 use strict;
 use warnings;
 use HTTP::Status qw(status_message);
 use Carp;
+
+our $VERSION = '0.01';
 
 sub new {
     my $self = shift;
@@ -25,18 +27,16 @@ sub exists {
 }
 
 sub remove {
-    my $self    = shift;
-    my @keys    = @_;
-    my @deleted = ();
+    my $self = shift;
+    my @keys = @_;
 
     for my $key (@keys) {
         if ($self->exists($key)) {
             delete $blosxom::header->{"-$key"};
-            push @deleted, $key;
         }
     }
 
-    return @deleted;
+    return;
 }
 
 sub keys {
@@ -46,12 +46,8 @@ sub keys {
 }
 
 sub remove_all {
-    my $self = shift;
-    my @keys = $self->keys();
-
     $blosxom::header = {};
-
-    return @keys;
+    return;
 }
 
 sub set {
@@ -79,28 +75,28 @@ __END__
 
 =head1 NAME
 
-Blosxom::Headers - Set HTTP headers in an object-oriented way
+Blosxom::Header - Set HTTP headers in an object-oriented way
 
 =head1 SYNOPSIS
 
-  use Blosxom::Headers;
+  use Blosxom::Header;
 
-  my $header = Blosxom::Headers->new();
+  my $header = Blosxom::Header->new();
   
   $header->set(
     type          => 'text/html;',
-    status        => '404',
+    status        => '304',
     cache_control => 'must-revalidate',
   );
-
-  my $value = $header->get('status');           # 404 Not Found
+  my $value = $header->get('status');           # 304 Not Modified
   my $bool  = $header->exists('cache_control'); # 1
   my @keys  = $header->keys();                  # ('type', 'status', 'cache_control')
 
   $header->remove('cache_control');
-  @keys = $header->keys();             # ('type', 'status')
-  my @deleted = $header->remove_all(); # ('type', 'status')
-  @keys = $header->keys();             # ()
+  @keys = $header->keys(); # ('type', 'status')
+
+  $header->remove_all();
+  @keys = $header->keys(); # ()
 
 =head1 DESCRIPTION
 
@@ -108,9 +104,9 @@ Blosxom::Headers - Set HTTP headers in an object-oriented way
 
 =over 4
 
-=item $header = Blosxom::Headers->new();
+=item $header = Blosxom::Header->new();
 
-Creates a new Blosxom::Headers object.
+Creates a new Blosxom::Header object.
 
 =item $header->get('foo')
 

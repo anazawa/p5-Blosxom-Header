@@ -1,14 +1,14 @@
 use strict;
 use warnings;
-use Test::More tests => 7;
-use Blosxom::Headers;
+use Test::More tests => 5;
+use Blosxom::Header;
 
 {
     package blosxom;
     our $header;
 }
 
-my $header = Blosxom::Headers->new();
+my $header = Blosxom::Header->new();
 
 $header->set( 'type' => 'text/html;' );
 is($header->get('type'),  'text/html;');
@@ -16,12 +16,6 @@ is($header->get('type'),  'text/html;');
 # Override
 $header->set( 'type' => 'text/plain;' );
 is($header->get('type'), 'text/plain;');
-
-$header->set( 'status' => '404' );
-is($header->get('status'), '404 Not Found');
-
-$header->set( 'status' => '404 Not Found');
-is($header->get('status'), '404 Not Found');
 
 $header->remove_all();
 $header->set(

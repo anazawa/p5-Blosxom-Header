@@ -1,7 +1,7 @@
 use inc::Module::Install;
 
-name 'Blosxom-Headers';
-all_from 'lib/Blosxom/Headers.pm';
+name 'Blosxom-Header';
+all_from 'lib/Blosxom/Header.pm';
 
 requires 'HTTP::Status';
 test_requires 'Test::More';
