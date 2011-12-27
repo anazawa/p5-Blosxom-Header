@@ -75,7 +75,7 @@ __END__
 
 =head1 NAME
 
-Blosxom::Header - Set HTTP headers in an object-oriented way
+Blosxom::Header - Missing interface to modify HTTP headers
 
 =head1 SYNOPSIS
 
@@ -100,6 +100,24 @@ Blosxom::Header - Set HTTP headers in an object-oriented way
 
 =head1 DESCRIPTION
 
+Blosxom, a weblog application, exports a global variable $header
+which is a hash reference. This application passes $header CGI::header()
+to generate HTTP headers.
+
+When plugin writers modify HTTP headers, they must write as follows:
+
+  package foo;
+  $blosxom::header->{'-status'} = '304 Not Modified';
+
+It's obviously bad practice. Blosxom misses the interface to modify
+HTTP headers.  
+
+This module allows you to modify them in an object-oriented way.
+If loaded, you might write as follows:
+
+  my $header = Blosxom::Header->new();
+  $header->set('status' => '304');
+
 =head1 METHODS
 
 =over 4
@@ -119,13 +137,19 @@ has a value.
 
 =item $header->remove('foo', 'bar')
 
+Deletes the specified elements from HTTP headers.
+
 =item $header->set(%headers)
+
+Set values of the specified HTTP headers.
 
 =item $header->keys()
 
 Returns a list of all the keys of HTTP headers.
 
 =item $header->remove_all()
+
+Deletes all the elements of HTTP headers.
 
 =back
 
