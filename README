@@ -20,13 +20,10 @@ SYNOPSIS
         $header->remove('cache_control');
         @keys = $header->keys(); # ('type', 'status')
 
-        $header->remove_all();
-        @keys = $header->keys(); # ()
-
 DESCRIPTION
 
     Blosxom, a weblog application, exports a global variable $header
-    which is a hash reference. This application passes $header CGI::header()
+    which is a reference to hash. This application passes $header CGI::header()
     to generate HTTP headers.
 
     When plugin writers modify HTTP headers, they must write as follows:
@@ -51,8 +48,8 @@ INSTALLATION
 
 DEPENDENCIES
 
-    *   Blosxom 2.1.2
-    *   HTTP::Status
+    * Blosxom 2.1.2
+    * HTTP::Status
 
 AUTHOR
 

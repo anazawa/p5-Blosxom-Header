@@ -2,52 +2,48 @@ package Blosxom::Header;
 
 use strict;
 use warnings;
-use HTTP::Status qw(status_message);
 use Carp;
+use HTTP::Status qw(status_message);
 
 our $VERSION = '0.01';
 
 sub new {
     my $self = shift;
-    return bless {}, $self;
+    $blosxom::header ||= {};
+    return bless $blosxom::header, $self;
 }
 
 sub get {
     my $self = shift;
     my $key  = shift;
 
-    return $blosxom::header->{"-$key"};
+    return $self->{"-$key"};
 }
 
 sub exists {
     my $self = shift;
     my $key  = shift;
 
-    return defined $self->get($key);
+    return exists $self->{"-$key"};
 }
 
 sub remove {
-    my $self = shift;
-    my @keys = @_;
+    my ($self, @keys) = @_;
 
     for my $key (@keys) {
-        if ($self->exists($key)) {
-            delete $blosxom::header->{"-$key"};
-        }
+        delete $self->{"-$key"};
     }
 
     return;
 }
 
 sub keys {
-    my @keys = keys %$blosxom::header;
-    for (@keys) { $_ =~ s{^-}{} }
-    return @keys;
-}
+    my $self = shift;
+    my @keys = keys %$self;
 
-sub remove_all {
-    $blosxom::header = {};
-    return;
+    for (@keys) { $_ =~ s{^-}{} }
+
+    return @keys;
 }
 
 sub set {
@@ -63,7 +59,7 @@ sub set {
             }
         }
 
-        $blosxom::header->{"-$key"} = $value;
+        $self->{"-$key"} = $value;
     }
 
     return;
@@ -95,13 +91,10 @@ Blosxom::Header - Missing interface to modify HTTP headers
   $header->remove('cache_control');
   @keys = $header->keys(); # ('type', 'status')
 
-  $header->remove_all();
-  @keys = $header->keys(); # ()
-
 =head1 DESCRIPTION
 
 Blosxom, a weblog application, exports a global variable $header
-which is a hash reference. This application passes $header CGI::header()
+which is a reference to hash. This application passes $header CGI::header()
 to generate HTTP headers.
 
 When plugin writers modify HTTP headers, they must write as follows:
@@ -147,13 +140,7 @@ Set values of the specified HTTP headers.
 
 Returns a list of all the keys of HTTP headers.
 
-=item $header->remove_all()
-
-Deletes all the elements of HTTP headers.
-
 =back
-
-=head1 DIAGOSTICS
 
 =head1 DEPENDENCIES
 
