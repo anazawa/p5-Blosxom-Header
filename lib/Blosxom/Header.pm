@@ -9,7 +9,11 @@ our $VERSION = '0.01';
 
 sub new {
     my $self = shift;
-    $blosxom::header ||= {};
+
+    if (!$blosxom::header) {
+        croak '$blosxom::header have not been initialized yet.';
+    }
+
     return bless $blosxom::header, $self;
 }
 
@@ -139,6 +143,17 @@ Set values of the specified HTTP headers.
 =item $header->keys()
 
 Returns a list of all the keys of HTTP headers.
+
+=back
+
+=head1 DIAGNOSTICS
+
+=over 4
+
+=item $blosxom::header have not been initialized yet.
+
+You can't modify HTTP headers until Blosxom calls a method 'skip'
+within your plugin.
 
 =back
 
