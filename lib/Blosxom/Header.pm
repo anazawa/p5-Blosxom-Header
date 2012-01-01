@@ -5,7 +5,7 @@ use warnings;
 use Carp;
 use HTTP::Status qw(status_message);
 
-our $VERSION = '0.01001';
+our $VERSION = '0.01002';
 
 sub new {
     my $self = shift;
