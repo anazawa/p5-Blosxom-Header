@@ -11,7 +11,8 @@ sub new {
     my $self = shift;
 
     if (!$blosxom::header) {
-        croak '$blosxom::header have not been initialized yet.';
+        carp q{$blosxom::header haven't been initialized yet.};
+        return;
     }
 
     return bless $blosxom::header, $self;
@@ -39,15 +40,6 @@ sub remove {
     }
 
     return;
-}
-
-sub keys {
-    my $self = shift;
-    my @keys = keys %$self;
-
-    for (@keys) { $_ =~ s{^-}{} }
-
-    return @keys;
 }
 
 sub set {
@@ -90,10 +82,7 @@ Blosxom::Header - Missing interface to modify HTTP headers
   );
   my $value = $header->get('status');           # 304 Not Modified
   my $bool  = $header->exists('cache_control'); # 1
-  my @keys  = $header->keys();                  # ('type', 'status', 'cache_control')
-
   $header->remove('cache_control');
-  @keys = $header->keys(); # ('type', 'status')
 
 =head1 DESCRIPTION
 
@@ -140,20 +129,21 @@ Deletes the specified elements from HTTP headers.
 
 Set values of the specified HTTP headers.
 
-=item $header->keys()
-
-Returns a list of all the keys of HTTP headers.
-
 =back
 
 =head1 DIAGNOSTICS
 
 =over 4
 
-=item $blosxom::header have not been initialized yet.
+=item $blosxom::header haven't been initialized yet.
 
-You can't modify HTTP headers until Blosxom calls a method 'skip'
-within your plugin.
+You can't modify HTTP headers until Blosxom initializes $blosxom::header. 
+
+=item Unknown status code
+
+The specified status code doesn't match any status codes defined by RFC2616.
+
+  $header->set('status' => '123') # Unknown status code: 123
 
 =back
 

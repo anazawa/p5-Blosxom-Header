@@ -1,5 +1,5 @@
 use strict;
-use Test::More tests => 10;
+use Test::More tests => 9;
 use Blosxom::Header;
 
 {
@@ -13,7 +13,7 @@ use Blosxom::Header;
 }
 
 my $header  = Blosxom::Header->new();
-my @methods = qw(new get exists remove keys set);
+my @methods = qw(new get exists remove set);
 
 isa_ok($header, 'Blosxom::Header');
 can_ok($header,  @methods);
@@ -40,14 +40,6 @@ is_deeply($header, $blosxom::header);
     my $expected = q{};
 
     is($got, $expected);
-}
-
-# Blosxom::Header->keys()
-{
-    my @got      = sort $header->keys();
-    my @expected = qw(cache_control status type);
-
-    is_deeply(\@got, \@expected);
 }
 
 # Blosxom::Header->set()
