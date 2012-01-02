@@ -9,7 +9,7 @@ use Blosxom::Header;
 }
 
 warning_is { Blosxom::Header->new() }
-    { carped => q{$blosxom::header haven't been initialized yet.} };
+    { carped => q{$blosxom::header hasn't been initialized yet.} };
 
 $blosxom::header = {};
 my $header = Blosxom::Header->new();

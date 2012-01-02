@@ -11,7 +11,7 @@ sub new {
     my $self = shift;
 
     if (!$blosxom::header) {
-        carp q{$blosxom::header haven't been initialized yet.};
+        carp q{$blosxom::header hasn't been initialized yet.};
         return;
     }
 
@@ -141,7 +141,7 @@ Set values of the specified HTTP headers.
 
 =over 4
 
-=item $blosxom::header haven't been initialized yet.
+=item $blosxom::header hasn't been initialized yet.
 
 You can't modify HTTP headers until Blosxom initializes $blosxom::header. 
 
