@@ -13,6 +13,7 @@ warning_is { Blosxom::Header->new() }
 
 $blosxom::header = {};
 my $header = Blosxom::Header->new();
+$header->set( 'Status' => '123' );
 
-warning_is { $header->set( 'status' => '123' ) }
+warning_is { $header->DESTROY }
     { carped => q{Unknown status code: 123} };

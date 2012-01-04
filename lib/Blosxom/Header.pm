@@ -8,45 +8,52 @@ use HTTP::Status qw(status_message);
 our $VERSION = '0.01004';
 
 sub new {
-    my $self = shift;
+    my $class   = shift;
+    my $headers = {};
 
     if (!$blosxom::header) {
         carp q{$blosxom::header hasn't been initialized yet.};
         return;
     }
 
-    return bless { %$blosxom::header }, $self;
-}
+    while (my ($key, $value) = each %$blosxom::header) {
+        $key =~ s{^-}{};
+        $key = 'Content-Type' if $key eq 'type';
+        $headers->{$key} = $value;
+    }
 
-sub get {
-    my $self = shift;
-    my $key  = shift;
-
-    return $self->{"-$key"};
-}
-
-sub exists {
-    my $self = shift;
-    my $key  = shift;
-
-    return exists $self->{"-$key"};
+    return bless $headers, $class;
 }
 
 sub remove {
-    my ($self, @keys) = @_;
+    my $self = shift;
+    my @keys = @_;
 
     for my $key (@keys) {
-        delete $self->{"-$key"};
+        delete $self->{$key};
     }
 
     return;
 }
 
 sub set {
-    my ($self, %headers) = @_;
+    my $self    = shift;
+    my %headers = @_;
 
     while (my ($key, $value) = each %headers) {
-        if ($key eq 'status') {
+        $value =~ s{\n.*}{}s;
+        $self->{$key} = $value;
+    }
+
+    return;
+}
+
+sub DESTROY {
+    my $self    = shift;
+    my %headers = ();
+
+    while (my ($key, $value) = each %$self) {
+        if ($key eq 'Status' and $value =~ m{^\d\d\d$}) {
             if (my $message = status_message($value)) {
                 $value .= q{ } . $message;
             }
@@ -55,15 +62,11 @@ sub set {
             }
         }
 
-        $self->{"-$key"} = $value;
+        $headers{"-$key"} = $value;
     }
 
-    return;
-}
+    %$blosxom::header = %headers;
 
-sub DESTROY {
-    my $self = shift;
-    %$blosxom::header = %$self;
     return;
 }
 
@@ -82,13 +85,13 @@ Blosxom::Header - Missing interface to modify HTTP headers
   my $header = Blosxom::Header->new();
   
   $header->set(
-    type          => 'text/html;',
-    status        => '304',
-    cache_control => 'must-revalidate',
+    'Content-Type'  => 'text/html;',
+    'Status'        => '304',
+    'Cache-Control' => 'must-revalidate',
   );
-  my $value = $header->get('status');           # 304 Not Modified
-  my $bool  = $header->exists('cache_control'); # 1
-  $header->remove('cache_control');
+  my $value = $header->{'Status'};               # 304 Not Modified
+  my $bool  = exists $header->{'Cache-Control'}; # 1
+  $header->remove('Cache-Control', 'Status');
 
 =head1 DESCRIPTION
 
@@ -117,15 +120,6 @@ If loaded, you might write as follows:
 =item $header = Blosxom::Header->new();
 
 Creates a new Blosxom::Header object.
-
-=item $header->get('foo')
-
-Returns a value of the specified HTTP header.
-
-=item $header->exists('foo')
-
-Returns a Boolean value telling whether the specified HTTP header
-has a value.
 
 =item $header->remove('foo', 'bar')
 
