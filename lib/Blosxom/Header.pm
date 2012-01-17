@@ -2,6 +2,7 @@ package Blosxom::Header;
 use strict;
 use warnings;
 use Carp;
+use HTTP::Status qw(status_message);
 
 our $VERSION = '0.01004';
 
@@ -48,9 +49,23 @@ sub set {
 }
 
 sub DESTROY {
-    my $self = shift;
+    my $self    = shift;
+    my %headers = ();
 
-    %$blosxom::header = map { '-' . $_ => $self->{$_} } keys %$self;
+    while (my ($key, $value) = each %$self) {
+        if ($key eq 'Status' and $value =~ /^\d\d\d$/) {
+            if (my $message = status_message($value)) {
+                $value .= q{ } . $message;
+            }
+            else {
+                carp 'Unknown status code: ' . $value;
+            }
+        }
+
+        $headers{'-'.$key} = $value;
+    }
+
+    %$blosxom::header = %headers;
 
     return;
 }
@@ -67,13 +82,15 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
   use Blosxom::Header;
 
-  my $header = Blosxom::Header->new( 'Content-Type' => 'text/html' );
+  # OO interface
+  my $header = Blosxom::Header->new('Content-Type' => 'text/html');
   $header->set(
-    'Status'        => '304 Not Modified',
+    'Status'        => '304',
     'Cache-Control' => 'must-revalidate',
   );
   $header->remove('Cache-Control', 'Status');
 
+  # As a reference to hash
   $header->{'Content-Type'} = 'text/plain';
   my $value = $header->{'Content-Type'};        # text/plain
   my $bool  = exists $header->{'Content-Type'}; # 1
@@ -88,7 +105,7 @@ to generate HTTP headers.
 When plugin writers modify HTTP headers, they must write as follows:
 
   package foo;
-  $blosxom::header->{'-status'} = '304 Not Modified';
+  $blosxom::header->{'-Status'} = '304 Not Modified';
 
 It's obviously bad practice. Blosxom misses the interface to modify
 them.  
@@ -97,16 +114,19 @@ This module allows you to modify them in an object-oriented way.
 If loaded, you might write as follows:
 
   my $header = Blosxom::Header->new();
-  $header->set('status' => '304 Not Modified');
+  $header->{'Status'} = '304'; # will be autocompleted as '304 Not Modified'
 
 =head1 METHODS
 
 =over 4
 
 =item $header = Blosxom::Header->new();
+
 =item $header = Blosxom::Header->new(%headers);
 
 Creates a new Blosxom::Header object.
+If %headers were defined, existing headers would be overridden with
+them.
 
 =item $header->remove('foo', 'bar')
 
@@ -126,11 +146,16 @@ Set values of the specified HTTP headers.
 
 You can't modify HTTP headers until Blosxom initializes $blosxom::header. 
 
+=item Unknown status code
+
+The specified status code doesn't match any status codes defined
+by RFC2616.
+
 =back
 
 =head1 DEPENDENCIES
 
-Blosxom 2.1.2
+L<HTTP::Status>, Blosxom 2.1.2
 
 =head1 AUTHOR
 
