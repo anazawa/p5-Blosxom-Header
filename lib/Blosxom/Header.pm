@@ -114,7 +114,7 @@ This module allows you to modify them in an object-oriented way.
 If loaded, you might write as follows:
 
   my $header = Blosxom::Header->new();
-  $header->{'Status'} = '304'; # will be autocompleted as '304 Not Modified'
+  $header->{'Status'} = '304';
 
 =head1 METHODS
 
@@ -125,16 +125,60 @@ If loaded, you might write as follows:
 =item $header = Blosxom::Header->new(%headers);
 
 Creates a new Blosxom::Header object.
-If %headers were defined, existing headers would be overridden with
-them.
+Returns a reference to hash which represents HTTP header fields:
+
+  $header->{'Content-Type'} = 'text/plain';
+  my $value = $header->{'Content-Type'};        # text/plain
+  my $bool  = exists $header->{'Content-Type'}; # 1
+  delete $header->{'Content-Type'};
+
+If %headers was defined,
+
+  my $header = Blosxom::Header->new(
+    'Content-Type'  => 'text/html',
+    'Cache-Control' => 'must-revalidate',
+  );
+
+would override existing headers.
 
 =item $header->remove('foo', 'bar')
 
 Deletes the specified elements from HTTP headers.
 
+Following code:
+
+  $header->remove('Content-Type');
+
+equals to
+
+  delete $header->{'Content-Type'};
+
+semantically.
+
 =item $header->set(%headers)
 
-Set values of the specified HTTP headers.
+Sets values of the specified HTTP headers.
+
+Following code:
+
+  $header->set('Content-Type' => 'text/html');
+
+equals to
+
+  $header->{'Content-Type'} = 'text/html';
+
+semantically.
+
+=item $header->DESTROY()
+
+Will be called automatically when $header goes away.
+And so you don't have to call it explicitly.
+
+If the Status header is specified,
+
+  $header->{'Status'} = '304';
+
+'304' will be autocompleted as '304 Not Modified'.
 
 =back
 
