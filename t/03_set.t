@@ -1,5 +1,5 @@
 use strict;
-use Test::More tests => 3;
+use Test::More tests => 2;
 use Blosxom::Header;
 
 {
@@ -16,23 +16,8 @@ use Blosxom::Header;
 }
 
 is_deeply($blosxom::header, {
-    '-Content-Type'   => 'text/html',
+    '-type'   => 'text/html',
     '-Content-Length' => '1234',
-});
-
-{
-    my $header = Blosxom::Header->new();
-    $header->set(
-        'Cache-Control' => 'must-revalidate',
-        'Last-Modified' => 'Wed, 15 Nov 1995 04:58:08 GMT',
-    );
-}
-
-is_deeply($blosxom::header, {
-    '-Content-Type'   => 'text/html',
-    '-Content-Length' => '1234',
-    '-Cache-Control'  => 'must-revalidate',
-    '-Last-Modified'  => 'Wed, 15 Nov 1995 04:58:08 GMT',
 });
 
 # override
@@ -42,9 +27,7 @@ is_deeply($blosxom::header, {
 }
 
 is_deeply($blosxom::header, {
-    '-Content-Type'   => 'text/plain',
+    '-type'   => 'text/plain',
     '-Content-Length' => '1234',
-    '-Cache-Control'  => 'must-revalidate',
-    '-Last-Modified'  => 'Wed, 15 Nov 1995 04:58:08 GMT',
 });
 

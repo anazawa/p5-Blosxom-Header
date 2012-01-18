@@ -1,5 +1,5 @@
 use strict;
-use Test::More tests => 3;
+use Test::More tests => 2;
 use Test::Warn;
 use Blosxom::Header;
 
@@ -16,19 +16,22 @@ $blosxom::header = {
 };
 
 {
-    my $header = Blosxom::Header->new(
-        'Content-Type' => 'text/plain',
-        'Status'       => '304 Not Modified',
-    );
-
-    is_deeply($header, {
-        'Content-Type' => 'text/plain',
-        'Status'       => '304 Not Modified',
-    });
+    my $header = Blosxom::Header->new();
 }
 
 is_deeply($blosxom::header, {
-    '-Content-Type' => 'text/plain',
-    '-Status'       => '304 Not Modified',
+    '-type' => 'text/html',
 });
+
+#{
+#    my $header = Blosxom::Header->new(
+#        'Content-Type' => 'text/plain',
+#        'Status'       => '304 Not Modified',
+#    );
+#}
+
+#is_deeply($blosxom::header, {
+#    '-type'   => 'text/plain',
+#    '-Status' => '304 Not Modified',
+#});
 

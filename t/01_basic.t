@@ -1,5 +1,5 @@
 use strict;
-use Test::More tests => 8;
+use Test::More tests => 2;
 use Blosxom::Header;
 
 {
@@ -10,44 +10,8 @@ use Blosxom::Header;
     };
 }
 
-{
-    my $header = Blosxom::Header->new();
+my $header = Blosxom::Header->new();
 
-    isa_ok($header, 'Blosxom::Header');
-    can_ok($header, qw/new remove set DESTROY/);
-    is_deeply($header, {'Content-Type' => 'text/html'});
-
-    $header->{'Content-Length'} = '1234';
-}
-
-is_deeply($blosxom::header, {
-    '-Content-Type'   => 'text/html',
-    '-Content-Length' => '1234',
-});
-
-# override
-{
-    my $header = Blosxom::Header->new();
-    $header->{'Content-Type'} = 'text/plain';
-
-    is_deeply($header, {
-        'Content-Type'   => 'text/plain',
-        'Content-Length' => '1234',
-    });
-}
-
-is_deeply($blosxom::header, {
-    '-Content-Type'   => 'text/plain',
-    '-Content-Length' => '1234',
-});
-
-{
-    my $header = Blosxom::Header->new();
-    delete $header->{'Content-Length'};
-
-    is_deeply($header, {'Content-Type' => 'text/plain'});
-}
-
-is_deeply($blosxom::header, {
-    '-Content-Type' => 'text/plain',
-});
+isa_ok($header, 'Blosxom::Header');
+can_ok($header, qw/new remove set get exists/);
+#is_deeply($header, {hash_ref => $blosxom::header});

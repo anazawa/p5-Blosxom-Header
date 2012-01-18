@@ -2,72 +2,99 @@ package Blosxom::Header;
 use strict;
 use warnings;
 use Carp;
-use HTTP::Status qw(status_message);
 
 our $VERSION = '0.01006';
 
 sub new {
-    my $class   = shift;
-    my %headers = @_;
+    my $class = shift;
 
     if (!$blosxom::header) {
         carp q{$blosxom::header hasn't been initialized yet.};
         return;
     }
 
-    if (!%headers) {
-        while (my ($key, $value) = each %$blosxom::header) {
-            $key =~ s{^-}{};
-            $key = 'Content-Type' if $key eq 'type';
-            $headers{$key} = $value;
-        }
+    return bless {}, $class;
+}
+
+sub get {
+    my $self    = shift;
+    my $key     = _lc(shift);
+    my $headers = $blosxom::header;
+
+    my @values;
+    while (my ($k, $v) = each %$headers) {
+        push @values, $v if lc $k eq $key;
     }
 
-    return bless \%headers, $class;
+    return wantarray ? @values : $values[0];
 }
 
 sub remove {
-    my $self = shift;
-    my @keys = @_;
+    my $self    = shift;
+    my $key     = _lc(shift);
+    my $headers = $blosxom::header;
 
-    for my $key (@keys) {
-        delete $self->{$key};
+    my %new_headers;
+    while (my ($k, $v) = each %$headers) {
+        $new_headers{$k} = $v unless lc $k eq $key;
     }
+
+    %$headers = %new_headers;
 
     return;
 }
 
 sub set {
     my $self    = shift;
-    my %headers = @_;
+    my $key     = shift;
+    my $value   = shift;
+    my $headers = $blosxom::header;
 
-    while (my ($key, $value) = each %headers) {
-        $self->{$key} = $value;
+    $key = lc $key eq 'content-type' ? '-type' : "-$key";
+
+    my ($set, %new_headers);
+    while (my ($k, $v) = each %$headers) {
+        if (lc $key eq lc $v) {
+            next if $set;
+            $v = $value;
+            $set++;
+        }
+        $new_headers{$k} = $v;
     }
+
+    $new_headers{$key} = $value unless $set;
+    %$headers = %new_headers;
 
     return;
 }
 
-sub DESTROY {
+sub exists {
     my $self    = shift;
-    my %headers = ();
+    my $key     = _lc(shift);
+    my $headers = $blosxom::header;
 
-    while (my ($key, $value) = each %$self) {
-        if ($key eq 'Status' and $value =~ /^\d\d\d$/) {
-            if (my $message = status_message($value)) {
-                $value .= q{ } . $message;
-            }
-            else {
-                carp 'Unknown status code: ' . $value;
-            }
-        }
-
-        $headers{'-'.$key} = $value;
+    my $exists;
+    while (my ($k, $v) = each %$headers) {
+        $exists = 1 if lc $k eq $key;
     }
 
-    %$blosxom::header = %headers;
+    return $exists;
+}
+
+sub push {
+    my $self  = shift;
+    my $key   = shift;
+    #my $value = shift;
+    my $value = join ', ', $self->get($key), shift;
+
+    $self->set($key => $value);
 
     return;
+}
+
+sub _lc {
+    my $key = lc shift;
+    return $key eq 'content-type' ? '-type' : "-$key";
 }
 
 1;
