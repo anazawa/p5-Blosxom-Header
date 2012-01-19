@@ -2,99 +2,85 @@ package Blosxom::Header;
 use strict;
 use warnings;
 use Carp;
+require Exporter;
 
-our $VERSION = '0.01006';
+our $VERSION   = '0.01006';
+our @ISA       = qw(Exporter);
+our @EXPORT_OK = qw(headers);
 
 sub new {
-    my $class = shift;
+    my $class   = shift;
+    my $headers = shift;
 
-    if (!$blosxom::header) {
-        carp q{$blosxom::header hasn't been initialized yet.};
+    if (!$headers) {
+        carp q{Given variable hasn't been initialized yet.};
         return;
     }
 
-    return bless {}, $class;
+    return bless { headers => $headers }, $class;
 }
+
+sub headers { __PACKAGE__->new(@_) }
 
 sub get {
     my $self    = shift;
     my $key     = _lc(shift);
-    my $headers = $blosxom::header;
+    my $headers = $self->{headers};
 
-    my @values;
-    while (my ($k, $v) = each %$headers) {
-        push @values, $v if lc $k eq $key;
+    my $value;
+    if ($key and exists $headers->{$key}) {
+        $value = $headers->{$key};
     }
 
-    return wantarray ? @values : $values[0];
+    return $value;
 }
 
 sub remove {
     my $self    = shift;
     my $key     = _lc(shift);
-    my $headers = $blosxom::header;
+    my $headers = $self->{headers};
 
-    my %new_headers;
-    while (my ($k, $v) = each %$headers) {
-        $new_headers{$k} = $v unless lc $k eq $key;
+    if ($key and exists $headers->{$key}) {
+        delete $headers->{$key};
     }
-
-    %$headers = %new_headers;
 
     return;
 }
 
 sub set {
-    my $self    = shift;
-    my $key     = shift;
-    my $value   = shift;
-    my $headers = $blosxom::header;
+    my $self  = shift;
+    my $key   = _lc(shift);
+    my $value = shift;
 
-    $key = lc $key eq 'content-type' ? '-type' : "-$key";
-
-    my ($set, %new_headers);
-    while (my ($k, $v) = each %$headers) {
-        if (lc $key eq lc $v) {
-            next if $set;
-            $v = $value;
-            $set++;
-        }
-        $new_headers{$k} = $v;
+    if ($key) {
+        $self->{headers}->{$key} = $value;
     }
-
-    $new_headers{$key} = $value unless $set;
-    %$headers = %new_headers;
 
     return;
 }
 
 sub exists {
-    my $self    = shift;
-    my $key     = _lc(shift);
-    my $headers = $blosxom::header;
+    my $self = shift;
+    my $key  = _lc(shift);
 
     my $exists;
-    while (my ($k, $v) = each %$headers) {
-        $exists = 1 if lc $k eq $key;
+    if ($key) {
+        $exists = exists $self->{headers}->{$key};
     }
 
     return $exists;
 }
 
-sub push {
-    my $self  = shift;
-    my $key   = shift;
-    #my $value = shift;
-    my $value = join ', ', $self->get($key), shift;
-
-    $self->set($key => $value);
-
-    return;
-}
-
 sub _lc {
-    my $key = lc shift;
-    return $key eq 'content-type' ? '-type' : "-$key";
+    my $key = shift;
+
+    my $new_key;
+    if ($key) {
+        $key = lc $key;
+        $new_key = $key eq 'content-type' ? '-type' :"-$key";
+    }
+
+    return $new_key;
 }
 
 1;
@@ -107,21 +93,16 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
 =head1 SYNOPSIS
 
-  use Blosxom::Header;
+  use Blosxom::Header qw(headers);
 
-  # OO interface
-  my $header = Blosxom::Header->new('Content-Type' => 'text/html');
-  $header->set(
-    'Status'        => '304',
-    'Cache-Control' => 'must-revalidate',
-  );
-  $header->remove('Cache-Control', 'Status');
+  my $headers = { -type => 'text/html' };
 
-  # As a reference to hash
-  $header->{'Content-Type'} = 'text/plain';
-  my $value = $header->{'Content-Type'};        # text/plain
-  my $bool  = exists $header->{'Content-Type'}; # 1
-  delete $header->{'Content-Type'};
+  my $h = headers($headers);
+  my $value = $h->get($key);
+  my $bool = $h->exists($key);
+  $h->set($key, $value); # overwrites existent header
+  $h->remove($key);
+  $h->{headers}; # same reference as $headers
 
 =head1 DESCRIPTION
 
@@ -132,7 +113,7 @@ to generate HTTP headers.
 When plugin writers modify HTTP headers, they must write as follows:
 
   package foo;
-  $blosxom::header->{'-Status'} = '304 Not Modified';
+  $blosxom::header->{'-type'} = 'text/plain';
 
 It's obviously bad practice. Blosxom misses the interface to modify
 them.  
@@ -140,72 +121,35 @@ them.
 This module allows you to modify them in an object-oriented way.
 If loaded, you might write as follows:
 
-  my $header = Blosxom::Header->new();
-  $header->{'Status'} = '304';
+  my $h = headers($blosxom::header);
+  $h->set('Content-Type' => 'text/plain');
 
 =head1 METHODS
 
 =over 4
 
-=item $header = Blosxom::Header->new();
+=item $h = Blosxom::Header->new($headers);
 
-=item $header = Blosxom::Header->new(%headers);
+=item $h = headers($headers);
 
 Creates a new Blosxom::Header object.
-Returns a reference to hash which represents HTTP header fields:
+The object holds a reference to the original given $headers argument.
 
-  $header->{'Content-Type'} = 'text/plain';
-  my $value = $header->{'Content-Type'};        # text/plain
-  my $bool  = exists $header->{'Content-Type'}; # 1
-  delete $header->{'Content-Type'};
+=item $h->get('foo')
 
-If %headers was defined,
+Returns a value of the specified HTTP header.
 
-  my $header = Blosxom::Header->new(
-    'Content-Type'  => 'text/html',
-    'Cache-Control' => 'must-revalidate',
-  );
+=item $h->exists('foo')
 
-would override existing headers.
+Returns a Boolean value telling whether the specified HTTP header exists.
 
-=item $header->remove('foo', 'bar')
+=item $h->set('foo' => 'bar')
 
-Deletes the specified elements from HTTP headers.
+Sets a value of the specified HTTP header.
 
-Following code:
+=item $h->remove('foo')
 
-  $header->remove('Content-Type');
-
-equals to
-
-  delete $header->{'Content-Type'};
-
-semantically.
-
-=item $header->set(%headers)
-
-Sets values of the specified HTTP headers.
-
-Following code:
-
-  $header->set('Content-Type' => 'text/html');
-
-equals to
-
-  $header->{'Content-Type'} = 'text/html';
-
-semantically.
-
-=item $header->DESTROY()
-
-Will be called automatically when $header goes away.
-And so you don't have to call it explicitly.
-
-If the Status header is specified,
-
-  $header->{'Status'} = '304';
-
-'304' will be autocompleted as '304 Not Modified'.
+Deletes the specified element from HTTP headers.
 
 =back
 
@@ -213,20 +157,13 @@ If the Status header is specified,
 
 =over 4
 
-=item $blosxom::header hasn't been initialized yet.
-
-You can't modify HTTP headers until Blosxom initializes $blosxom::header. 
-
-=item Unknown status code
-
-The specified status code doesn't match any status codes defined
-by RFC2616.
+=item Given variable hasn't been initialized yet.
 
 =back
 
 =head1 DEPENDENCIES
 
-L<HTTP::Status>, Blosxom 2.1.2
+L<Blosxom 2.1.2|http://blosxom.sourceforge.net/>
 
 =head1 AUTHOR
 
