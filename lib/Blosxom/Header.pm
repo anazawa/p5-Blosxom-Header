@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use base 'Exporter';
 
-our $VERSION   = '0.01006';
+our $VERSION   = '0.01007';
 our @EXPORT_OK = qw(headers);
 
 sub new {
