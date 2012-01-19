@@ -1,21 +1,14 @@
 package Blosxom::Header;
 use strict;
 use warnings;
-use Carp;
-require Exporter;
+use base 'Exporter';
 
 our $VERSION   = '0.01006';
-our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(headers);
 
 sub new {
     my $class   = shift;
     my $headers = shift;
-
-    if (!$headers) {
-        carp q{Given variable hasn't been initialized yet.};
-        return;
-    }
 
     return bless { headers => $headers }, $class;
 }
@@ -100,8 +93,10 @@ Blosxom::Header - Missing interface to modify HTTP headers
   my $h = headers($headers);
   my $value = $h->get($key);
   my $bool = $h->exists($key);
+
   $h->set($key, $value); # overwrites existent header
   $h->remove($key);
+
   $h->{headers}; # same reference as $headers
 
 =head1 DESCRIPTION
@@ -124,7 +119,7 @@ If loaded, you might write as follows:
   my $h = headers($blosxom::header);
   $h->set('Content-Type' => 'text/plain');
 
-=head1 METHODS
+=head2 METHODS
 
 =over 4
 
@@ -153,17 +148,26 @@ Deletes the specified element from HTTP headers.
 
 =back
 
-=head1 DIAGNOSTICS
+=head1 EXAMPLES
 
-=over 4
+  # plugins/content_length
+  package content_length;
+  use Blosxom::Header qw(headers);
 
-=item Given variable hasn't been initialized yet.
+  sub start { 1 }
 
-=back
+  sub last {
+      my $h = headers($blosxom::header);
+      $h->set('Content-Length' => length $blosxom::output);
+  }
 
 =head1 DEPENDENCIES
 
 L<Blosxom 2.1.2|http://blosxom.sourceforge.net/>
+
+=head1 SEE ALSO
+
+The interface of this module is inspired by L<Plack::Util>.
 
 =head1 AUTHOR
 

@@ -1,17 +1,15 @@
 use strict;
 use Test::More;
-use Test::Warn;
 use Blosxom::Header qw(headers);
 
 {
-    my $headers;
-    warning_is { headers($headers) }
-        { carped => q{Given variable hasn't been initialized yet.} };
-}
-
-{
     my $headers = { '-foo' => 'bar' };
-    is_deeply headers($headers), { headers => $headers };
+
+    my $h = headers($headers);
+
+    isa_ok $h, 'Blosxom::Header';
+    can_ok $h, qw(get set remove exists);
+    is_deeply $h, { headers => $headers };
 }
 
 {
