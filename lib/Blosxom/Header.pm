@@ -2,7 +2,7 @@ package Blosxom::Header;
 use strict;
 use warnings;
 
-our $VERSION   = '0.01007';
+our $VERSION   = '0.01008';
 
 sub new {
     my $class   = shift;
@@ -19,7 +19,6 @@ sub get {
     my $value;
     if ($key and exists $headers->{$key}) {
         $value = $headers->{$key};
-        #$value = $self->{headers}->{$key};
     }
 
     return $value;
@@ -32,7 +31,6 @@ sub remove {
 
     if ($key and exists $headers->{$key}) {
         delete $headers->{$key};
-        #delete $self->{headers}->{$key};
     }
 
     return;
