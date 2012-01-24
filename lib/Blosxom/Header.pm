@@ -1,10 +1,8 @@
 package Blosxom::Header;
 use strict;
 use warnings;
-use base 'Exporter';
 
 our $VERSION   = '0.01007';
-our @EXPORT_OK = qw(headers);
 
 sub new {
     my $class   = shift;
@@ -12,8 +10,6 @@ sub new {
 
     return bless { headers => $headers }, $class;
 }
-
-sub headers { __PACKAGE__->new(@_) }
 
 sub get {
     my $self    = shift;
@@ -23,6 +19,7 @@ sub get {
     my $value;
     if ($key and exists $headers->{$key}) {
         $value = $headers->{$key};
+        #$value = $self->{headers}->{$key};
     }
 
     return $value;
@@ -35,6 +32,7 @@ sub remove {
 
     if ($key and exists $headers->{$key}) {
         delete $headers->{$key};
+        #delete $self->{headers}->{$key};
     }
 
     return;
@@ -46,7 +44,7 @@ sub set {
     my $value = shift;
 
     if ($key) {
-        $self->{headers}->{$key} = $value;
+        $self->{headers}{$key} = $value;
     }
 
     return;
@@ -58,7 +56,7 @@ sub exists {
 
     my $exists;
     if ($key) {
-        $exists = exists $self->{headers}->{$key};
+        $exists = exists $self->{headers}{$key};
     }
 
     return $exists;
@@ -86,11 +84,11 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
 =head1 SYNOPSIS
 
-  use Blosxom::Header qw(headers);
+  use Blosxom::Header;
 
   my $headers = { -type => 'text/html' };
 
-  my $h = headers($headers);
+  my $h = Blosxom::Header->new($headers);
   my $value = $h->get($key);
   my $bool = $h->exists($key);
 
@@ -116,7 +114,7 @@ them.
 This module allows you to modify them in an object-oriented way.
 If loaded, you might write as follows:
 
-  my $h = headers($blosxom::header);
+  my $h = Blosxom::Header->new($blosxom::header);
   $h->set('Content-Type' => 'text/plain');
 
 =head2 METHODS
@@ -124,8 +122,6 @@ If loaded, you might write as follows:
 =over 4
 
 =item $h = Blosxom::Header->new($headers);
-
-=item $h = headers($headers);
 
 Creates a new Blosxom::Header object.
 The object holds a reference to the original given $headers argument.
@@ -152,12 +148,14 @@ Deletes the specified element from HTTP headers.
 
   # plugins/content_length
   package content_length;
-  use Blosxom::Header qw(headers);
+  use Blosxom::Header;
 
-  sub start { 1 }
+  sub start {
+      return $blosxom::static_or_dynamic eq 'dynamic' ? 1 : 0;
+  }
 
   sub last {
-      my $h = headers($blosxom::header);
+      my $h = Blosxom::Header->new($blosxom::header);
       $h->set('Content-Length' => length $blosxom::output);
   }
 
