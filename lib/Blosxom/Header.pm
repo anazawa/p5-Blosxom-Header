@@ -127,7 +127,11 @@ Deletes the specified element from HTTP headers.
 
 =head1 EXAMPLES
 
-  # plugins/conditional_get
+The following code is a plugin to enable conditional GET and HEAD using
+C<If-None-Match> and C<If-Modified-Since> headers.
+
+plugins/conditional_get:
+
   package conditional_get;
   use strict;
   use warnings;
@@ -147,38 +151,29 @@ Deletes the specified element from HTTP headers.
           # Truncate output
           $blosxom::output = q{};
       }
+
+      return;
   }
 
   sub _etag_matches {
       my $h = shift;
-
-      my $bool;
-      if ($h->exists('ETag')) {
-          $bool = $h->get('ETag') eq _value($ENV{HTTP_IF_NONE_MATCH});
-      }
-    
-      return $bool;
+      return unless $h->exists('ETag');
+      $h->get('ETag') eq _value($ENV{HTTP_IF_NONE_MATCH});
   }
 
   sub _not_modified_since {
       my $h = shift;
-
-      my $bool;
-      if ($h->exists('Last-Modified')) {
-          $bool = $h->get('Last-Modified')
-                      eq _value($ENV{HTTP_IF_MODIFIED_SINCE});
-      }
-
-      return $bool;
+      return unless $h->exists('Last-Modified');
+      $h->exists('Last-Modified') eq _value($ENV{HTTP_IF_MODIFIED_SINCE});
   }
 
-  # IE sends wrong formatted value
-  # i.e. "Thu, 03 Dec 2009 01:46:32 GMT; length=17936"
   sub _value {
       my $str = shift;
       $str =~ s{;.*$}{};
-      return $str;
+      $str;
   }
+  
+  1;
 
 =head1 DEPENDENCIES
 
@@ -203,3 +198,4 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
+=cut
