@@ -2,13 +2,13 @@ package Blosxom::Header;
 use strict;
 use warnings;
 
-our $VERSION   = '0.01009';
+our $VERSION = '0.01009';
 
 sub new {
     my $class   = shift;
     my $headers = shift;
 
-    return bless { headers => $headers }, $class;
+    bless { headers => $headers }, $class;
 }
 
 sub get {
@@ -16,12 +16,7 @@ sub get {
     my $key     = _lc(shift);
     my $headers = $self->{headers};
 
-    my $value;
-    if ($key and exists $headers->{$key}) {
-        $value = $headers->{$key};
-    }
-
-    return $value;
+    $key and exists $headers->{$key} and $headers->{$key};
 }
 
 sub remove {
@@ -52,24 +47,12 @@ sub exists {
     my $self = shift;
     my $key  = _lc(shift);
 
-    my $exists;
-    if ($key) {
-        $exists = exists $self->{headers}{$key};
-    }
-
-    return $exists;
+    $key and exists $self->{headers}{$key};
 }
 
 sub _lc {
-    my $key = shift;
-
-    my $new_key;
-    if ($key) {
-        $key = lc $key;
-        $new_key = $key eq 'content-type' ? '-type' :"-$key";
-    }
-
-    return $new_key;
+    my $key = $_[0] ? lc shift : undef;
+    $key and ($key eq 'content-type' ? '-type' : "-$key");
 }
 
 1;
