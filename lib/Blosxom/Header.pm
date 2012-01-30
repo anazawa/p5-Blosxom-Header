@@ -127,8 +127,9 @@ Deletes the specified element from HTTP headers.
 
 =head1 EXAMPLES
 
-The following code is a plugin to enable conditional GET and HEAD using
+The following code is a Blosxom plugin to enable conditional GET and HEAD using
 C<If-None-Match> and C<If-Modified-Since> headers.
+Refer to L<Plack::Middleware::ConditionalGET>.
 
 plugins/conditional_get:
 
