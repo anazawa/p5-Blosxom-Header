@@ -2,7 +2,7 @@ package Blosxom::Header;
 use strict;
 use warnings;
 
-our $VERSION = '0.01009';
+our $VERSION = '0.01010';
 
 sub new {
     my $class   = shift;
