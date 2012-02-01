@@ -1,8 +1,9 @@
-package Blosxom::Header;
+package Blosxom::Header::Cookie;
 use strict;
 use warnings;
+use CGI qw(cookie);
 
-our $VERSION = '0.01010';
+our $VERSION = '0.01001';
 
 sub new {
     my $class   = shift;
@@ -13,93 +14,48 @@ sub new {
 
 sub get {
     my $self    = shift;
-    my $key     = _lc(shift);
+    my $key     = shift;
     my $headers = $self->{headers};
 
-    return if !$key or !exists $headers->{$key};
+    return unless exists $headers->{-cookie};
 
     my @val;
-    if ($key eq '-cookie') {
-        my $cookies = $headers->{-cookie};
-        if (ref $cookies eq 'ARRAY') {
-            @val = @$cookies;
-        }
-        else {
-            push @val, $cookies;
+    my $cookies = $headers->{-cookie};
+    if (ref $cookies eq 'ARRAY') {
+        for my $cookie (@$cookies) {
+            push @val, $cookie->value
+                if $cookie->name() eq $key;
         }
     }
     else {
-        push @val, $headers->{$key};
+        push @val, $cookies->value();
     }
 
     return wantarray ? @val : $val[0];
 }
 
-sub push_cookie {
+sub push {
     my $self    = shift;
-    my $value   = shift;
+    my $cookie  = cookie(@_);
     my $headers = $self->{headers};
-    my $key     = '-cookie';
 
-    if (exists $headers->{$key}) {
-        my $cookies = $headers->{$key};
+    if (exists $headers->{-cookie}) {
+        my $cookies = $headers->{-cookie};
         if (ref $cookies eq 'ARRAY') {
-            push @$cookies, $value;
+            push @$cookies, $cookie;
         }
         else {
-            $headers->{$key} = [$cookies, $value];
+            $headers->{-cookie} = [$cookies, $cookie];
         }
     }
     else {
-        $headers->{$key} = $value;
+        $headers->{-cookie} = $cookie;
     }
 
     return;
 }
 
 sub remove {
-    my $self = shift;
-    my $key  = shift;
-
-    if ($key) {
-        $key = _lc($key);
-        delete $self->{headers}{$key};
-    }
-
-    return;
-}
-
-sub set {
-    my $self  = shift;
-    my $key   = shift;
-    my $value = shift;
-
-    if ($key) {
-        $key = _lc($key);
-        $self->{headers}{$key} = $value;
-    }
-
-    return;
-}
-
-sub exists {
-    my $self = shift;
-    my $key  = shift;
-
-    my $bool;
-    if ($key) {
-        $key  = _lc($key);
-        $bool = exists $self->{headers}{$key};
-    }
-
-    $bool;
-}
-
-sub _lc {
-    my $key = lc shift;
-
-    $key eq 'content-type' ? '-type'   :
-    $key eq 'set-cookie'   ? '-cookie' : "-$key";
 }
 
 1;
