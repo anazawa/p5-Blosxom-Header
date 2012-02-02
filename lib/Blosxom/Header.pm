@@ -13,93 +13,81 @@ sub new {
 
 sub get {
     my $self    = shift;
-    my $key     = _lc(shift);
+    my $key     = lc shift;
     my $headers = $self->{headers};
 
-    return if !$key or !exists $headers->{$key};
-
-    my @val;
-    if ($key eq '-cookie') {
-        my $cookies = $headers->{-cookie};
-        if (ref $cookies eq 'ARRAY') {
-            @val = @$cookies;
-        }
-        else {
-            push @val, $cookies;
-        }
-    }
-    else {
-        push @val, $headers->{$key};
-    }
-
-    return wantarray ? @val : $val[0];
-}
-
-sub push_cookie {
-    my $self    = shift;
-    my $value   = shift;
-    my $headers = $self->{headers};
-    my $key     = '-cookie';
-
-    if (exists $headers->{$key}) {
-        my $cookies = $headers->{$key};
-        if (ref $cookies eq 'ARRAY') {
-            push @$cookies, $value;
-        }
-        else {
-            $headers->{$key} = [$cookies, $value];
-        }
-    }
-    else {
-        $headers->{$key} = $value;
-    }
-
-    return;
+    exists $headers->{"-$key"} && $headers->{"-$key"};
 }
 
 sub remove {
     my $self = shift;
-    my $key  = shift;
+    my $key  = lc shift;
 
-    if ($key) {
-        $key = _lc($key);
-        delete $self->{headers}{$key};
-    }
+    delete $self->{headers}{"-$key"};
 
     return;
 }
 
 sub set {
     my $self  = shift;
-    my $key   = shift;
+    my $key   = lc shift;
     my $value = shift;
 
-    if ($key) {
-        $key = _lc($key);
-        $self->{headers}{$key} = $value;
-    }
+    $self->{headers}{"-$key"} = $value;
 
     return;
 }
 
 sub exists {
     my $self = shift;
-    my $key  = shift;
+    my $key  = lc shift;
 
-    my $bool;
-    if ($key) {
-        $key  = _lc($key);
-        $bool = exists $self->{headers}{$key};
-    }
-
-    $bool;
+    exists $self->{headers}{"-$key"};
 }
 
-sub _lc {
-    my $key = lc shift;
+# +---------------------------+
+#   Make additional accessors
+# +---------------------------+
 
-    $key eq 'content-type' ? '-type'   :
-    $key eq 'set-cookie'   ? '-cookie' : "-$key";
+for my $field (qw(type nph expires cookie charset attachment p3p)) {
+    my $slot = __PACKAGE__ . "::$field";
+    no strict 'refs';
+
+    *$slot = sub {
+        my $self  = shift;
+        my $value = shift;
+
+        if ($value) {
+            $self->set($field => $value);
+        }
+
+        $self->get($field);
+    };
+}
+
+for my $field (qw(cookie p3p)) {
+    my $slot = __PACKAGE__ . "::push_$field";
+    my $key  = "-$field";
+    no strict 'refs';
+
+    *$slot = sub {
+        my $self    = shift;
+        my $value   = shift;
+        my $headers = $self->{headers};
+
+        if (exists $headers->{$key}) {
+            my $values = $headers->{$key};
+            if (ref $values eq 'ARRAY') {
+                push @$values, $value;
+            }
+            else {
+                $headers->{$key} = [$values, $value];
+            }
+        }
+        else {
+            $headers->{$key} = $value;
+        }
+    };
 }
 
 1;
@@ -131,7 +119,7 @@ Blosxom, a weblog application, exports a global variable $header
 which is a reference to hash. This application passes $header CGI::header()
 to generate HTTP headers.
 
-When plugin writers modify HTTP headers, they must write as follows:
+When plugin developers modify HTTP headers, they must write as follows:
 
   package foo;
   $blosxom::header->{'-type'} = 'text/plain';
@@ -143,7 +131,7 @@ This module allows you to modify them in an object-oriented way.
 If loaded, you might write as follows:
 
   my $h = Blosxom::Header->new($blosxom::header);
-  $h->set('Content-Type' => 'text/plain');
+  $h->type('text/plain');
 
 =head2 METHODS
 
@@ -169,6 +157,40 @@ Sets a value of the specified HTTP header.
 =item $h->remove('foo')
 
 Deletes the specified element from HTTP headers.
+
+=item $h->push_cookie()
+
+=item $h->push_p3p()
+
+=back
+
+=head2 ACCESSORS
+
+=over 4
+
+=item $h->type()
+
+=item $h->nph()
+
+If set to a true value, will issue the correct headers to work
+with a NPH (no-parse-header) script.
+
+=item $h->expires()
+
+=item $h->cookie()
+
+
+=item $h->charset()
+
+Controls the character set sent to the browser.
+If not provided, defaults to ISO-8859-1.
+
+=item $h->attachment()
+
+Turns the page into an attachment.
+The value of the argument is suggested name for the saved file.
+
+=item $h->p3p()
 
 =back
 
@@ -212,7 +234,7 @@ plugins/conditional_get:
   sub _not_modified_since {
       my $h = shift;
       return unless $h->exists('Last-Modified');
-      $h->exists('Last-Modified') eq _value($ENV{HTTP_IF_MODIFIED_SINCE});
+      $h->get('Last-Modified') eq _value($ENV{HTTP_IF_MODIFIED_SINCE});
   }
 
   sub _value {
