@@ -19,15 +19,6 @@ sub get {
     exists $headers->{"-$key"} && $headers->{"-$key"};
 }
 
-sub remove {
-    my $self = shift;
-    my $key  = lc shift;
-
-    delete $self->{headers}{"-$key"};
-
-    return;
-}
-
 sub set {
     my $self  = shift;
     my $key   = lc shift;
@@ -42,32 +33,44 @@ sub exists {
     my $self = shift;
     my $key  = lc shift;
 
-    exists $self->{headers}{"-$key"};
+    for (keys %{$self->{headers}}) {
+        return 1 if lc $_ eq "-$key"; # any
+    } 
+
+    return;
+}
+
+sub remove {
+    my $self    = shift;
+    my $key     = lc shift;
+    my $headers = $self->{headers};
+
+    my @keys = grep {lc $_ eq "-$key"} keys %$headers;
+    delete @{$headers}{@keys}; # slice
+
+    return;
 }
 
 # 'push' methods
 for my $field (qw(cookie p3p)) {
     my $slot = __PACKAGE__ . "::push_$field";
-    my $key  = "-$field";
 
     no strict 'refs';
 
     *$slot = sub {
-        my $self    = shift;
-        my $value   = shift;
-        my $headers = $self->{headers};
+        my $self  = shift;
+        my $value = shift;
 
-        if (exists $headers->{$key}) {
-            my $old_value = $headers->{$key};
+        if (my $old_value = $self->get($field)) {
             if (ref $old_value eq 'ARRAY') {
                 push @$old_value, $value;
             }
             else {
-                $headers->{$key} = [$old_value, $value];
+                $self->set($field => [$old_value, $value]);
             }
         }
         else {
-            $headers->{$key} = $value;
+            $self->set($field => $value);
         }
 
         return;
