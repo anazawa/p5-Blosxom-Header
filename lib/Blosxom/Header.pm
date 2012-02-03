@@ -16,15 +16,28 @@ sub get {
     my $key     = lc shift;
     my $headers = $self->{headers};
 
-    exists $headers->{"-$key"} && $headers->{"-$key"};
+    my @keys   = grep {"-$key" eq lc $_} sort keys %$headers;
+    my @values = @{$headers}{@keys};
+
+    wantarray ? @values : $values[0];
 }
 
 sub set {
-    my $self  = shift;
-    my $key   = lc shift;
-    my $value = shift;
+    my $self    = shift;
+    my $key     = shift;
+    my $value   = shift;
+    my $headers = $self->{headers};
 
-    $self->{headers}{"-$key"} = $value;
+    my $set;
+    for (sort keys %$headers) {
+        if (lc "-$key" eq lc $_) {
+            $headers->{$_} = $value;
+            $set++;
+            last;
+        }  
+    } 
+
+    $headers->{"-$key"} = $value unless $set;
 
     return;
 }
@@ -91,7 +104,8 @@ for my $field (qw(type nph expires cookie charset attachment p3p)) {
             $self->set($field => $value);
         }
         else {
-            $self->get($field);
+            my @values = $self->get($field);
+            wantarray ? @values : $values[0];
         }
     };
 }
