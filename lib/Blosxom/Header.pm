@@ -45,12 +45,39 @@ sub exists {
     exists $self->{headers}{"-$key"};
 }
 
-# +---------------------------+
-#   Make additional accessors
-# +---------------------------+
+# 'push' methods
+for my $field (qw(cookie p3p)) {
+    my $slot = __PACKAGE__ . "::push_$field";
+    my $key  = "-$field";
 
+    no strict 'refs';
+
+    *$slot = sub {
+        my $self    = shift;
+        my $value   = shift;
+        my $headers = $self->{headers};
+
+        if (exists $headers->{$key}) {
+            my $old_value = $headers->{$key};
+            if (ref $old_value eq 'ARRAY') {
+                push @$old_value, $value;
+            }
+            else {
+                $headers->{$key} = [$old_value, $value];
+            }
+        }
+        else {
+            $headers->{$key} = $value;
+        }
+
+        return;
+    };
+}
+
+# Accessors
 for my $field (qw(type nph expires cookie charset attachment p3p)) {
     my $slot = __PACKAGE__ . "::$field";
+
     no strict 'refs';
 
     *$slot = sub {
@@ -60,32 +87,8 @@ for my $field (qw(type nph expires cookie charset attachment p3p)) {
         if ($value) {
             $self->set($field => $value);
         }
-
-        $self->get($field);
-    };
-}
-
-for my $field (qw(cookie p3p)) {
-    my $slot = __PACKAGE__ . "::push_$field";
-    my $key  = "-$field";
-    no strict 'refs';
-
-    *$slot = sub {
-        my $self    = shift;
-        my $value   = shift;
-        my $headers = $self->{headers};
-
-        if (exists $headers->{$key}) {
-            my $values = $headers->{$key};
-            if (ref $values eq 'ARRAY') {
-                push @$values, $value;
-            }
-            else {
-                $headers->{$key} = [$values, $value];
-            }
-        }
         else {
-            $headers->{$key} = $value;
+            $self->get($field);
         }
     };
 }
@@ -158,39 +161,78 @@ Sets a value of the specified HTTP header.
 
 Deletes the specified element from HTTP headers.
 
-=item $h->push_cookie()
-
-=item $h->push_p3p()
-
 =back
 
-=head2 ACCESSORS
+=head3 ACCESSORS
 
 =over 4
 
 =item $h->type()
 
+Gets or sets the Content-Type header.
+
+  $h->type('text/plain')
+
 =item $h->nph()
 
-If set to a true value, will issue the correct headers to work
-with a NPH (no-parse-header) script.
+Gets or sets a Boolean value telling whether to issue the correct
+headers to work with a NPH (no-parse-header) script.
+
+  $h->nph(1)
 
 =item $h->expires()
 
+Gets or sets the Expires header.
+You can specify an absolute or relative expiration interval.
+The following forms are all valid for this field.
+
+  $h->expires('+30s') # 30 seconds from now
+  $h->expires('+10m') # ten minutes from now
+  $h->expires('+1h')  # one hour from now
+  $h->expires('-1d')  # yesterday
+  $h->expires('now')  # immediately
+  $h->expires('+3M')  # in three months
+  $h->expires('+10y') # in ten years time
+
+  # at the indicated time & date
+  $h->expires('Thursday, 25-Apr-1999 00:40:33 GMT')
+
 =item $h->cookie()
 
+Gets or sets the Set-Cookie header.
+The parameter can be an arrayref or a string.
+
+=item $h->push_cookie()
+
+Adds the Set-Cookie header.
 
 =item $h->charset()
 
-Controls the character set sent to the browser.
+Gets or sets the character set sent to the browser.
 If not provided, defaults to ISO-8859-1.
+
+  $h->charset('utf-8')
 
 =item $h->attachment()
 
-Turns the page into an attachment.
+Can be used to turn the page into an attachment.
 The value of the argument is suggested name for the saved file.
 
+  $h->attachment('foo.png')
+
 =item $h->p3p()
+
+Gets or sets the P3P tags.
+The parameter can be arrayref or a space-delimited string.
+
+  $h->p3p([qw(CAO DSP LAW CURa)])
+  $h->p3p('CAO DSP LAW CURa')
+
+In either case, the outgoing header will be formatted as:
+
+  P3P: policyref="/w3c/p3p.xml" cp="CAO DSP LAW CURa"
+
+=item $h->push_p3p()
 
 =back
 
@@ -213,7 +255,7 @@ plugins/conditional_get:
       return unless $ENV{REQUEST_METHOD} =~ /^(GET|HEAD)$/;
 
       my $h = Blosxom::Header->new($blosxom::header);
-      if (_etag_matches($h) or _not_modified_since($h)) {
+      if (etag_matches($h) or not_modified_since($h)) {
           $h->set('Status' => '304 Not Modified');
           $h->remove($_)
               for qw(Content-Type Content-Length Content-Disposition);
@@ -225,13 +267,13 @@ plugins/conditional_get:
       return;
   }
 
-  sub _etag_matches {
+  sub etag_matches {
       my $h = shift;
       return unless $h->exists('ETag');
       $h->get('ETag') eq _value($ENV{HTTP_IF_NONE_MATCH});
   }
 
-  sub _not_modified_since {
+  sub not_modified_since {
       my $h = shift;
       return unless $h->exists('Last-Modified');
       $h->get('Last-Modified') eq _value($ENV{HTTP_IF_MODIFIED_SINCE});

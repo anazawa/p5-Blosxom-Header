@@ -7,7 +7,8 @@ use Blosxom::Header;
     my $h = Blosxom::Header->new($headers);
 
     isa_ok $h, 'Blosxom::Header';
-    can_ok $h, qw(new get set remove exists);
+    can_ok $h, qw(new get remove exists push_cookie push_p3p
+                  type nph expires cookie charset attachment p3p);
     is_deeply $h, { headers => $headers };
 }
 
