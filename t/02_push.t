@@ -6,7 +6,8 @@ use Blosxom::Header;
     my $headers = {};
     my $h = Blosxom::Header->new($headers);
     $h->push_cookie('foo');
-    is_deeply $headers, { -cookie => 'foo' };
+    #is_deeply $headers, { -cookie => 'foo' };
+    is_deeply $headers, { cookie => 'foo' };
 }
 
 {

@@ -13,10 +13,10 @@ sub new {
 
 sub get {
     my $self    = shift;
-    my $key     = lc shift;
+    my $key     = _lc(shift);
     my $headers = $self->{headers};
 
-    my @keys   = grep {"-$key" eq lc $_} sort keys %$headers;
+    my @keys   = grep { $key eq _lc($_) } keys %$headers;
     my @values = @{$headers}{@keys};
 
     wantarray ? @values : $values[0];
@@ -29,25 +29,24 @@ sub set {
     my $headers = $self->{headers};
 
     my $set;
-    for (sort keys %$headers) {
-        if (lc "-$key" eq lc $_) {
-            $headers->{$_} = $value;
-            $set++;
-            last;
-        }  
+    for (keys %$headers) {
+        next unless _lc($key) eq _lc($_);
+        $headers->{$_} = $value;
+        $set++;
+        last;
     } 
 
-    $headers->{"-$key"} = $value unless $set;
+    $headers->{$key} = $value unless $set;
 
     return;
 }
 
 sub exists {
     my $self = shift;
-    my $key  = lc shift;
+    my $key  = _lc(shift);
 
     for (keys %{$self->{headers}}) {
-        return 1 if lc $_ eq "-$key"; # any
+        return 1 if _lc($_) eq $key; # any
     } 
 
     return;
@@ -55,24 +54,27 @@ sub exists {
 
 sub remove {
     my $self    = shift;
-    my $key     = lc shift;
+    my $key     = _lc(shift);
     my $headers = $self->{headers};
 
-    my @keys = grep {lc $_ eq "-$key"} keys %$headers;
-    delete @{$headers}{@keys}; # slice
+    my @keys = grep { _lc($_) eq $key } keys %$headers;
+    delete @{$headers}{@keys};
 
     return;
+}
+
+sub _lc {
+    my $key = lc shift;
+    $key =~ s{^\-}{};
+    $key;
 }
 
 # 'push' methods
 for my $field (qw(cookie p3p)) {
     my $slot = __PACKAGE__ . "::push_$field";
-
-    no strict 'refs';
-
-    *$slot = sub {
+    my $code = sub {
         my $self  = shift;
-        my $value = shift;
+        my $value = shift; # must be scalar
 
         if (my $old_value = $self->get($field)) {
             if (ref $old_value eq 'ARRAY') {
@@ -88,15 +90,15 @@ for my $field (qw(cookie p3p)) {
 
         return;
     };
+
+    no strict 'refs';
+    *$slot = $code;
 }
 
 # Accessors
 for my $field (qw(type nph expires cookie charset attachment p3p)) {
     my $slot = __PACKAGE__ . "::$field";
-
-    no strict 'refs';
-
-    *$slot = sub {
+    my $code = sub {
         my $self  = shift;
         my $value = shift;
 
@@ -105,9 +107,14 @@ for my $field (qw(type nph expires cookie charset attachment p3p)) {
         }
         else {
             my @values = $self->get($field);
-            wantarray ? @values : $values[0];
+            return wantarray ? @values : $values[0];
         }
+
+        return;
     };
+
+    no strict 'refs';
+    *$slot = $code;
 }
 
 1;

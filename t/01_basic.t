@@ -9,7 +9,7 @@ use Blosxom::Header;
     isa_ok $h, 'Blosxom::Header';
     can_ok $h, qw(new get remove exists push_cookie push_p3p
                   type nph expires cookie charset attachment p3p);
-    is_deeply $h, { headers => $headers };
+                  #is_deeply $h, { headers => $headers };
 }
 
 {
@@ -23,7 +23,8 @@ use Blosxom::Header;
     my $headers = { '-foo' => 'bar' };
     my $h = Blosxom::Header->new($headers);
     $h->set(bar => 'baz');
-    is_deeply $headers, { '-foo' => 'bar', '-bar' => 'baz' };
+    #is_deeply $headers, { '-foo' => 'bar', '-bar' => 'baz' };
+    is_deeply $headers, { '-foo' => 'bar', 'bar' => 'baz' };
 }
 
 {
