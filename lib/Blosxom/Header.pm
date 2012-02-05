@@ -102,7 +102,7 @@ for my $field (qw(type nph expires cookie charset attachment p3p)) {
         my $self  = shift;
         my $value = shift;
 
-        if ($value) {
+        if (defined $value) {
             $self->set($field => $value);
         }
         else {
@@ -140,10 +140,23 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
   $h->{headers}; # same reference as $headers
 
+  # 'push' methods
+  $h->push_cookie('foo=bar');
+  $h->push_p3p('foo');
+
+  # Accessors
+  $h->type('text/plain');
+  $h->nph(1);
+  $h->expires('+1d');
+  $h->cookie('foo=bar');
+  $h->charset('utf-8');
+  $h->attachment('foo.png');
+  $h->p3p('foo');
+
 =head1 DESCRIPTION
 
 Blosxom, a weblog application, exports a global variable $header
-which is a reference to hash. This application passes $header CGI::header()
+which is a reference to hash. This application passes $header L<CGI>::header()
 to generate HTTP headers.
 
 When plugin developers modify HTTP headers, they must write as follows:
@@ -154,8 +167,7 @@ When plugin developers modify HTTP headers, they must write as follows:
 It's obviously bad practice. Blosxom misses the interface to modify
 them.  
 
-This module allows you to modify them in an object-oriented way.
-If loaded, you might write as follows:
+This module allows you to modify them in an object-oriented way:
 
   my $h = Blosxom::Header->new($blosxom::header);
   $h->type('text/plain');
@@ -185,9 +197,18 @@ Sets a value of the specified HTTP header.
 
 Deletes the specified element from HTTP headers.
 
+=item $h->push_cookie()
+
+=item $h->push_p3p()
+
+Pushes the Set-Cookie header with the specified value onto 
+the HTTP headers.
+
 =back
 
 =head3 ACCESSORS
+
+Refer to L<CGI>::header.
 
 =over 4
 
@@ -219,16 +240,21 @@ The following forms are all valid for this field.
   $h->expires('+10y') # in ten years time
 
   # at the indicated time & date
-  $h->expires('Thursday, 25-Apr-1999 00:40:33 GMT')
+  $h->expires('Thu, 25 Apr 1999 00:40:33 GMT')
 
 =item $h->cookie()
 
 Gets or sets the Set-Cookie header.
-The parameter can be an arrayref or a string.
+The parameter can be an arrayref:
 
-=item $h->push_cookie()
+  use CGI qw(cookie);
+  my $cookie1 = cookie(-name => 'foo', -value= 'bar');
+  my $cookie2 = cookie(-name => 'bar', -value= 'baz');
+  $h->cookie([$cookie1, $cookie2]);
 
-Adds the Set-Cookie header.
+or a string:
+
+  $h->cookie($cookie)
 
 =item $h->charset()
 
@@ -256,8 +282,6 @@ In either case, the outgoing header will be formatted as:
 
   P3P: policyref="/w3c/p3p.xml" cp="CAO DSP LAW CURa"
 
-=item $h->push_p3p()
-
 =back
 
 =head1 EXAMPLES
@@ -281,8 +305,12 @@ plugins/conditional_get:
       my $h = Blosxom::Header->new($blosxom::header);
       if (etag_matches($h) or not_modified_since($h)) {
           $h->set('Status' => '304 Not Modified');
-          $h->remove($_)
-              for qw(Content-Type Content-Length Content-Disposition);
+          $h->remove($_) for qw(Content-Length attachment);
+
+          # If the Content-Type header isn't defined,
+          # CGI::header will add default value.
+          # And so makes it defined.
+          $h->type(q{});
 
           # Truncate output
           $blosxom::output = q{};
@@ -317,7 +345,7 @@ L<Blosxom 2.1.2|http://blosxom.sourceforge.net/>
 
 =head1 SEE ALSO
 
-The interface of this module is inspired by L<Plack::Util>::headers.
+L<CGI>
 
 =head1 AUTHOR
 
