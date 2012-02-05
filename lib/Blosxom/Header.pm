@@ -69,32 +69,6 @@ sub _lc {
     $key;
 }
 
-# 'push' methods
-for my $field (qw(cookie p3p)) {
-    my $slot = __PACKAGE__ . "::push_$field";
-    my $code = sub {
-        my $self  = shift;
-        my $value = shift; # must be scalar
-
-        if (my $old_value = $self->get($field)) {
-            if (ref $old_value eq 'ARRAY') {
-                push @$old_value, $value;
-            }
-            else {
-                $self->set($field => [$old_value, $value]);
-            }
-        }
-        else {
-            $self->set($field => $value);
-        }
-
-        return;
-    };
-
-    no strict 'refs';
-    *$slot = $code;
-}
-
 # Accessors
 for my $field (qw(type nph expires cookie charset attachment p3p)) {
     my $slot = __PACKAGE__ . "::$field";
@@ -139,10 +113,6 @@ Blosxom::Header - Missing interface to modify HTTP headers
   $h->remove($key);
 
   $h->{headers}; # same reference as $headers
-
-  # 'push' methods
-  $h->push_cookie('foo=bar');
-  $h->push_p3p('foo');
 
   # Accessors
   $h->type('text/plain');
@@ -196,13 +166,6 @@ Sets a value of the specified HTTP header.
 =item $h->remove('foo')
 
 Deletes the specified element from HTTP headers.
-
-=item $h->push_cookie()
-
-=item $h->push_p3p()
-
-Pushes the Set-Cookie header with the specified value onto 
-the HTTP headers.
 
 =back
 
