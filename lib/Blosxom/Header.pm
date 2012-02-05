@@ -2,7 +2,7 @@ package Blosxom::Header;
 use strict;
 use warnings;
 
-our $VERSION = '0.01010';
+our $VERSION = '0.01011';
 
 sub new {
     my $class   = shift;
@@ -80,11 +80,8 @@ for my $field (qw(type nph expires cookie charset attachment p3p)) {
             $self->set($field => $value);
         }
         else {
-            my @values = $self->get($field);
-            return wantarray ? @values : $values[0];
+            $self->get($field);
         }
-
-        return;
     };
 
     no strict 'refs';
