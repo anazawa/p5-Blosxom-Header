@@ -15,9 +15,25 @@ require_ok "$FindBin::Bin/$plugin";
 can_ok $plugin, qw/start last/;
 ok $plugin->start();
 
-my @tests = (
+my $tests_ref = do join(q{}, <DATA>);
+for my $test (@$tests_ref) {
+    # initial configuration
+    %$blosxom::header = %{ $test->{header} };
+    $blosxom::output  = $test->{output};
+    local %ENV        = %{ $test->{env} };
+
+    $plugin->last();
+
+    is_deeply $blosxom::header, $test->{expected}{header};
+    is $blosxom::output, $test->{expected}{output};
+}
+
+done_testing;
+
+__DATA__
+[
     {
-        headers  => { '-type' => 'text/html' },
+        header  => { '-type' => 'text/html' },
         env      => { REQUEST_METHOD => 'GET' },
         output   => 'abcdj',
         expected => {
@@ -26,7 +42,7 @@ my @tests = (
         }
     },
     {
-        headers => {
+        header => {
             '-type' => 'text/html',
             '-etag' => 'Foo', 
         },
@@ -37,14 +53,15 @@ my @tests = (
         output => 'abcdj',
         expected => {
             header => {
-                '-etag'   => 'Foo',
+                '-type'  => q{},
+                '-etag'  => 'Foo',
                 'Status' => '304 Not Modified',
             },
             output => q{},
         }
     },
     {
-        headers => {
+        header => {
             '-type'          => 'text/html',
             '-last-modified' => 'Wed, 23 Sep 2009 13:36:33 GMT',
         },
@@ -55,6 +72,7 @@ my @tests = (
         output => 'abcdj',
         expected => {
             header => {
+                '-type'  => q{},
                 '-last-modified' => 'Wed, 23 Sep 2009 13:36:33 GMT',
                 'Status'        => '304 Not Modified',
             },
@@ -62,7 +80,7 @@ my @tests = (
         }
     },
     {
-        headers => {
+        header => {
             '-type'          => 'text/html',
             '-last-modified' => 'Wed, 23 Sep 2009 13:36:33 GMT',
         },
@@ -80,7 +98,7 @@ my @tests = (
         }
     },
     {
-        headers => {
+        header => {
             '-type'          => 'text/html',
             '-last-modified' => 'Wed, 23 Sep 2009 13:36:33 GMT'
         },
@@ -92,6 +110,7 @@ my @tests = (
         output => 'abcdj',
         expected => {
             header => {
+                '-type'  => q{},
                 '-last-modified' => 'Wed, 23 Sep 2009 13:36:33 GMT',
                 'Status'        => '304 Not Modified'
             },
@@ -99,7 +118,7 @@ my @tests = (
         }
     },
     {
-        headers => {
+        header => {
             '-type' => 'text/html',
             '-etag' => 'Foo', 
         },
@@ -116,17 +135,5 @@ my @tests = (
             output => 'abcdj',
         }
     },
-);
-
-for my $block (@tests) {
-    %$blosxom::header = %{$block->{headers}};
-    $blosxom::output = $block->{output};
-    local %ENV = %{$block->{env}};
-
-    $plugin->last();
-
-    is_deeply $blosxom::header, $block->{expected}{header};
-    is $blosxom::output, $block->{expected}{output};
-}
-
-done_testing;
+];
+__END__

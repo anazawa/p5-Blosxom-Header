@@ -2,7 +2,7 @@
 # Blosxom plugin: conditional_get
 # Purpose: enables conditional GET
 # Author: Ryo Anazawa <anazawa@cpan.org>
-# Version: 0.01002 (2012/01/28)
+# Version: 0.01003 (2012/02/08)
 # Documentation: See the bottom of this file or type: perldoc conditional_get
 
 package conditional_get;
@@ -12,6 +12,8 @@ use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Blosxom::Header;
 
+our $VERSION = '0.01003';
+
 sub start { !$blosxom::static_entries }
 
 sub last {
@@ -20,12 +22,12 @@ sub last {
     my $h = Blosxom::Header->new($blosxom::header);
     if (etag_matches($h) or not_modified_since($h)) {
         $h->set('Status' => '304 Not Modified');
-        $h->remove($_)
-            for qw(attachment Content-Disposition Content-Length);
+        $h->remove($_) for qw(attachment Content-Length);
 
         # If Content-Type isn't defined,
-        # CGI::header will add the Content-Type header with default value.
-        $h->type(q{});
+        # CGI::header will add default value.
+        # And so makes it defined.
+        $h->set(type => q{});
 
         # Truncate output
         $blosxom::output = q{};
@@ -69,7 +71,7 @@ Blosxom Plug-in: conditional_get
 
 =head1 VERSION
 
-0.01002 (2012/01/28)
+0.01003 (2012/02/08)
 
 =head1 SYNOPSIS
 
