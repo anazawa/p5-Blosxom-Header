@@ -6,13 +6,13 @@ our $VERSION = '0.01012';
 
 sub new {
     my ($class, $header_ref) = @_;
-    bless { header_ref => $header_ref }, $class;
+    bless { header => $header_ref }, $class;
 }
 
 sub get {
     my $self       = shift;
     my $key        = _lc(shift);
-    my $header_ref = $self->{header_ref};
+    my $header_ref = $self->{header};
 
     my @keys   = grep { $key eq _lc($_) } keys %$header_ref;
     my @values = @{ $header_ref }{ @keys };
@@ -24,7 +24,7 @@ sub set {
     my $self       = shift;
     my $new_key    = shift;
     my $value      = shift;
-    my $header_ref = $self->{header_ref};
+    my $header_ref = $self->{header};
 
     for my $key ( keys %$header_ref ) {
         next unless _lc($new_key) eq _lc($key);
@@ -43,7 +43,7 @@ sub exists {
 
     # any
     my $exists = 0;
-    for my $k ( keys %{ $self->{header_ref} } ) {
+    for my $k ( keys %{ $self->{header} } ) {
         next unless _lc($k) eq $key;
         $exists = 1;
         last;
@@ -55,7 +55,7 @@ sub exists {
 sub remove {
     my $self       = shift;
     my $key        = _lc(shift);
-    my $header_ref = $self->{header_ref};
+    my $header_ref = $self->{header};
 
     my @keys = grep { _lc($_) eq $key } keys %$header_ref;
     delete @{ $header_ref }{ @keys };
@@ -88,9 +88,9 @@ Blosxom::Header - Missing interface to modify HTTP headers
   package foo;
   use Blosxom::Header;
 
-  my $h = Blosxom::Header->new($blosxom::header);
+  my $h     = Blosxom::Header->new($blosxom::header);
   my $value = $h->get('type');
-  my $bool = $h->exists('type');
+  my $bool  = $h->exists('type');
 
   $h->set(type => 'text/plain'); # overwrites existent header
   $h->remove('type');
@@ -98,16 +98,17 @@ Blosxom::Header - Missing interface to modify HTTP headers
 =head1 DESCRIPTION
 
 Blosxom, a weblog application, exports a global variable $header
-which is a reference to hash. This application passes $header L<CGI>::header()
-to generate HTTP headers.
+which is a reference to hash.
+This application passes $header L<CGI>::header() to generate
+HTTP headers.
 
 When plugin developers modify HTTP headers, they must write as follows:
 
   package foo;
   $blosxom::header->{'-status'} = '304 Not Modified';
 
-It's obviously bad practice. Blosxom misses the interface to modify
-them.  
+It's obviously bad practice.
+Blosxom misses the interface to modify them.
 
 This module allows you to modify them in an object-oriented way:
 
