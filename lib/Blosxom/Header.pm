@@ -5,38 +5,34 @@ use warnings;
 our $VERSION = '0.01012';
 
 sub new {
-    my $class   = shift;
-    my $headers = shift;
-
-    bless { headers => $headers }, $class;
+    my ($class, $header_ref) = @_;
+    bless { header_ref => $header_ref }, $class;
 }
 
 sub get {
-    my $self    = shift;
-    my $key     = _lc(shift);
-    my $headers = $self->{headers};
+    my $self       = shift;
+    my $key        = _lc(shift);
+    my $header_ref = $self->{header_ref};
 
-    my @keys   = grep { $key eq _lc($_) } keys %$headers;
-    my @values = @{$headers}{@keys};
+    my @keys   = grep { $key eq _lc($_) } keys %$header_ref;
+    my @values = @{ $header_ref }{ @keys };
 
-    wantarray ? @values : $values[0];
+    return wantarray ? @values : $values[0];
 }
 
 sub set {
-    my $self    = shift;
-    my $key     = shift;
-    my $value   = shift;
-    my $headers = $self->{headers};
+    my $self       = shift;
+    my $new_key    = shift;
+    my $value      = shift;
+    my $header_ref = $self->{header_ref};
 
-    my $set;
-    for (keys %$headers) {
-        next unless _lc($key) eq _lc($_);
-        $headers->{$_} = $value;
-        $set++;
+    for my $key ( keys %$header_ref ) {
+        next unless _lc($new_key) eq _lc($key);
+        $new_key = $key;
         last;
     } 
 
-    $headers->{$key} = $value unless $set;
+    $header_ref->{$new_key} = $value;
 
     return;
 }
@@ -46,20 +42,23 @@ sub exists {
     my $key  = _lc(shift);
 
     # any
-    for (keys %{$self->{headers}}) {
-        return 1 if _lc($_) eq $key;
+    my $exists = 0;
+    for my $k ( keys %{ $self->{header_ref} } ) {
+        next unless _lc($k) eq $key;
+        $exists = 1;
+        last;
     } 
 
-    return;
+    return $exists;
 }
 
 sub remove {
-    my $self    = shift;
-    my $key     = _lc(shift);
-    my $headers = $self->{headers};
+    my $self       = shift;
+    my $key        = _lc(shift);
+    my $header_ref = $self->{header_ref};
 
-    my @keys = grep { _lc($_) eq $key } keys %$headers;
-    delete @{$headers}{@keys};
+    my @keys = grep { _lc($_) eq $key } keys %$header_ref;
+    delete @{ $header_ref }{ @keys };
 
     return;
 }
@@ -90,13 +89,11 @@ Blosxom::Header - Missing interface to modify HTTP headers
   use Blosxom::Header;
 
   my $h = Blosxom::Header->new($blosxom::header);
-  my $value = $h->get($key);
-  my $bool = $h->exists($key);
+  my $value = $h->get('type');
+  my $bool = $h->exists('type');
 
-  $h->set($key, $value); # overwrites existent header
-  $h->remove($key);
-
-  $h->{headers}; # same reference as $blosxom::header
+  $h->set(type => 'text/plain'); # overwrites existent header
+  $h->remove('type');
 
 =head1 DESCRIPTION
 
@@ -117,30 +114,16 @@ This module allows you to modify them in an object-oriented way:
   my $h = Blosxom::Header->new($blosxom::header);
   $h->set(Status => '304 Not Modified');
 
-You don't have to care whether to put a hyphen before a key,
-and also whether to make a key lowercased or L<camelized|String::CamelCase>.
-And so the following forms are semantically identical:
-
-=over 4
-
-=item status
-
-=item -status
-
-=item Status
-
-=item -Status
-
-=back
+You don't need to mind whether to put a hyphen before a key,
+nor whether to make a key lowercased or L<camelized|String::CamelCase>.
 
 =head2 METHODS
 
 =over 4
 
-=item $h = Blosxom::Header->new($headers);
+=item $h = Blosxom::Header->new($blosxom::header);
 
 Creates a new Blosxom::Header object.
-The object holds a reference to the original given $headers argument.
 
 =item $h->get('foo')
 
@@ -187,10 +170,10 @@ The following forms are all valid for this field.
 
   $h->set(expires => '+30s') # 30 seconds from now
   $h->set(expires => '+10m') # ten minutes from now
-  $h->set(expires => '+1h')  # one hour from now
-  $h->set(expires => '-1d')  # yesterday
-  $h->set(expires => 'now')  # immediately
-  $h->set(expires => '+3M')  # in three months
+  $h->set(expires => '+1h' ) # one hour from now
+  $h->set(expires => '-1d' ) # yesterday
+  $h->set(expires => 'now' ) # immediately
+  $h->set(expires => '+3M' ) # in three months
   $h->set(expires => '+10y') # in ten years time
 
   # at the indicated time & date
@@ -234,7 +217,7 @@ In either case, the outgoing header will be formatted as:
 
 =head1 EXAMPLES
 
-The following code is a Blosxom plugin to enable conditional GET and HEAD using
+The following code is a plugin to enable conditional GET and HEAD using
 C<If-None-Match> and C<If-Modified-Since> headers.
 Refer to L<Plack::Middleware::ConditionalGET>.
 

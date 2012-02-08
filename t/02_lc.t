@@ -10,7 +10,8 @@ my @tests = (
 );
 
 for my $test (@tests) {
-    is Blosxom::Header::_lc($test->[0]), $test->[1];
+    my ($input, $output) = @$test;
+    is Blosxom::Header::_lc($input), $output;
 }
 
 done_testing;
