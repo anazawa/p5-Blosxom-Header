@@ -1,50 +1,73 @@
 package Blosxom::Header;
 use strict;
 use warnings;
+use Carp;
 
 our $VERSION = '0.01012';
 
 sub new {
-    my ($class, $header_ref) = @_;
-    bless { header => $header_ref }, $class;
+    my $class      = shift;
+    my $header_ref = shift;
+
+    if (!$header_ref or ref $header_ref ne 'HASH') {
+        carp q{Can't create a Blosxom::Header object.};
+        return;
+    }
+
+    return bless { header => $header_ref }, $class;
 }
 
 sub get {
     my $self       = shift;
-    my $key        = _lc(shift);
+    my $key        = _key( shift );
     my $header_ref = $self->{header};
 
-    my @keys   = grep { $key eq _lc($_) } keys %$header_ref;
-    my @values = @{ $header_ref }{ @keys };
+    return unless $key;
 
-    return wantarray ? @values : $values[0];
+    if (wantarray) {
+        my @keys = grep { $key eq _key( $_ ) } keys %{ $header_ref };
+        return @keys ? @{ $header_ref }{ @keys } : ();
+    }
+
+    my $value;
+    for my $raw_key ( keys %{ $header_ref } ) {
+        next unless _key( $raw_key ) eq $key;
+        $value = $header_ref->{ $raw_key };
+        last;
+    }
+
+    return $value;
 }
 
 sub set {
     my $self       = shift;
-    my $new_key    = shift;
+    my $raw_key    = shift;
     my $value      = shift;
     my $header_ref = $self->{header};
 
-    for my $key ( keys %$header_ref ) {
-        next unless _lc($new_key) eq _lc($key);
-        $new_key = $key;
+    return unless _key( $raw_key );
+
+    for my $key ( keys %{ $header_ref } ) {
+        next unless _key( $raw_key ) eq _key( $key );
+        $raw_key = $key;
         last;
     } 
 
-    $header_ref->{$new_key} = $value;
+    $header_ref->{ $raw_key } = $value;
 
     return;
 }
 
 sub exists {
-    my $self = shift;
-    my $key  = _lc(shift);
+    my $self   = shift;
+    my $key    = _key(shift);
+    my $exists = 0;
+
+    return unless $key;
 
     # any
-    my $exists = 0;
-    for my $k ( keys %{ $self->{header} } ) {
-        next unless _lc($k) eq $key;
+    for my $raw_key ( keys %{ $self->{header} } ) {
+        next unless _key( $raw_key ) eq $key;
         $exists = 1;
         last;
     } 
@@ -54,19 +77,28 @@ sub exists {
 
 sub remove {
     my $self       = shift;
-    my $key        = _lc(shift);
+    my $key        = _key( shift );
     my $header_ref = $self->{header};
 
-    my @keys = grep { _lc($_) eq $key } keys %$header_ref;
-    delete @{ $header_ref }{ @keys };
+    if ($key) {
+        my @keys = grep { _key( $_ ) eq $key } keys %{ $header_ref };
+        delete @{ $header_ref }{ @keys } if @keys;
+    }
 
     return;
 }
 
-sub _lc {
-    my $key = lc shift;
+sub _key {
+    my $key = shift || q{};
+
+    # get rid of an initial hyphen if exists
     $key =~ s{^\-}{};
-    $key;
+
+    # use hyphens instead of underbars
+    $key =~ tr{_}{-};
+
+    # do lowercase
+    return lc $key;
 }
 
 1;
@@ -122,46 +154,61 @@ nor whether to make a key lowercased or L<camelized|String::CamelCase>.
 
 =over 4
 
-=item $h = Blosxom::Header->new($blosxom::header);
+=item $h = Blosxom::Header->new($blosxom::header)
 
 Creates a new Blosxom::Header object.
-
-=item $h->get('foo')
-
-Returns a value of the specified HTTP header.
 
 =item $h->exists('foo')
 
 Returns a Boolean value telling whether the specified HTTP header exists.
 
-=item $h->set('foo' => 'bar')
+=item $h->get('foo')
 
-Sets a value of the specified HTTP header.
+Returns a value of the specified HTTP header.
 
 =item $h->remove('foo')
 
 Deletes the specified element from HTTP headers.
 
+=item $h->set('foo' => 'bar')
+
+Sets a value of the specified HTTP header.
+
 =back
 
-=head2 RECOGNIZED PARAMETERS
+=head1 EXAMPLES
 
-Refer to L<CGI>::header.
+L<CGI>::header recognizes the following parameters.
 
 =over 4
 
-=item type
+=item attachment
 
-Represents the Content-Type header.
+Can be used to turn the page into an attachment.
+Represents suggested name for the saved file.
 
-  $h->set(type => 'text/plain')
+  $h->set(attachment => 'foo.png');
 
-=item nph
+In this case, the outgoing header will be formatted as:
 
-If set to a true value, will issue the correct headers to work with
-a NPH (no-parse-header) script.
+  Content-Disposition: attachment; filename="foo.png"
 
-  $h->set(nph => 1)
+=item charset
+
+Represents the character set sent to the browser.
+If not provided, defaults to ISO-8859-1.
+
+  $h->set(charset => 'utf-8');
+
+=item cookie
+
+Represents the Set-Cookie header.
+The parameter can be an arrayref or a string.
+
+  $h->set(cookie => [$cookie1, $cookie2]);
+  $h->set(cookie => $cookie);
+
+Refer to L<CGI>::cookie.
 
 =item expires
 
@@ -169,107 +216,44 @@ Represents the Expires header.
 You can specify an absolute or relative expiration interval.
 The following forms are all valid for this field.
 
-  $h->set(expires => '+30s') # 30 seconds from now
-  $h->set(expires => '+10m') # ten minutes from now
-  $h->set(expires => '+1h' ) # one hour from now
-  $h->set(expires => '-1d' ) # yesterday
-  $h->set(expires => 'now' ) # immediately
-  $h->set(expires => '+3M' ) # in three months
-  $h->set(expires => '+10y') # in ten years time
+  $h->set(expires => '+30s'); # 30 seconds from now
+  $h->set(expires => '+10m'); # ten minutes from now
+  $h->set(expires => '+1h' ); # one hour from now
+  $h->set(expires => '-1d' ); # yesterday
+  $h->set(expires => 'now' ); # immediately
+  $h->set(expires => '+3M' ); # in three months
+  $h->set(expires => '+10y'); # in ten years time
 
   # at the indicated time & date
-  $h->set(expires => 'Thu, 25 Apr 1999 00:40:33 GMT')
+  $h->set(expires => 'Thu, 25 Apr 1999 00:40:33 GMT');
 
-=item cookie
+=item nph
 
-Represents the Set-Cookie header.
-The parameter can be an arrayref or a string.
+If set to a true value,
+will issue the correct headers to work with
+a NPH (no-parse-header) script:
 
-  $h->set(cookie => ['foo=bar', 'bar=baz']);
-  $h->set(cookie => 'foo=bar')
-
-=item charset
-
-Represents the character set sent to the browser.
-If not provided, defaults to ISO-8859-1.
-
-  $h->set(charset => 'utf-8')
-
-=item attachment
-
-Can be used to turn the page into an attachment.
-Represents suggested name for the saved file.
-
-  $h->set(attachment => 'foo.png')
+  $h->set(nph => 1);
 
 =item p3p
 
 Will add a P3P tag to the outgoing header.
-The parameter can be arrayref or a space-delimited string.
+The parameter can be an arrayref or a space-delimited string.
 
-  $h->set(p3p => [qw(CAO DSP LAW CURa)])
-  $h->set(p3p => 'CAO DSP LAW CURa')
+  $h->set(p3p => [qw(CAO DSP LAW CURa)]);
+  $h->set(p3p => 'CAO DSP LAW CURa');
 
 In either case, the outgoing header will be formatted as:
 
   P3P: policyref="/w3c/p3p.xml" cp="CAO DSP LAW CURa"
 
+=item type
+
+Represents the Content-Type header.
+
+  $h->set(type => 'text/plain');
+
 =back
-
-=head1 EXAMPLES
-
-The following code is a plugin to enable conditional GET and HEAD using
-C<If-None-Match> and C<If-Modified-Since> headers.
-Refer to L<Plack::Middleware::ConditionalGET>.
-
-plugins/conditional_get:
-
-  package conditional_get;
-  use strict;
-  use warnings;
-  use Blosxom::Header;
-
-  sub start { !$blosxom::static_entries }
-
-  sub last {
-      return unless $ENV{REQUEST_METHOD} =~ /^(GET|HEAD)$/;
-
-      my $h = Blosxom::Header->new($blosxom::header);
-      if (etag_matches($h) or not_modified_since($h)) {
-          $h->set('Status' => '304 Not Modified');
-          $h->remove($_) for qw(Content-Length attachment);
-
-          # If the Content-Type header isn't defined,
-          # CGI::header will add default value.
-          # And so makes it defined.
-          $h->set(type => q{});
-
-          # Truncate output
-          $blosxom::output = q{};
-      }
-
-      return;
-  }
-
-  sub etag_matches {
-      my $h = shift;
-      return unless $h->exists('ETag');
-      $h->get('ETag') eq _value($ENV{HTTP_IF_NONE_MATCH});
-  }
-
-  sub not_modified_since {
-      my $h = shift;
-      return unless $h->exists('Last-Modified');
-      $h->get('Last-Modified') eq _value($ENV{HTTP_IF_MODIFIED_SINCE});
-  }
-
-  sub _value {
-      my $str = shift;
-      $str =~ s{;.*$}{};
-      $str;
-  }
-  
-  1;
 
 =head1 DEPENDENCIES
 
