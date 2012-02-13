@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use List::Util qw(first);
 
-our $VERSION = '0.01012';
+our $VERSION = '0.01013';
 
 sub new {
     my ( $class, $header_ref ) = @_;
