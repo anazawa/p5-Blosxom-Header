@@ -1,38 +1,26 @@
 package Blosxom::Header;
+use 5.008_001;
 use strict;
 use warnings;
-use Carp;
+use List::Util qw(first);
 
 our $VERSION = '0.01012';
 
 sub new {
-    my $class      = shift;
-    my $header_ref = shift;
-
-    if (!$header_ref or ref $header_ref ne 'HASH') {
-        carp q{Can't create a Blosxom::Header object.};
-        return;
-    }
-
-    return bless { header => $header_ref }, $class;
+    my ( $class, $header_ref ) = @_;
+    bless { header_ref => $header_ref }, $class;
 }
 
 sub get {
     my $self       = shift;
-    my $key        = _key( shift );
-    my $header_ref = $self->{header};
+    my $key        = _lc( shift );
+    my $header_ref = $self->{header_ref};
 
-    return unless $key;
-
-    if (wantarray) {
-        my @keys = grep { $key eq _key( $_ ) } keys %{ $header_ref };
-        return @keys ? @{ $header_ref }{ @keys } : ();
-    }
-
+    # if any key matches $key, return the value
     my $value;
-    for my $raw_key ( keys %{ $header_ref } ) {
-        next unless _key( $raw_key ) eq $key;
-        $value = $header_ref->{ $raw_key };
+    while ( my ( $k, $v ) = each %{ $header_ref } ) {
+        next unless _lc( $k ) eq $key;
+        $value = $v;
         last;
     }
 
@@ -41,55 +29,47 @@ sub get {
 
 sub set {
     my $self       = shift;
-    my $raw_key    = shift;
+    my $key        = shift;
     my $value      = shift;
-    my $header_ref = $self->{header};
+    my $header_ref = $self->{header_ref};
 
-    return unless _key( $raw_key );
-
-    for my $key ( keys %{ $header_ref } ) {
-        next unless _key( $raw_key ) eq _key( $key );
-        $raw_key = $key;
-        last;
-    } 
-
-    $header_ref->{ $raw_key } = $value;
+    # if any key matches $key, replaces the value with $value
+    my $k = first { _lc( $_ ) eq _lc( $key ) } keys %{ $header_ref };
+    $header_ref->{ $k || $key } = $value;
 
     return;
 }
 
 sub exists {
     my $self   = shift;
-    my $key    = _key(shift);
+    my $key    = _lc( shift );
     my $exists = 0;
 
-    return unless $key;
-
-    # any
-    for my $raw_key ( keys %{ $self->{header} } ) {
-        next unless _key( $raw_key ) eq $key;
+    # if any key matches $key, returns true
+    for my $k ( keys %{ $self->{header_ref} } ) {
+        next unless _lc( $k ) eq $key;
         $exists = 1;
         last;
-    } 
+    }
 
     return $exists;
 }
 
 sub remove {
     my $self       = shift;
-    my $key        = _key( shift );
-    my $header_ref = $self->{header};
+    my $key        = _lc( shift );
+    my $header_ref = $self->{header_ref};
 
-    if ($key) {
-        my @keys = grep { _key( $_ ) eq $key } keys %{ $header_ref };
-        delete @{ $header_ref }{ @keys } if @keys;
-    }
+    # deletes an element whose key matches $key
+    my @keys = grep { _lc( $_ ) eq $key } keys %{ $header_ref };
+    delete @{ $header_ref }{ @keys };
 
     return;
 }
 
-sub _key {
-    my $key = shift || q{};
+# returns a lowercased version of a given string
+sub _lc {
+    my $key = lc shift;
 
     # get rid of an initial hyphen if exists
     $key =~ s{^\-}{};
@@ -97,8 +77,7 @@ sub _key {
     # use hyphens instead of underbars
     $key =~ tr{_}{-};
 
-    # do lowercase
-    return lc $key;
+    return $key;
 }
 
 1;
@@ -113,7 +92,6 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
   # blosxom.cgi
   package blosxom;
-
   our $header = { -type => 'text/html' };
 
   # plugins/foo
@@ -124,7 +102,7 @@ Blosxom::Header - Missing interface to modify HTTP headers
   my $value = $h->get('type');
   my $bool  = $h->exists('type');
 
-  $h->set(type => 'text/plain'); # overwrites existent header
+  $h->set( type => 'text/plain' );
   $h->remove('type');
 
 =head1 DESCRIPTION

@@ -4,33 +4,36 @@ use Blosxom::Header;
 
 {
     my $header_ref = { '-foo' => 'bar' };
-    my $h = Blosxom::Header->new($header_ref);
+    my $h = Blosxom::Header->new( $header_ref );
     isa_ok $h, 'Blosxom::Header';
     can_ok $h, qw(new get remove exists set);
-
-    $h->set(bar => 'baz');
-    is_deeply $header_ref, { '-foo' => 'bar', 'bar' => 'baz' };
 }
-
 
 {
     my $header_ref = { '-foo' => 'bar' };
-    my $h = Blosxom::Header->new($header_ref);
-    $h->set(-foo => q{});
+    my $h = Blosxom::Header->new( $header_ref );
+    $h->set( bar => 'baz' );
+    is_deeply $header_ref, { '-foo' => 'bar', 'bar' => 'baz' };
+}
+
+{
+    my $header_ref = { '-foo' => 'bar' };
+    my $h = Blosxom::Header->new( $header_ref );
+    $h->set( -foo => q{} );
     is_deeply $header_ref, { '-foo' => q{} }, 'set empty string';
 }
 
 {
     my $header_ref = { '-foo' => 'bar' };
     my $h = Blosxom::Header->new($header_ref);
-    $h->set(-foo => 'baz');
+    $h->set( -foo => 'baz' );
     is_deeply $header_ref, { '-foo' => 'baz' }, 'set overwrite';
 }
 
 {
     my $header_ref = { '-foo' => 'bar' };
     my $h = Blosxom::Header->new($header_ref);
-    $h->set(Foo => 'baz');
+    $h->set( Foo => 'baz' );
     is_deeply $header_ref, { '-foo' => 'baz' }, 'set case-sensitive';
 }
 
@@ -44,15 +47,6 @@ use Blosxom::Header;
     my $header_ref = { '-foo' => 'bar' };
     my $h = Blosxom::Header->new($header_ref);
     is $h->get('Foo'), 'bar', 'get case-sensitive';
-}
-
-{
-    my $header_ref = { '-foo' => 'bar', 'foo' => 'baz', 'bar' => 'foo'  };
-    my $h = Blosxom::Header->new($header_ref);
-    like $h->get('foo'), qr/^(bar|baz)$/, 'get scalar context'; 
-
-    my @values = sort $h->get('foo');
-    is_deeply \@values, [qw(bar baz)], 'get list context';
 }
 
 {
