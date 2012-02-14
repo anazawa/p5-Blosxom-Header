@@ -2,63 +2,59 @@ package Blosxom::Header;
 use 5.008_001;
 use strict;
 use warnings;
-use List::Util qw(first);
+use Exporter 'import';
+use List::Util 'first';
 
-our $VERSION = '0.01013';
+our $VERSION   = '0.01013';
+our @EXPORT_OK = qw( get_header    set_header
+                     remove_header has_header header );
 
-sub new {
-    my ( $class, $header_ref ) = @_;
-    bless { header_ref => $header_ref }, $class;
+sub header { 
+    my $header_ref = shift;
+    require Blosxom::Header::Object;
+    return Blosxom::Header::Object->new( $header_ref );
 }
 
-sub get {
-    my $self       = shift;
+sub get_header {
+    my $header_ref = shift;
     my $key        = _lc( shift );
-    my $header_ref = $self->{header_ref};
 
-    # if any key matches $key, return the value
-    my $value;
+    # if any key matches $key, returns the value
     while ( my ( $k, $v ) = each %{ $header_ref } ) {
-        next unless _lc( $k ) eq $key;
-        $value = $v;
-        last;
+        return $v if _lc( $k ) eq $key;
     }
-
-    return $value;
-}
-
-sub set {
-    my $self       = shift;
-    my $key        = shift;
-    my $value      = shift;
-    my $header_ref = $self->{header_ref};
-
-    # if any key matches $key, replaces the value with $value
-    my $k = first { _lc( $_ ) eq _lc( $key ) } keys %{ $header_ref };
-    $header_ref->{ $k || $key } = $value;
 
     return;
 }
 
-sub exists {
-    my $self   = shift;
-    my $key    = _lc( shift );
-    my $exists = 0;
+sub set_header {
+    my $header_ref = shift;
+    my $key        = shift;
+    my $value      = shift;
 
-    # if any key matches $key, returns true
-    for my $k ( keys %{ $self->{header_ref} } ) {
-        next unless _lc( $k ) eq $key;
-        $exists = 1;
-        last;
-    }
+    # if any key matches $key, replaces the value with $value
+    my @keys      = keys %{ $header_ref };
+    my $first_key = first { _lc( $_ ) eq _lc( $key ) } @keys;
+    $header_ref->{ $first_key || $key } = $value;
 
-    return $exists;
+    return;
 }
 
-sub remove {
-    my $self       = shift;
+sub has_header {
+    my $header_ref = shift;
     my $key        = _lc( shift );
-    my $header_ref = $self->{header_ref};
+
+    # if any key matches $key, returns true
+    for my $raw_key ( keys %{ $header_ref } ) {
+        return 1 if _lc( $raw_key ) eq $key;
+    }
+
+    return 0;
+}
+
+sub remove_header {
+    my $header_ref = shift;
+    my $key        = _lc( shift );
 
     # deletes an element whose key matches $key
     my @keys = grep { _lc( $_ ) eq $key } keys %{ $header_ref };
@@ -71,10 +67,10 @@ sub remove {
 sub _lc {
     my $key = lc shift;
 
-    # get rid of an initial hyphen if exists
+    # get rid of an initial dash if exists
     $key =~ s{^\-}{};
 
-    # use hyphens instead of underbars
+    # use hyphens instead of underscores
     $key =~ tr{_}{-};
 
     return $key;

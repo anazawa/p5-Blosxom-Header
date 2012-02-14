@@ -1,86 +1,68 @@
 use strict;
 use Test::More;
-use Blosxom::Header;
+use Blosxom::Header qw(set_header get_header remove_header has_header);
 
 {
     my $header_ref = { '-foo' => 'bar' };
-    my $h = Blosxom::Header->new( $header_ref );
-    isa_ok $h, 'Blosxom::Header';
-    can_ok $h, qw(new get remove exists set);
-}
-
-{
-    my $header_ref = { '-foo' => 'bar' };
-    my $h = Blosxom::Header->new( $header_ref );
-    $h->set( bar => 'baz' );
+    set_header( $header_ref, bar => 'baz' );
     is_deeply $header_ref, { '-foo' => 'bar', 'bar' => 'baz' };
 }
 
 {
     my $header_ref = { '-foo' => 'bar' };
-    my $h = Blosxom::Header->new( $header_ref );
-    $h->set( -foo => q{} );
+    set_header( $header_ref, -foo => q{} );
     is_deeply $header_ref, { '-foo' => q{} }, 'set empty string';
 }
 
 {
     my $header_ref = { '-foo' => 'bar' };
-    my $h = Blosxom::Header->new($header_ref);
-    $h->set( -foo => 'baz' );
+    set_header( $header_ref, -foo => 'baz' );
     is_deeply $header_ref, { '-foo' => 'baz' }, 'set overwrite';
 }
 
 {
     my $header_ref = { '-foo' => 'bar' };
-    my $h = Blosxom::Header->new($header_ref);
-    $h->set( Foo => 'baz' );
+    set_header( $header_ref, Foo => 'baz' );
     is_deeply $header_ref, { '-foo' => 'baz' }, 'set case-sensitive';
 }
 
 {
     my $header_ref = { '-foo' => 'bar' };
-    my $h = Blosxom::Header->new($header_ref);
-    is $h->get('-foo'), 'bar';
+    is get_header( $header_ref, '-foo' ), 'bar';
 }
 
 {
     my $header_ref = { '-foo' => 'bar' };
-    my $h = Blosxom::Header->new($header_ref);
-    is $h->get('Foo'), 'bar', 'get case-sensitive';
+    is get_header( $header_ref, 'Foo' ), 'bar', 'get case-sensitive';
 }
 
 {
     my $header_ref = { '-foo' => 'bar', '-bar' => 'baz' };
-    my $h = Blosxom::Header->new($header_ref);
-    $h->remove('-foo');
+    remove_header( $header_ref, '-foo' );
     is_deeply $header_ref, { '-bar' => 'baz' };
 }
 
 {
     my $header_ref = { '-foo' => 'bar', '-bar' => 'baz' };
-    my $h = Blosxom::Header->new($header_ref);
-    $h->remove('Foo');
+    remove_header( $header_ref, 'Foo' );
     is_deeply $header_ref, { '-bar' => 'baz' }, 'remove case-sensitive';
 }
 
 {
     my $header_ref = { '-foo' => 'bar', 'foo' => 'baz', '-bar' => 'baz' };
-    my $h = Blosxom::Header->new($header_ref);
-    $h->remove('Foo');
+    remove_header( $header_ref, 'Foo' );
     is_deeply $header_ref, { '-bar' => 'baz' }, 'remove multiple values';
 }
 
 {
     my $header_ref = { '-foo' => 'bar', '-bar' => 'baz' };
-    my $h = Blosxom::Header->new($header_ref);
-    ok $h->exists('-foo');
-    ok !$h->exists('baz');
+    ok has_header( $header_ref, '-foo' );
+    ok !has_header( $header_ref, 'baz' );
 }
 
 {
     my $header_ref = { '-foo' => 'bar', '-bar' => 'baz' };
-    my $h = Blosxom::Header->new($header_ref);
-    ok $h->exists('Foo'), 'exists case-sensitive';
+    ok has_header( $header_ref, 'Foo' ), 'has case-sensitive';
 }
 
 done_testing;
