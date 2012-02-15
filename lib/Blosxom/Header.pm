@@ -6,18 +6,21 @@ use Exporter 'import';
 use List::Util 'first';
 
 our $VERSION   = '0.01014';
-our @EXPORT_OK = qw( get_header set_header remove_header has_header );
+our @EXPORT_OK = qw( get_header set_header delete_header exists_header );
 
 sub new {
-    require Blosxom::Header::Object;
+    my $class      = __PACKAGE__ . '::Prototype';
     my $header_ref = $_[1];
-
-    Blosxom::Header::Object->new(
-        get    => sub { get_header( $header_ref, @_ )    },
-        set    => sub { set_header( $header_ref, @_ )    },
-        has    => sub { has_header( $header_ref, @_ )    },
-        remove => sub { remove_header( $header_ref, @_ ) },
+    my %method     = (
+        get    => sub { get_header(    $header_ref, @_ ) },
+        set    => sub { set_header(    $header_ref, @_ ) },
+        exists => sub { exists_header( $header_ref, @_ ) },
+        delete => sub { delete_header( $header_ref, @_ ) },
     );
+
+    eval "require $class";
+
+    return $class->new( %method );
 }
 
 sub get_header {
@@ -43,7 +46,7 @@ sub set_header {
     return;
 }
 
-sub has_header {
+sub exists_header {
     my $header_ref = shift;
     my $key        = _lc( shift );
 
@@ -55,7 +58,7 @@ sub has_header {
     return 0;
 }
 
-sub remove_header {
+sub delete_header {
     my $header_ref = shift;
     my $key        = _lc( shift );
 
@@ -98,20 +101,20 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
   # plugins/foo
   package foo;
-  use Blosxom::Header qw(get_header set_header has_header remove_header);
+  use Blosxom::Header qw(get_header set_header exists_header delete_header);
 
   # Functional interface
   my $value = get_header( $blosxom::header, 'foo' );
-  my $bool  = has_header( $blosxom::header, 'foo' );
+  my $bool  = exists_header( $blosxom::header, 'foo' );
   set_header( $blosxom::header, 'bar' => 'baz' );
-  remove_header( $blosxom::header, 'foo' );
+  delete_header( $blosxom::header, 'foo' );
 
   # Object-oriented interface
   my $h     = Blosxom::Header->new( $blosxom::header );
   my $value = $h->get('foo');
-  my $bool  = $h->has('foo');
+  my $bool  = $h->exists('foo');
   $h->set( bar => 'baz' );
-  $h->remove('foo');
+  $h->delete('foo');
 
 =head1 DESCRIPTION
 
@@ -156,11 +159,11 @@ Returns a value of the specified HTTP header.
 
 Sets a value of the specified HTTP header.
 
-=item has_header( $blosxom::header, 'foo' )
+=item exists_header( $blosxom::header, 'foo' )
 
 Returns a Boolean value telling whether the specified HTTP header exists.
 
-=item remove_header( $blosxom::header, 'foo' )
+=item delete_header( $blosxom::header, 'foo' )
 
 Deletes the specified element from HTTP headers.
 
@@ -174,17 +177,17 @@ Deletes the specified element from HTTP headers.
 
 Creates a new Blosxom::Header object.
 
-=item $h->has( 'foo' )
+=item $h->exists( 'foo' )
 
-A synonym for has_header.
+A synonym for exists_header.
 
 =item $h->get( 'foo' )
 
 A synonym for get_header.
 
-=item $h->remove( 'foo' )
+=item $h->delete( 'foo' )
 
-A synonym for remove_header.
+A synonym for delete_header.
 
 =item $h->set( 'foo' => 'bar' )
 
