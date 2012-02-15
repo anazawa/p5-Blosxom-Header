@@ -5,34 +5,19 @@ use warnings;
 use Exporter 'import';
 use List::Util 'first';
 
-our $VERSION   = '0.01013';
+our $VERSION   = '0.01014';
 our @EXPORT_OK = qw( get_header set_header remove_header has_header );
 
 sub new {
+    require Blosxom::Header::Object;
     my $header_ref = $_[1];
 
-    # define what an object can do
-    my %header = (
-        get => sub {
-            my $key = shift;
-            get_header( $header_ref, $key );
-        },
-        set => sub {
-            my ( $key, $value ) = @_;
-            set_header( $header_ref, $key => $value );
-        },
-        has => sub {
-            my $key = shift;
-            has_header( $header_ref, $key );
-        },
-        remove => sub {
-            my $key = shift;
-            remove_header( $header_ref, $key );
-        },
+    Blosxom::Header::Object->new(
+        get    => sub { get_header( $header_ref, @_ )    },
+        set    => sub { set_header( $header_ref, @_ )    },
+        has    => sub { has_header( $header_ref, @_ )    },
+        remove => sub { remove_header( $header_ref, @_ ) },
     );
-
-    require Blosxom::Header::Object;
-    bless \%header, 'Blosxom::Header::Object';
 }
 
 sub get_header {
@@ -106,18 +91,24 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
   # blosxom.cgi
   package blosxom;
-  our $header = { -type => 'text/html' };
+  our $header = { foo => 'bar' };
 
   # plugins/foo
   package foo;
-  use Blosxom::Header;
+  use Blosxom::Header qw(get_header set_header has_header remove_header);
 
-  my $h     = Blosxom::Header->new($blosxom::header);
-  my $value = $h->get('type');
-  my $bool  = $h->exists('type');
+  # Functional interface
+  my $value = get_header( $blosxom::header, 'foo' );
+  my $bool  = has_header( $blosxom::header, 'foo' );
+  set_header( $blosxom::header, 'bar' => 'baz' );
+  remove_header( $blosxom::header, 'foo' );
 
-  $h->set( type => 'text/plain' );
-  $h->remove('type');
+  # OO interface
+  my $h     = Blosxom::Header->new( $blosxom::header );
+  my $value = $h->get('foo');
+  my $bool  = $h->has('foo');
+  $h->set( bar => 'baz' );
+  $h->remove('foo');
 
 =head1 DESCRIPTION
 
@@ -134,37 +125,67 @@ When plugin developers modify HTTP headers, they must write as follows:
 It's obviously bad practice.
 Blosxom misses the interface to modify them.
 
-This module allows you to modify them in an object-oriented way:
+This module provieds you an OO interface:
 
-  my $h = Blosxom::Header->new($blosxom::header);
-  $h->set(Status => '304 Not Modified');
+  use Blosxom::Header;
+  my $h = Blosxom::Header->new( $blosxom::header );
+  $h->set( 'Status' => '304 Not Modified' );
+
+or a functional one:
+
+  use Blosxom::Header qw(set_header);
+  set_header( $blosxom::header, 'Status' => '304 Not Modified' );
 
 You don't need to mind whether to put a hyphen before a key,
 nor whether to make a key lowercased or L<camelized|String::CamelCase>.
+
+=head2 SUBROUTINES
+
+The following are exported on demand.
+
+=over 4
+
+=item get_header( $blosxom::header, 'foo' )
+
+Returns a value of the specified HTTP header.
+
+=item set_header( $blosxom::header, 'foo' => 'bar' )
+
+Sets a value of the specified HTTP header.
+
+=item has_header( $blosxom::header, 'foo' )
+
+Returns a Boolean value telling whether the specified HTTP header exists.
+
+=item remove_header( $blosxom::header, 'foo' )
+
+Deletes the specified element from HTTP headers.
+
+=back
 
 =head2 METHODS
 
 =over 4
 
-=item $h = Blosxom::Header->new($blosxom::header)
+=item $h = Blosxom::Header->new( $blosxom::header )
 
 Creates a new Blosxom::Header object.
 
-=item $h->exists('foo')
+=item $h->has( 'foo' )
 
-Returns a Boolean value telling whether the specified HTTP header exists.
+A synonym for has_header.
 
-=item $h->get('foo')
+=item $h->get( 'foo' )
 
-Returns a value of the specified HTTP header.
+A synonym for get_header.
 
-=item $h->remove('foo')
+=item $h->remove( 'foo' )
 
-Deletes the specified element from HTTP headers.
+A synonym for remove_header.
 
-=item $h->set('foo' => 'bar')
+=item $h->set( 'foo' => 'bar' )
 
-Sets a value of the specified HTTP header.
+A synonym for set_header.
 
 =back
 
