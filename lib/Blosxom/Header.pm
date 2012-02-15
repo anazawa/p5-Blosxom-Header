@@ -91,7 +91,10 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
   # blosxom.cgi
   package blosxom;
+  use CGI qw(header);
   our $header = { foo => 'bar' };
+  # loads plugins
+  print header( $header );
 
   # plugins/foo
   package foo;
@@ -103,7 +106,7 @@ Blosxom::Header - Missing interface to modify HTTP headers
   set_header( $blosxom::header, 'bar' => 'baz' );
   remove_header( $blosxom::header, 'foo' );
 
-  # OO interface
+  # Object-oriented interface
   my $h     = Blosxom::Header->new( $blosxom::header );
   my $value = $h->get('foo');
   my $bool  = $h->has('foo');
