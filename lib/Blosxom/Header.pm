@@ -6,13 +6,33 @@ use Exporter 'import';
 use List::Util 'first';
 
 our $VERSION   = '0.01013';
-our @EXPORT_OK = qw( get_header    set_header
-                     remove_header has_header header );
+our @EXPORT_OK = qw( get_header set_header remove_header has_header );
 
-sub header { 
-    my $header_ref = shift;
+sub new {
+    my $header_ref = $_[1];
+
+    # define what an object can do
+    my %header = (
+        get => sub {
+            my $key = shift;
+            get_header( $header_ref, $key );
+        },
+        set => sub {
+            my ( $key, $value ) = @_;
+            set_header( $header_ref, $key => $value );
+        },
+        has => sub {
+            my $key = shift;
+            has_header( $header_ref, $key );
+        },
+        remove => sub {
+            my $key = shift;
+            remove_header( $header_ref, $key );
+        },
+    );
+
     require Blosxom::Header::Object;
-    return Blosxom::Header::Object->new( $header_ref );
+    bless \%header, 'Blosxom::Header::Object';
 }
 
 sub get_header {
@@ -28,9 +48,7 @@ sub get_header {
 }
 
 sub set_header {
-    my $header_ref = shift;
-    my $key        = shift;
-    my $value      = shift;
+    my ( $header_ref, $key, $value ) = @_;
 
     # if any key matches $key, replaces the value with $value
     my @keys      = keys %{ $header_ref };
@@ -45,8 +63,8 @@ sub has_header {
     my $key        = _lc( shift );
 
     # if any key matches $key, returns true
-    for my $raw_key ( keys %{ $header_ref } ) {
-        return 1 if _lc( $raw_key ) eq $key;
+    for my $k ( keys %{ $header_ref } ) {
+        return 1 if _lc( $k ) eq $key;
     }
 
     return 0;
@@ -70,7 +88,7 @@ sub _lc {
     # get rid of an initial dash if exists
     $key =~ s{^\-}{};
 
-    # use hyphens instead of underscores
+    # use dashes instead of underscores
     $key =~ tr{_}{-};
 
     return $key;

@@ -1,31 +1,25 @@
 package Blosxom::Header::Object;
 use strict;
 use warnings;
-use Blosxom::Header qw(get_header set_header has_header remove_header);
+use Carp;
 
-sub new {
-    my ( $class, $header_ref ) = @_;
-    return bless \$header_ref, $class;
+sub can {
+    my ( $self, $method ) = @_;
+    exists $self->{ $method };
 }
 
-sub get {
-    my ( $self, $key ) = @_;
-    return get_header( $$self, $key );
-}
+sub AUTOLOAD {
+    my ( $self, @args ) = @_;
+    ( my $method = our $AUTOLOAD ) =~ s{.*::}{}o;
 
-sub has {
-    my ( $self, $key ) = @_;
-    return has_header( $$self, $key );
-}
+    return if $method eq 'DESTROY';
 
-sub remove {
-    my ( $self, $key ) = @_;
-    return remove_header( $$self, $key );
-}
+    unless ( $self->can( $method ) ) {
+        croak qq{Can't locate object method "$method" via package } .
+              __PACKAGE__;
+    }
 
-sub set {
-    my ( $self, $key, $value ) = @_;
-    return set_header( $$self, $key => $value );
+    $self->{ $method }->( @args );
 }
 
 1;
