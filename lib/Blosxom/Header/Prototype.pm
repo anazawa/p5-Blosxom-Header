@@ -20,6 +20,9 @@ sub new {
     my $self   = bless \do{ my $anon_scalar }, $class;
     my $id     = refaddr( $self ); 
 
+    my @invalid_methods = grep { ref $method{ $_ } ne 'CODE' } keys %method;
+    delete @method{ @invalid_methods };
+
     $prototype_of{ $id } = \%method;
 
     return $self;
