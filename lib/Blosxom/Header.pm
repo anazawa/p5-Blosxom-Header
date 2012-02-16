@@ -5,7 +5,7 @@ use warnings;
 use Exporter 'import';
 use List::Util 'first';
 
-our $VERSION   = '0.01014';
+our $VERSION   = '0.01015';
 our @EXPORT_OK = qw( get_header set_header delete_header exists_header );
 
 sub new {
@@ -92,15 +92,6 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
 =head1 SYNOPSIS
 
-  # blosxom.cgi
-  package blosxom;
-  use CGI qw(header);
-  our $header = { foo => 'bar' };
-  # loads plugins
-  print header( $header );
-
-  # plugins/foo
-  package foo;
   use Blosxom::Header qw(get_header set_header exists_header delete_header);
 
   # Functional interface
@@ -131,17 +122,7 @@ When plugin developers modify HTTP headers, they must write as follows:
 It's obviously bad practice.
 Blosxom misses the interface to modify them.
 
-This module provieds you an OO interface:
-
-  use Blosxom::Header;
-  my $h = Blosxom::Header->new( $blosxom::header );
-  $h->set( 'Status' => '304 Not Modified' );
-
-or a functional one:
-
-  use Blosxom::Header qw(set_header);
-  set_header( $blosxom::header, 'Status' => '304 Not Modified' );
-
+This module provieds you a functional one or an object-oriented one.
 You don't need to mind whether to put a hyphen before a key,
 nor whether to make a key lowercased or L<camelized|String::CamelCase>.
 
@@ -206,7 +187,7 @@ L<CGI>::header recognizes the following parameters.
 Can be used to turn the page into an attachment.
 Represents suggested name for the saved file.
 
-  $h->set(attachment => 'foo.png');
+  $h->set( attachment => 'foo.png' );
 
 In this case, the outgoing header will be formatted as:
 
@@ -217,15 +198,15 @@ In this case, the outgoing header will be formatted as:
 Represents the character set sent to the browser.
 If not provided, defaults to ISO-8859-1.
 
-  $h->set(charset => 'utf-8');
+  $h->set( charset => 'utf-8' );
 
 =item cookie
 
 Represents the Set-Cookie header.
 The parameter can be an arrayref or a string.
 
-  $h->set(cookie => [$cookie1, $cookie2]);
-  $h->set(cookie => $cookie);
+  $h->set( cookie => [$cookie1, $cookie2] );
+  $h->set( cookie => $cookie );
 
 Refer to L<CGI>::cookie.
 
@@ -235,16 +216,16 @@ Represents the Expires header.
 You can specify an absolute or relative expiration interval.
 The following forms are all valid for this field.
 
-  $h->set(expires => '+30s'); # 30 seconds from now
-  $h->set(expires => '+10m'); # ten minutes from now
-  $h->set(expires => '+1h' ); # one hour from now
-  $h->set(expires => '-1d' ); # yesterday
-  $h->set(expires => 'now' ); # immediately
-  $h->set(expires => '+3M' ); # in three months
-  $h->set(expires => '+10y'); # in ten years time
+  $h->set( expires => '+30s' ); # 30 seconds from now
+  $h->set( expires => '+10m' ); # ten minutes from now
+  $h->set( expires => '+1h'  ); # one hour from now
+  $h->set( expires => '-1d'  ); # yesterday
+  $h->set( expires => 'now'  ); # immediately
+  $h->set( expires => '+3M'  ); # in three months
+  $h->set( expires => '+10y' ); # in ten years time
 
   # at the indicated time & date
-  $h->set(expires => 'Thu, 25 Apr 1999 00:40:33 GMT');
+  $h->set( expires => 'Thu, 25 Apr 1999 00:40:33 GMT' );
 
 =item nph
 
@@ -252,15 +233,15 @@ If set to a true value,
 will issue the correct headers to work with
 a NPH (no-parse-header) script:
 
-  $h->set(nph => 1);
+  $h->set( nph => 1 );
 
 =item p3p
 
 Will add a P3P tag to the outgoing header.
 The parameter can be an arrayref or a space-delimited string.
 
-  $h->set(p3p => [qw(CAO DSP LAW CURa)]);
-  $h->set(p3p => 'CAO DSP LAW CURa');
+  $h->set( p3p => [qw(CAO DSP LAW CURa)] );
+  $h->set( p3p => 'CAO DSP LAW CURa' );
 
 In either case, the outgoing header will be formatted as:
 
@@ -270,7 +251,7 @@ In either case, the outgoing header will be formatted as:
 
 Represents the Content-Type header.
 
-  $h->set(type => 'text/plain');
+  $h->set( type => 'text/plain' );
 
 =back
 
