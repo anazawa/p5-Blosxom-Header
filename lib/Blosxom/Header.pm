@@ -5,7 +5,7 @@ use warnings;
 use Exporter 'import';
 use List::Util qw(first);
 
-our $VERSION     = '0.01015';
+our $VERSION     = '0.01016';
 our @EXPORT_OK   = qw( get_header set_header delete_header exists_header );
 our %EXPORT_TAGS = ( all => [ @EXPORT_OK ] );
 
