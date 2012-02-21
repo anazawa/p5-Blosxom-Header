@@ -9,6 +9,7 @@ our $VERSION     = '0.01016';
 our @EXPORT_OK   = qw( get_header set_header delete_header exists_header );
 our %EXPORT_TAGS = ( all => [ @EXPORT_OK ] );
 
+# aliase to Blosxom::Header::Object::new
 sub new {
     require Blosxom::Header::Object;
     Blosxom::Header::Object->new( $_[1] );
@@ -18,21 +19,28 @@ sub get_header {
     my $header_ref = shift;
     my $key        = _lc( shift );
 
-    # if any key matches $key, returns the value
-    while ( my ( $k, $v ) = each %{ $header_ref } ) {
-        return $v if _lc( $k ) eq $key;
+    if ( wantarray ) {
+        my @keys = grep { _lc( $_ ) eq $key } keys %{ $header_ref };
+        return @{ $header_ref }{ @keys };
     }
-
-    return;
+    else {
+        my $first_key = first { _lc( $_ ) eq $key } keys %{ $header_ref };
+        return $header_ref->{ $first_key };
+    }
 }
 
 sub set_header {
-    my ( $header_ref, $key, $value ) = @_;
+    my $header_ref = shift;
+    my $key        = shift;
+    my $value      = shift;
+    my @keys       = grep { _lc( $_ ) eq _lc( $key ) } keys %{ $header_ref };
 
-    # if any key matches $key, replaces the value with $value
-    my @keys      = keys %{ $header_ref };
-    my $first_key = first { _lc( $_ ) eq _lc( $key ) } @keys;
-    $header_ref->{ $first_key || $key } = $value;
+    if ( @keys ) {
+        $key = shift @keys;
+        delete @{ $header_ref }{ @keys };
+    }
+
+    $header_ref->{ $key } = $value;
 
     return;
 }
@@ -40,20 +48,16 @@ sub set_header {
 sub exists_header {
     my $header_ref = shift;
     my $key        = _lc( shift );
+    my @keys       = grep { _lc( $_ ) eq $key } keys %{ $header_ref };
 
-    # if any key matches $key, returns true
-    for my $k ( keys %{ $header_ref } ) {
-        return 1 if _lc( $k ) eq $key;
-    }
-
-    return 0;
+    return scalar @keys;
 }
 
 sub delete_header {
     my $header_ref = shift;
     my $key        = _lc( shift );
 
-    # deletes an element whose key matches $key
+    # deletes elements whose key matches $key
     my @keys = grep { _lc( $_ ) eq $key } keys %{ $header_ref };
     delete @{ $header_ref }{ @keys };
 

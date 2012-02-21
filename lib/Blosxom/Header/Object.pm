@@ -17,6 +17,19 @@ sub new {
     return $self;
 }
 
+sub header {
+    my $self = shift;
+    my $header_ref = shift;
+    my $id = refaddr( $self );
+
+    if ( ref $header_ref eq 'HASH' ) {
+        $header_of{ $id } = $header_ref;
+        return;
+    }
+
+    return $header_of{ $id };
+}
+
 sub get {
     my $self = shift;
     my $key  = shift;
