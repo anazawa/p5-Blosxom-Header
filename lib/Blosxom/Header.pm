@@ -2,14 +2,30 @@ package Blosxom::Header;
 use 5.008_001;
 use strict;
 use warnings;
+use Carp;
 use Exporter 'import';
 use List::Util qw(first);
 
 our $VERSION     = '0.01016';
-our @EXPORT_OK   = qw( get_header set_header delete_header exists_header );
+our @EXPORT_OK   = qw( get_header set_header push_header delete_header exists_header );
 our %EXPORT_TAGS = ( all => [ @EXPORT_OK ] );
 
-# aliase to Blosxom::Header::Object::new
+my %ALIAS_OF = (
+    'content-type' => 'type',
+    'set-cookie'   => 'cookie',
+);
+
+my %ISA_ArrayRef = (
+    attachment => 0,
+    charset    => 0,
+    cookie     => 1,
+    expires    => 0,
+    nph        => 0,
+    p3p        => 1,
+    type       => 0, 
+);
+
+# the alias of Blosxom::Header::Object::new
 sub new {
     require Blosxom::Header::Object;
     Blosxom::Header::Object->new( $_[1] );
@@ -17,55 +33,80 @@ sub new {
 
 sub get_header {
     my $header_ref = shift;
-    my $key        = _lc( shift );
+    my $key        = _norm( shift );
 
-    if ( wantarray ) {
-        my @keys = grep { _lc( $_ ) eq $key } keys %{ $header_ref };
-        return @{ $header_ref }{ @keys };
+    my @keys = grep { _norm( $_ ) eq $key } keys %{ $header_ref };
+    carp "Multiple elements specifies the same field: @keys" if @keys > 1;
+
+    my $value = $header_ref->{ $keys[0] };
+    if ( ref $value eq 'ARRAY' ) {
+        carp "The $key field can't be a reference to array" unless $ISA_ArrayRef{ $key };
+        my @values = @{ $value };
+        return wantarray ? @values : $values[0];
     }
-    else {
-        my $first_key = first { _lc( $_ ) eq $key } keys %{ $header_ref };
-        return $header_ref->{ $first_key };
-    }
+
+    $value;
 }
 
 sub set_header {
     my $header_ref = shift;
-    my $key        = shift;
+    my $key        = _norm( shift );
     my $value      = shift;
-    my @keys       = grep { _lc( $_ ) eq _lc( $key ) } keys %{ $header_ref };
 
-    if ( @keys ) {
-        $key = shift @keys;
-        delete @{ $header_ref }{ @keys };
-    }
-
+    delete_header( $header_ref, $key );
     $header_ref->{ $key } = $value;
+
+    return;
+}
+
+sub push_header {
+    my $header_ref = shift;
+    my $key        = _norm( shift );
+    my $value      = shift;
+
+    if ( $ISA_ArrayRef{ $key } ) {
+        my @values = get_header( $header_ref, $key );
+        push @values, $value;
+        set_header( $header_ref, $key => \@values );
+    }
+    else {
+        croak "Can't push the $key field.";
+    }
 
     return;
 }
 
 sub exists_header {
     my $header_ref = shift;
-    my $key        = _lc( shift );
-    my @keys       = grep { _lc( $_ ) eq $key } keys %{ $header_ref };
+    my $key        = _norm( shift );
 
-    return scalar @keys;
+    my @keys = grep { _norm( $_ ) eq $key } keys %{ $header_ref };
+    
+    if ( @keys > 1 ) {
+        carp "Multiple keys specifies the same field: @keys";
+        return 1;
+    }
+    elsif ( @keys ) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
 }
 
 sub delete_header {
     my $header_ref = shift;
-    my $key        = _lc( shift );
+    my $key        = _norm( shift );
 
     # deletes elements whose key matches $key
-    my @keys = grep { _lc( $_ ) eq $key } keys %{ $header_ref };
+    my @keys = grep { _norm( $_ ) eq $key } keys %{ $header_ref };
     delete @{ $header_ref }{ @keys };
 
     return;
 }
 
-# returns a lowercased version of a given string
-sub _lc {
+# normalizes keys
+sub _norm {
     my $key = lc shift;
 
     # get rid of an initial dash if exists
@@ -74,7 +115,8 @@ sub _lc {
     # use dashes instead of underscores
     $key =~ tr{_}{-};
 
-    return $key;
+    # returns the alias of $key if exists
+    $ALIAS_OF{ $key } || $key;
 }
 
 1;

@@ -2,6 +2,7 @@ package Blosxom::Header::Object;
 use strict;
 use warnings;
 use Blosxom::Header qw(:all);
+use Carp;
 use Scalar::Util qw(refaddr);
 
 my %header_of;
@@ -12,58 +13,48 @@ sub new {
     my $self       = bless \do { my $anon_scalar }, $class;
     my $id         = refaddr( $self );
 
-    $header_of{ $id } = $header_ref;
-
-    return $self;
-}
-
-sub header {
-    my $self = shift;
-    my $header_ref = shift;
-    my $id = refaddr( $self );
-
     if ( ref $header_ref eq 'HASH' ) {
         $header_of{ $id } = $header_ref;
-        return;
+    }
+    else {
+        croak "Not a reference to hash";
     }
 
-    return $header_of{ $id };
+    $self;
+}
+
+# read only
+sub header {
+    my $self = shift;
+    my $id = refaddr( $self );
+    $header_of{ $id };
 }
 
 sub get {
-    my $self = shift;
-    my $key  = shift;
-    my $id   = refaddr( $self );
-
-    return get_header( $header_of{ $id }, $key );
+    my ( $self, $key ) = @_;
+    get_header( $self->header, $key );
 }
 
 sub set {
-    my $self  = shift;
-    my $key   = shift;
-    my $value = shift;
-    my $id    = refaddr( $self );
+    my ( $self, $key, $value ) = @_;
+    set_header( $self->header, $key => $value );
+    return;
+}
 
-    set_header( $header_of{ $id }, $key => $value );
-
+sub push {
+    my ( $self, $key, $value ) = @_;
+    push_header( $self->header, $key, $value );
     return;
 }
 
 sub exists {
-    my $self = shift;
-    my $key  = shift;
-    my $id   = refaddr( $self );
-
-    return exists_header( $header_of{ $id }, $key );
+    my ( $self, $key ) = @_;
+    exists_header( $self->header, $key );
 }
 
 sub delete {
-    my $self = shift;
-    my $key  = shift;
-    my $id   = refaddr( $self );
-
-    delete_header( $header_of{ $id }, $key );
-
+    my ( $self, $key ) = @_;
+    delete_header( $self->header, $key );
     return;
 }
 
