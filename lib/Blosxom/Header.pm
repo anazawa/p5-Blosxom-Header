@@ -4,28 +4,12 @@ use strict;
 use warnings;
 use Carp;
 use Exporter 'import';
-use List::Util qw(first);
 
 our $VERSION     = '0.01016';
 our @EXPORT_OK   = qw( get_header set_header push_header delete_header exists_header );
 our %EXPORT_TAGS = ( all => [ @EXPORT_OK ] );
 
-my %ALIAS_OF = (
-    'content-type' => 'type',
-    'set-cookie'   => 'cookie',
-);
-
-my %ISA_ArrayRef = (
-    attachment => 0,
-    charset    => 0,
-    cookie     => 1,
-    expires    => 0,
-    nph        => 0,
-    p3p        => 1,
-    type       => 0, 
-);
-
-# the alias of Blosxom::Header::Object::new
+# the alias of Blosxom::Header::Object->new
 sub new {
     require Blosxom::Header::Object;
     Blosxom::Header::Object->new( $_[1] );
@@ -36,16 +20,12 @@ sub get_header {
     my $key        = _norm( shift );
 
     my @keys = grep { _norm( $_ ) eq $key } keys %{ $header_ref };
-    carp "Multiple elements specifies the same field: @keys" if @keys > 1;
+    return unless @keys;
+    carp "Multiple elements specify the same field: @keys" if @keys > 1;
 
     my $value = $header_ref->{ $keys[0] };
-    if ( ref $value eq 'ARRAY' ) {
-        carp "The $key field can't be a reference to array" unless $ISA_ArrayRef{ $key };
-        my @values = @{ $value };
-        return wantarray ? @values : $values[0];
-    }
-
-    $value;
+    return $value unless ref $value eq 'ARRAY';
+    wantarray ? @{ $value } : $value->[0];
 }
 
 sub set_header {
@@ -64,8 +44,8 @@ sub push_header {
     my $key        = _norm( shift );
     my $value      = shift;
 
-    if ( $ISA_ArrayRef{ $key } ) {
-        my @values = get_header( $header_ref, $key );
+    if ( $key eq 'cookie' or $key eq 'p3p' ) {
+        my @values = get_header( $header_ref, $key ) || ();
         push @values, $value;
         set_header( $header_ref, $key => \@values );
     }
@@ -81,17 +61,9 @@ sub exists_header {
     my $key        = _norm( shift );
 
     my @keys = grep { _norm( $_ ) eq $key } keys %{ $header_ref };
-    
-    if ( @keys > 1 ) {
-        carp "Multiple keys specifies the same field: @keys";
-        return 1;
-    }
-    elsif ( @keys ) {
-        return 1;
-    }
-    else {
-        return 0;
-    }
+    carp "Multiple elements specify the same field: @keys" if @keys > 1;
+
+    @keys ? 1 : 0;
 }
 
 sub delete_header {
@@ -105,8 +77,9 @@ sub delete_header {
     return;
 }
 
-# normalizes keys
+# normalizes a given key
 sub _norm {
+    # do lowercase
     my $key = lc shift;
 
     # get rid of an initial dash if exists
@@ -116,7 +89,8 @@ sub _norm {
     $key =~ tr{_}{-};
 
     # returns the alias of $key if exists
-    $ALIAS_OF{ $key } || $key;
+    $key eq 'content-type' ? 'type'   :
+    $key eq 'set-cookie'   ? 'cookie' : $key;
 }
 
 1;

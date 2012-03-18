@@ -5,66 +5,62 @@ use Blosxom::Header qw(:all);
 use Carp;
 use Scalar::Util qw(refaddr);
 
-my %header_of;
+{
+    my %header_of;
 
-sub new {
-    my $class      = shift;
-    my $header_ref = shift;
-    my $self       = bless \do { my $anon_scalar }, $class;
-    my $id         = refaddr( $self );
+    sub new {
+        my ( $class, $header_ref ) = @_;
 
-    if ( ref $header_ref eq 'HASH' ) {
+        unless ( ref $header_ref eq 'HASH' ) {
+            croak 'Must pass a reference to hash.';
+        }
+
+        my $self = bless \do { my $anon_scalar }, $class;
+        my $id = refaddr( $self );
         $header_of{ $id } = $header_ref;
-    }
-    else {
-        croak "Not a reference to hash";
+        $self;
     }
 
-    $self;
-}
+    # read only
+    sub header {
+        my $self = shift;
+        my $id = refaddr( $self );
+        $header_of{ $id };
+    }
 
-# read only
-sub header {
-    my $self = shift;
-    my $id = refaddr( $self );
-    $header_of{ $id };
-}
+    sub get {
+        my ( $self, $key ) = @_;
+        get_header( $self->header, $key );
+    }
 
-sub get {
-    my ( $self, $key ) = @_;
-    get_header( $self->header, $key );
-}
+    sub set {
+        my ( $self, $key, $value ) = @_;
+        set_header( $self->header, $key => $value );
+        return;
+    }
 
-sub set {
-    my ( $self, $key, $value ) = @_;
-    set_header( $self->header, $key => $value );
-    return;
-}
+    sub push {
+        my ( $self, $key, $value ) = @_;
+        push_header( $self->header, $key, $value );
+        return;
+    }
 
-sub push {
-    my ( $self, $key, $value ) = @_;
-    push_header( $self->header, $key, $value );
-    return;
-}
+    sub exists {
+        my ( $self, $key ) = @_;
+        exists_header( $self->header, $key );
+    }
 
-sub exists {
-    my ( $self, $key ) = @_;
-    exists_header( $self->header, $key );
-}
+    sub delete {
+        my ( $self, $key ) = @_;
+        delete_header( $self->header, $key );
+        return;
+    }
 
-sub delete {
-    my ( $self, $key ) = @_;
-    delete_header( $self->header, $key );
-    return;
-}
-
-sub DESTROY {
-    my $self = shift;
-    my $id   = refaddr( $self );
-
-    delete $header_of{ $id };
-
-    return;
+    sub DESTROY {
+        my $id = refaddr( shift );
+        delete $header_of{ $id };
+        return;
+    }
 }
 
 1;
