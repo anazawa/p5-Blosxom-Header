@@ -1,13 +1,19 @@
 use strict;
-use Test::More;
 use Blosxom::Header;
+use Test::More;
 
 {
     my $header_ref = {};
     my $h = Blosxom::Header->new( $header_ref );
     isa_ok $h, 'Blosxom::Header::Object';
-    can_ok $h, qw( new header get set push exists delete DESTROY );
+    #can_ok $h, qw( new header get set push exists delete DESTROY );
+    can_ok $h, qw( new header get set push_cookie exists delete DESTROY );
     is $h->header, $header_ref;
+}
+
+{
+    eval { Blosxom::Header->new };
+    like $@, qr{^Must pass a reference to hash.};
 }
 
 {
@@ -28,11 +34,12 @@ use Blosxom::Header;
     my $header_ref = {};
     my $h = Blosxom::Header->new( $header_ref );
 
-    $h->push( cookie => 'foo' );
+    #$h->push( 'Set-Cookie', 'foo' );
+    $h->push_cookie( 'foo' );
     is_deeply $header_ref, { cookie => [ 'foo' ] };
 
-    $h->push( p3p => 'foo' );
-    is_deeply $header_ref, { cookie => [ 'foo' ], p3p => [ 'foo' ] };
+    #$h->push( 'P3P', 'foo' );
+    #is_deeply $header_ref, { cookie => [ 'foo' ], p3p => [ 'foo' ] };
 }
 
 done_testing;

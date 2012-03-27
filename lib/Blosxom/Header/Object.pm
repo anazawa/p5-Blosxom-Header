@@ -1,8 +1,9 @@
 package Blosxom::Header::Object;
 use strict;
 use warnings;
-use Blosxom::Header qw(:all);
-use Carp;
+#use Blosxom::Header qw(:all);
+use Blosxom::Header;
+#use Carp;
 use Scalar::Util qw(refaddr);
 
 {
@@ -10,11 +11,12 @@ use Scalar::Util qw(refaddr);
 
     sub new {
         my ( $class, $header_ref ) = @_;
-
+        
         unless ( ref $header_ref eq 'HASH' ) {
-            croak 'Must pass a reference to hash.';
+            require Carp;
+            Carp::croak( 'Must pass a reference to hash.' );
         }
-
+        
         my $self = bless \do { my $anon_scalar }, $class;
         my $id = refaddr( $self );
         $header_of{ $id } = $header_ref;
@@ -30,29 +32,35 @@ use Scalar::Util qw(refaddr);
 
     sub get {
         my ( $self, $key ) = @_;
-        get_header( $self->header, $key );
+        Blosxom::Header::get_header( $self->header, $key );
     }
 
     sub set {
         my ( $self, $key, $value ) = @_;
-        set_header( $self->header, $key => $value );
+        Blosxom::Header::set_header( $self->header, $key => $value );
         return;
     }
 
-    sub push {
-        my ( $self, $key, $value ) = @_;
-        push_header( $self->header, $key, $value );
+    #sub push {
+    #    my ( $self, $key, $value ) = @_;
+    #    push_header( $self->header, $key, $value );
+    #    return;
+    #}
+
+    sub push_cookie {
+        my ( $self, $cookie ) = @_;
+        Blosxom::Header::push_cookie( $self->header, $cookie );
         return;
     }
 
     sub exists {
         my ( $self, $key ) = @_;
-        exists_header( $self->header, $key );
+        Blosxom::Header::exists_header( $self->header, $key );
     }
 
     sub delete {
         my ( $self, $key ) = @_;
-        delete_header( $self->header, $key );
+        Blosxom::Header::delete_header( $self->header, $key );
         return;
     }
 

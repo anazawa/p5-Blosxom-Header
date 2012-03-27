@@ -4,6 +4,8 @@ use Blosxom::Header;
 
 {
     my %tests = (
+        q{}            => q{},
+        '-'            => q{},
         'foo'          => 'foo',
         'Foo'          => 'foo',
         '-foo'         => 'foo',
@@ -24,7 +26,9 @@ use Blosxom::Header;
         '-Foo_bar'     => 'foo-bar',
         '-foo_Bar'     => 'foo-bar',
         '-Foo_Bar'     => 'foo-bar',
+        'type'         => 'type',
         'content-type' => 'type',
+        'cookie'       => 'cookie',
         'set-cookie'   => 'cookie',
     );
 

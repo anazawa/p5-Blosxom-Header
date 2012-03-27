@@ -4,19 +4,19 @@ use Blosxom::Header qw(set_header);
 
 {
     my $header_ref = { '-foo' => 'bar' };
-    set_header( $header_ref, bar => 'baz' );
+    set_header( $header_ref, '-bar' => 'baz' );
     is_deeply $header_ref, { '-foo' => 'bar', 'bar' => 'baz' };
 }
 
 {
     my $header_ref = { '-foo' => 'bar' };
-    set_header( $header_ref, -foo => q{} );
-    is_deeply $header_ref, { 'foo' => q{} }, 'set empty string';
+    set_header( $header_ref, '-bar' => q{} );
+    is_deeply $header_ref, { '-foo' => 'bar', 'bar' => q{} }, 'set empty string';
 }
 
 {
     my $header_ref = { '-foo' => 'bar' };
-    set_header( $header_ref, -foo => 'baz' );
+    set_header( $header_ref, '-foo' => 'baz' );
     is_deeply $header_ref, { 'foo' => 'baz' }, 'set overwrite';
 }
 

@@ -6,6 +6,7 @@ use Blosxom::Header qw(get_header);
 {
     my $header_ref = { '-foo' => 'bar' };
     is get_header( $header_ref, '-foo' ), 'bar';
+    is get_header( $header_ref, '-bar' ), undef, 'get undef';
 }
 
 {
@@ -14,11 +15,11 @@ use Blosxom::Header qw(get_header);
 }
 
 {
-    my $header_ref = { '-foo' => [ 'bar', 'baz' ] };
-    is get_header( $header_ref, 'foo' ), 'bar', 'get scalar context';
+    my $header_ref = { '-cookie' => [ 'foo', 'bar' ] };
+    is get_header( $header_ref, 'cookie' ), 'foo', 'get scalar context';
 
-    my @values = get_header( $header_ref, 'foo' );
-    is_deeply \@values, [ 'bar', 'baz' ], 'get list context';
+    my @values = get_header( $header_ref, 'cookie' );
+    is_deeply \@values, [ 'foo', 'bar' ], 'get list context';
 }
 
 {

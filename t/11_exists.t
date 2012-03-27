@@ -4,13 +4,13 @@ use Test::Warn;
 use Blosxom::Header qw(exists_header);
 
 {
-    my $header_ref = { '-foo' => 'bar', '-bar' => 'baz' };
+    my $header_ref = { '-foo' => 'bar' };
     ok exists_header( $header_ref, '-foo' );
-    ok !exists_header( $header_ref, 'baz' );
+    ok !exists_header( $header_ref, '-bar' );
 }
 
 {
-    my $header_ref = { '-foo' => 'bar', '-bar' => 'baz' };
+    my $header_ref = { '-foo' => 'bar' };
     ok exists_header( $header_ref, 'Foo' ), 'exists case-sensitive';
 }
 
