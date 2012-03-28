@@ -5,10 +5,8 @@ use warnings;
 use Carp;
 use Exporter 'import';
 
-our $VERSION     = '0.02000';
-#our @EXPORT_OK   = qw( get_header set_header push_header delete_header exists_header );
-our @EXPORT_OK   = qw( get_header set_header push_cookie delete_header exists_header );
-#our %EXPORT_TAGS = ( all => [ @EXPORT_OK ] );
+our $VERSION   = '0.02000';
+our @EXPORT_OK = qw( get_header set_header push_cookie delete_header exists_header );
 
 # the alias of Blosxom::Header::Object->new
 sub new {
@@ -20,11 +18,15 @@ sub get_header {
     my $header_ref = shift;
     my $key        = _norm( shift );
 
-    my @keys = grep { _norm( $_ ) eq $key } keys %{ $header_ref };
-    return unless @keys;
-    carp "Multiple elements specify the same field: @keys" if @keys > 1;
+    my @values;
+    while ( my ( $k, $v ) = each %{ $header_ref } ) {
+        push @values, $v if $key eq _norm( $k );
+    }
 
-    my $value = $header_ref->{ $keys[0] };
+    return unless @values;
+    carp "Multiple elements specify the $key header." if @values > 1;
+
+    my $value = shift @values;
     return $value unless ref $value eq 'ARRAY';
     wantarray ? @{ $value } : $value->[0];
 }
@@ -55,47 +57,32 @@ sub exists_header {
     my $header_ref = shift;
     my $key        = _norm( shift );
 
-    my @keys = grep { _norm( $_ ) eq $key } keys %{ $header_ref };
-    carp "Multiple elements specify the same field: @keys" if @keys > 1;
+    my $exists = 0;
+    for my $k ( keys %{ $header_ref } ) {
+        $exists++ if _norm( $k ) eq $key;
+    }
 
-    @keys ? 1 : 0;
+    carp "$exists elements specify the $key field." if $exists > 1;
+    $exists;
 }
-
-
-#sub push_header {
-#    my $header_ref = shift;
-#    my $key        = _norm( shift );
-#    my $value      = shift;
-
-#    if ( $key eq 'cookie' or $key eq 'p3p' ) {
-#        my @values = get_header( $header_ref, $key );
-#        push @values, $value;
-#        set_header( $header_ref, $key => \@values );
-#    } 
-#    else {
-#        croak "Can't push the $key field.";
-#    }
-
-#    return;
-#}
 
 sub push_cookie {
     my ( $header_ref, $cookie ) = @_;
-    my @cookies = get_header( $header_ref, 'cookie' );
+    my @cookies = get_header( $header_ref, 'cookie' ) || ();
     push @cookies, $cookie;
     set_header( $header_ref, 'cookie' => \@cookies );
     return;
 }
 
 {
+    # suppose read-only
     my %alias_of = (
         'content-type' => 'type',
         'set-cookie'   => 'cookie',
     );
 
-    # normalizes a given key
+    # normalize a given key
     sub _norm {
-        # do lowercase
         my $key = lc shift;
 
         # get rid of an initial dash if exists

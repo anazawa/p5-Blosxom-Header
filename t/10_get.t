@@ -25,7 +25,7 @@ use Blosxom::Header qw(get_header);
 {
     my $header_ref = { '-foo' => 'bar', 'foo' => 'baz' };
     warning_is { get_header( $header_ref, 'foo' ) }
-        'Multiple elements specify the same field: -foo foo';
+        'Multiple elements specify the foo header.';
 }
 
 done_testing;
