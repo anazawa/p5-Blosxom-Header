@@ -1,15 +1,12 @@
-# vim: ft=perl
-# Blosxom plugin: conditional_get
-# Purpose: enables conditional GET
-# Author: Ryo Anazawa <anazawa@cpan.org>
-# Version: 0.01003 (2012/02/08)
-# Documentation: See the bottom of this file or type: perldoc conditional_get
+# Blosxom plugin : conditional_get
+# Purpose        : enables conditional GET
+# Author         : Ryo Anazawa <anazawa@cpan.org>
+# Version        : 0.01003 (2012/02/08)
+# Documentation  : See the bottom of this file or type: perldoc conditional_get
 
 package conditional_get;
 use strict;
 use warnings;
-use FindBin;
-use lib "$FindBin::Bin/../lib";
 use Blosxom::Header;
 
 our $VERSION = '0.01003';
@@ -18,16 +15,16 @@ sub start { !$blosxom::static_entries }
 
 sub last {
     return unless $ENV{REQUEST_METHOD} =~ /^(GET|HEAD)$/;
+    my $h = Blosxom::Header->new( $blosxom::header );
 
-    my $h = Blosxom::Header->new($blosxom::header);
-    if (etag_matches($h) or not_modified_since($h)) {
-        $h->set('Status' => '304 Not Modified');
-        $h->remove($_) for qw(attachment Content-Length);
+    if ( etag_matches( $h ) or not_modified_since( $h ) ) {
+        $h->set( Status => '304 Not Modified' );
+        $h->delete( $_ ) for qw( attachment Content-Length );
 
         # If Content-Type isn't defined,
-        # CGI::header will add default value.
+        # CGI::header() will add the default value.
         # And so makes it defined.
-        $h->set(type => q{});
+        $h->set( type => q{} );
 
         # Truncate output
         $blosxom::output = q{};
@@ -43,14 +40,14 @@ sub last {
 
 sub etag_matches {
     my $h = shift;
-    return unless $h->exists('ETag');
-    $h->get('ETag') eq _value($ENV{HTTP_IF_NONE_MATCH});
+    return unless $h->exists( 'ETag' );
+    $h->get( 'ETag' ) eq _value( $ENV{HTTP_IF_NONE_MATCH} );
 }
 
 sub not_modified_since {
     my $h = shift;
-    return unless $h->exists('Last-Modified');
-    $h->get('Last-Modified') eq _value($ENV{HTTP_IF_MODIFIED_SINCE});
+    return unless $h->exists( 'Last-Modified' );
+    $h->get( 'Last-Modified' ) eq _value( $ENV{HTTP_IF_MODIFIED_SINCE} );
 }
 
 # > IE sends wrong formatted value

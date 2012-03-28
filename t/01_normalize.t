@@ -1,40 +1,72 @@
 use strict;
-use Test::More;
 use Blosxom::Header;
+use Test::Base;
+plan tests => 1 * blocks;
 
-{
-    my %tests = (
-        q{}            => q{},
-        '-'            => q{},
-        'foo'          => 'foo',
-        'Foo'          => 'foo',
-        '-foo'         => 'foo',
-        '-Foo'         => 'foo',
-        'foo-bar'      => 'foo-bar',
-        'Foo-bar'      => 'foo-bar',
-        'foo-Bar'      => 'foo-bar',
-        'Foo-Bar'      => 'foo-bar',
-        'foo_bar'      => 'foo-bar',
-        'Foo_bar'      => 'foo-bar',
-        'foo_Bar'      => 'foo-bar',
-        'Foo_Bar'      => 'foo-bar',
-        '-foo-bar'     => 'foo-bar',
-        '-Foo-bar'     => 'foo-bar',
-        '-foo-Bar'     => 'foo-bar',
-        '-Foo-Bar'     => 'foo-bar',
-        '-foo_bar'     => 'foo-bar',
-        '-Foo_bar'     => 'foo-bar',
-        '-foo_Bar'     => 'foo-bar',
-        '-Foo_Bar'     => 'foo-bar',
-        'type'         => 'type',
-        'content-type' => 'type',
-        'cookie'       => 'cookie',
-        'set-cookie'   => 'cookie',
-    );
+run {
+    my $block  = shift;
+    my $output = Blosxom::Header::_norm( $block->input );
+    is $output, $block->expected;
+};
 
-    while ( my ( $input, $output ) = each %tests ) {
-        is Blosxom::Header::_norm( $input ), $output;
-    }
-}
-
-done_testing;
+__DATA__
+===
+--- input:    foo
+--- expected: foo
+===
+--- input:    Foo
+--- expected: foo
+===
+--- input:    -foo
+--- expected: foo
+===
+--- input:    -Foo
+--- expected: foo
+===
+--- input:    foo-bar
+--- expected: foo-bar
+===
+--- input:    Foo-bar
+--- expected: foo-bar
+===
+--- input:    Foo-Bar
+--- expected: foo-bar
+===
+--- input:    foo_bar
+--- expected: foo-bar
+===
+--- input:    Foo_bar
+--- expected: foo-bar
+===
+--- input:    Foo_Bar
+--- expected: foo-bar
+===
+--- input:    -foo-bar
+--- expected: foo-bar
+===
+--- input:    -Foo-bar
+--- expected: foo-bar
+===
+--- input:    -Foo-Bar
+--- expected: foo-bar
+===
+--- input:    -foo_bar
+--- expected: foo-bar
+===
+--- input:    -Foo_bar
+--- expected: foo-bar
+===
+--- input:    -Foo_Bar
+--- expected: foo-bar
+===
+--- input:    type
+--- expected: type
+===
+--- input:    content-type
+--- expected: type
+===
+--- input:    cookie
+--- expected: cookie
+===
+--- input:    set-cookie
+--- expected: cookie
