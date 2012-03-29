@@ -1,64 +1,45 @@
-package Blosxom::Header::Object;
+package Blosxom::Header::Class;
 use strict;
 use warnings;
 use Blosxom::Header;
-use Scalar::Util qw(refaddr);
 
-{
-    my %header_of;
-
-    sub new {
-        my $class      = shift;
-        my $header_ref = shift || $blosxom::header;
+sub new {
+    my $class      = shift;
+    my $header_ref = shift || $blosxom::header;
         
-        unless ( ref $header_ref eq 'HASH' ) {
-            require Carp;
-            Carp::croak( 'Must pass a reference to hash.' );
-        }
-        
-        my $self = bless \do { my $anon_scalar }, $class;
-        $header_of{ refaddr $self } = $header_ref;
-        $self;
+    unless ( ref $header_ref eq 'HASH' ) {
+        require Carp;
+        Carp::croak( 'Must pass a reference to hash.' );
     }
 
-    # read only
-    sub header {
-        my $self = shift;
-        $header_of{ refaddr $self };
-    }
-
-    sub DESTROY {
-        my $self = shift;
-        delete $header_of{ refaddr $self };
-        return;
-    }
+    bless { header => $header_ref }, $class;
 }
 
 sub get {
     my ( $self, $key ) = @_;
-    Blosxom::Header::get_header( $self->header, $key );
+    Blosxom::Header::get_header( $self->{header}, $key );
 }
 
 sub set {
     my ( $self, $key, $value ) = @_;
-    Blosxom::Header::set_header( $self->header, $key => $value );
+    Blosxom::Header::set_header( $self->{header}, $key => $value );
     return;
 }
-
-sub push_cookie {
-    my ( $self, $cookie ) = @_;
-    Blosxom::Header::push_cookie( $self->header, $cookie );
-    return;
-}
-
+ 
 sub exists {
     my ( $self, $key ) = @_;
-    Blosxom::Header::exists_header( $self->header, $key );
+    Blosxom::Header::exists_header( $self->{header}, $key );
 }
 
 sub delete {
     my ( $self, $key ) = @_;
-    Blosxom::Header::delete_header( $self->header, $key );
+    Blosxom::Header::delete_header( $self->{header}, $key );
+    return;
+}
+
+sub push_cookie {
+    my ( $self, $key, $value ) = @_;
+    Blosxom::Header::push_cookie( $self->{header}, $key, $value );
     return;
 }
 

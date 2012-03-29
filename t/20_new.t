@@ -17,23 +17,23 @@ use Test::More;
     undef $blosxom::header;
     my $header_ref = {};
     my $h = Blosxom::Header->new( $header_ref );
-    isa_ok $h, 'Blosxom::Header::Object';
-    can_ok $h, qw( new header get set push_cookie exists delete DESTROY );
-    is $h->header, $header_ref;
+    isa_ok $h, 'Blosxom::Header::Class';
+    can_ok $h, qw( new get set push_cookie exists delete );
+    is $h->{header}, $header_ref;
 }
 
 {
     $blosxom::header = {};
     my $h = Blosxom::Header->new;
-    is $h->header, $blosxom::header;
+    is $h->{header}, $blosxom::header;
 }
 
 {
     $blosxom::header = {};
     my $header_ref = {};
     my $h = Blosxom::Header->new( $header_ref );
-    is   $h->header, $header_ref;
-    isnt $h->header, $blosxom::header;
+    is   $h->{header}, $header_ref;
+    isnt $h->{header}, $blosxom::header;
 }
 
 done_testing;

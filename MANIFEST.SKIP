@@ -9,3 +9,4 @@ MYMETA*
 ^blib/
 ^\.shipit$
 \.old$
+\.DS_Store$

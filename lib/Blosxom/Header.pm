@@ -8,10 +8,10 @@ use Exporter 'import';
 our $VERSION   = '0.02003';
 our @EXPORT_OK = qw( get_header set_header push_cookie delete_header exists_header );
 
-# the alias of Blosxom::Header::Object->new
+# the alias of Blosxom::Header::Class->new
 sub new {
-    require Blosxom::Header::Object;
-    Blosxom::Header::Object->new( $_[1] );
+    require Blosxom::Header::Class;
+    Blosxom::Header::Class->new( $_[1] );
 }
 
 sub get_header {
@@ -27,12 +27,10 @@ sub get_header {
     carp "Multiple elements specify the $key header." if @values > 1;
 
     my $value = shift @values;
-    if ( ref $value eq 'ARRAY' ) {
-        carp "The $key header must be scalar." if $key ne 'cookie' and $key ne 'p3p';
-        return wantarray ? @{ $value } : $value->[0];
-    }
+    return $value unless ref $value eq 'ARRAY';
 
-    $value;
+    carp "The $key header must be scalar." if $key ne 'cookie' and $key ne 'p3p';
+    return wantarray ? @{ $value } : $value->[0];
 }
 
 sub delete_header {
