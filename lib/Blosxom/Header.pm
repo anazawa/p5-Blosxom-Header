@@ -5,7 +5,7 @@ use warnings;
 use Carp;
 use Exporter 'import';
 
-our $VERSION   = '0.02002';
+our $VERSION   = '0.02003';
 our @EXPORT_OK = qw( get_header set_header push_cookie delete_header exists_header );
 
 # the alias of Blosxom::Header::Object->new
