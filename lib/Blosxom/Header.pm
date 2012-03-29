@@ -1,5 +1,5 @@
 package Blosxom::Header;
-use 5.008_001;
+use 5.008_009;
 use strict;
 use warnings;
 use Carp;
@@ -27,8 +27,12 @@ sub get_header {
     carp "Multiple elements specify the $key header." if @values > 1;
 
     my $value = shift @values;
-    return $value unless ref $value eq 'ARRAY';
-    wantarray ? @{ $value } : $value->[0];
+    if ( ref $value eq 'ARRAY' ) {
+        carp "The $key header must be scalar." if $key ne 'cookie' and $key ne 'p3p';
+        return wantarray ? @{ $value } : $value->[0];
+    }
+
+    $value;
 }
 
 sub delete_header {
@@ -62,7 +66,7 @@ sub exists_header {
         $exists++ if _norm( $k ) eq $key;
     }
 
-    carp "$exists elements specify the $key field." if $exists > 1;
+    carp "$exists elements specify the $key header." if $exists > 1;
     $exists;
 }
 

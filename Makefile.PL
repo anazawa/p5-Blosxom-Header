@@ -11,7 +11,7 @@ test_requires 'Test::More';
 test_requires 'Test::Warn';
 test_requires 'Test::Base';
 test_requires 'YAML';
-test_requires 'Test::POD';
+test_requires 'Test::Pod';
 
 tests_recursive;
 

@@ -23,9 +23,24 @@ use Blosxom::Header qw(get_header);
 }
 
 {
+    my $header_ref = { '-p3p' => [ 'foo', 'bar' ] };
+    is get_header( $header_ref, 'p3p' ), 'foo', 'get scalar context';
+
+    my @values = get_header( $header_ref, 'p3p' );
+    is_deeply \@values, [ 'foo', 'bar' ], 'get list context';
+}
+
+{
+    my $header_ref = { 'foo' => [ 'bar', 'baz' ] };
+    warning_is { get_header( $header_ref, 'foo' ) }
+        'The foo header must be scalar.';
+}
+
+{
     my $header_ref = { '-foo' => 'bar', 'foo' => 'baz' };
     warning_is { get_header( $header_ref, 'foo' ) }
         'Multiple elements specify the foo header.';
 }
+
 
 done_testing;

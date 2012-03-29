@@ -8,7 +8,8 @@ use Scalar::Util qw(refaddr);
     my %header_of;
 
     sub new {
-        my ( $class, $header_ref ) = @_;
+        my $class      = shift;
+        my $header_ref = shift || $blosxom::header;
         
         unless ( ref $header_ref eq 'HASH' ) {
             require Carp;
@@ -16,21 +17,19 @@ use Scalar::Util qw(refaddr);
         }
         
         my $self = bless \do { my $anon_scalar }, $class;
-        my $id = refaddr( $self );
-        $header_of{ $id } = $header_ref;
+        $header_of{ refaddr $self } = $header_ref;
         $self;
     }
 
     # read only
     sub header {
         my $self = shift;
-        my $id = refaddr( $self );
-        $header_of{ $id };
+        $header_of{ refaddr $self };
     }
 
     sub DESTROY {
-        my $id = refaddr( shift );
-        delete $header_of{ $id };
+        my $self = shift;
+        delete $header_of{ refaddr $self };
         return;
     }
 }
@@ -73,7 +72,7 @@ Blosxom::Header::Object - Wraps subroutines exported by Blosxom::Header in an ob
 
 =head1 SYNOPSIS
 
-  use Blosxom::Header::Object;
+  require Blosxom::Header::Object;
 
   my $h     = Blosxom::Header::Object->new( $blosxom::header );
   my $value = $h->get( 'foo' );
