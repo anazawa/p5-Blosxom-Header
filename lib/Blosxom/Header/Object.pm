@@ -28,39 +28,39 @@ use Scalar::Util qw(refaddr);
         $header_of{ $id };
     }
 
-    sub get {
-        my ( $self, $key ) = @_;
-        Blosxom::Header::get_header( $self->header, $key );
-    }
-
-    sub set {
-        my ( $self, $key, $value ) = @_;
-        Blosxom::Header::set_header( $self->header, $key => $value );
-        return;
-    }
-
-    sub push_cookie {
-        my ( $self, $cookie ) = @_;
-        Blosxom::Header::push_cookie( $self->header, $cookie );
-        return;
-    }
-
-    sub exists {
-        my ( $self, $key ) = @_;
-        Blosxom::Header::exists_header( $self->header, $key );
-    }
-
-    sub delete {
-        my ( $self, $key ) = @_;
-        Blosxom::Header::delete_header( $self->header, $key );
-        return;
-    }
-
     sub DESTROY {
         my $id = refaddr( shift );
         delete $header_of{ $id };
         return;
     }
+}
+
+sub get {
+    my ( $self, $key ) = @_;
+    Blosxom::Header::get_header( $self->header, $key );
+}
+
+sub set {
+    my ( $self, $key, $value ) = @_;
+    Blosxom::Header::set_header( $self->header, $key => $value );
+    return;
+}
+
+sub push_cookie {
+    my ( $self, $cookie ) = @_;
+    Blosxom::Header::push_cookie( $self->header, $cookie );
+    return;
+}
+
+sub exists {
+    my ( $self, $key ) = @_;
+    Blosxom::Header::exists_header( $self->header, $key );
+}
+
+sub delete {
+    my ( $self, $key ) = @_;
+    Blosxom::Header::delete_header( $self->header, $key );
+    return;
 }
 
 1;
