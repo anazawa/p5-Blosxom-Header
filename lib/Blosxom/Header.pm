@@ -137,6 +137,8 @@ Blosxom::Header - Missing interface to modify HTTP headers
   my @cookies = $h->get( 'Set-Cookie' );
   $h->push_cookie( 'foo' );
 
+  $h->header; # same reference as $blosxom::header
+
 =head1 DESCRIPTION
 
 Blosxom, a weblog application, exports a global variable $header
@@ -221,6 +223,10 @@ A synonym for set_header.
 =item $h->push_cookie( 'foo' )
 
 A synonym for push_cookie.
+
+=item $h->header
+
+Returns the same reference as $blosxom::header.
 
 =back
 

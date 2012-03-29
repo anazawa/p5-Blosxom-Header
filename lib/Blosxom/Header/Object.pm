@@ -1,9 +1,7 @@
 package Blosxom::Header::Object;
 use strict;
 use warnings;
-#use Blosxom::Header qw(:all);
 use Blosxom::Header;
-#use Carp;
 use Scalar::Util qw(refaddr);
 
 {
@@ -40,12 +38,6 @@ use Scalar::Util qw(refaddr);
         Blosxom::Header::set_header( $self->header, $key => $value );
         return;
     }
-
-    #sub push {
-    #    my ( $self, $key, $value ) = @_;
-    #    push_header( $self->header, $key, $value );
-    #    return;
-    #}
 
     sub push_cookie {
         my ( $self, $cookie ) = @_;
@@ -86,8 +78,14 @@ Blosxom::Header::Object - Wraps subroutines exported by Blosxom::Header in an ob
   my $h     = Blosxom::Header::Object->new( $blosxom::header );
   my $value = $h->get( 'foo' );
   my $bool  = $h->exists( 'foo' );
-  $h->set( 'foo' => 'bar' );
-  $h->remove( 'foo' );
+
+  $h->set( foo => 'bar' );
+  $h->delete( 'foo' );
+
+  my @cookies = $h->get( 'Set-Cookie' );
+  $h->push_cookie( 'foo' );
+
+  $h->header; # same reference as $blosxom::header
 
 =head1 DESCRIPTION
 
@@ -99,7 +97,7 @@ Ryo Anazawa (anazawa@cpan.org)
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2011 Ryo Anazawa. All rights reserved.
+Copyright (c) 2011-2012 Ryo Anazawa. All rights reserved.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.
