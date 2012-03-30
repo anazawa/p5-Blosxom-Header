@@ -7,18 +7,14 @@ use Blosxom::Header qw(get_header);
     my $header_ref = { '-foo' => 'bar' };
     is get_header( $header_ref, '-foo' ), 'bar';
     is get_header( $header_ref, '-bar' ), undef, 'get undef';
-}
-
-{
-    my $header_ref = { '-foo' => 'bar' };
-    is get_header( $header_ref, 'Foo' ), 'bar', 'get case-sensitive';
+    is get_header( $header_ref, 'Foo'  ), 'bar', 'get case-sensitive';
 }
 
 {
     my $header_ref = { '-cookie' => [ 'foo', 'bar' ] };
-    is get_header( $header_ref, 'cookie' ), 'foo', 'get scalar context';
+    is get_header( $header_ref, 'Set-Cookie' ), 'foo', 'get scalar context';
 
-    my @values = get_header( $header_ref, 'cookie' );
+    my @values = get_header( $header_ref, 'Set-Cookie' );
     is_deeply \@values, [ 'foo', 'bar' ], 'get list context';
 }
 

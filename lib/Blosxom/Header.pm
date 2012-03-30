@@ -6,7 +6,7 @@ use Carp;
 use Exporter 'import';
 
 our $VERSION   = '0.02003';
-our @EXPORT_OK = qw( get_header set_header push_cookie delete_header exists_header );
+our @EXPORT_OK = qw( get_header set_header push_header delete_header exists_header );
 
 # the alias of Blosxom::Header::Class->new
 sub new {
@@ -30,7 +30,7 @@ sub get_header {
     return $value unless ref $value eq 'ARRAY';
 
     carp "The $key header must be scalar." if $key ne 'cookie' and $key ne 'p3p';
-    return wantarray ? @{ $value } : $value->[0];
+    wantarray ? @{ $value } : $value->[0];
 }
 
 sub delete_header {
@@ -68,11 +68,20 @@ sub exists_header {
     $exists;
 }
 
-sub push_cookie {
-    my ( $header_ref, $cookie ) = @_;
-    my @cookies = get_header( $header_ref, 'cookie' ) || ();
-    push @cookies, $cookie;
-    set_header( $header_ref, 'cookie' => \@cookies );
+sub push_header {
+    my $header_ref = shift;
+    my $key        = _norm( shift );
+    my $value      = shift;
+
+    if ( $key eq 'cookie' or $key eq 'p3p' ) {
+        my @values = get_header( $header_ref, $key ) || ();
+        push @values, $value;
+        set_header( $header_ref, $key => \@values );
+    }
+    else {
+        croak "Can't push the $key header";
+    }
+
     return;
 }
 
@@ -108,6 +117,11 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
 =head1 SYNOPSIS
 
+  {
+      package blosxom;
+      our $header = { -type => 'text/html' };
+  }
+
   use Blosxom::Header qw(
       get_header
       set_header
@@ -125,11 +139,11 @@ Blosxom::Header - Missing interface to modify HTTP headers
   delete_header( $blosxom::header, 'foo' );
 
   my @cookies = get_header( $blosxom::header, 'Set-Cookie' );
-  push_cookie( $blosxom::header, 'foo' );
+  push_header( $blosxom::header, 'Set-Cookie', 'foo' );
 
   # Object-oriented interface
 
-  my $h     = Blosxom::Header->new( $blosxom::header );
+  my $h     = Blosxom::Header->new;
   my $value = $h->get( 'foo' );
   my $bool  = $h->exists( 'foo' );
 
@@ -137,9 +151,9 @@ Blosxom::Header - Missing interface to modify HTTP headers
   $h->delete( 'foo' );
 
   my @cookies = $h->get( 'Set-Cookie' );
-  $h->push_cookie( 'foo' );
+  $h->push( 'Set-Cookie', 'foo' );
 
-  $h->header; # same reference as $blosxom::header
+  $h->{header}; # same reference as $blosxom::header
 
 =head1 DESCRIPTION
 
@@ -154,7 +168,7 @@ When plugin developers modify HTTP headers, they must write as follows:
   $blosxom::header->{'-status'} = '304 Not Modified';
 
 It's obviously bad practice.
-Multiple elements may specify the same field:
+The problem is multiple elements may specify the same field:
 
   $blosxom::header->{'-status'} = '304 Not Modified';
   $blosxom::header->{'status' } = '304 Not Modified';
@@ -162,6 +176,21 @@ Multiple elements may specify the same field:
   $blosxom::header->{'Status' } = '304 Not Modified';
 
 Blosxom misses the interface to modify HTTP headers.
+
+If you used this module, you might write as follows:
+
+  package foo;
+  use Blosxom::Header qw(set_header);
+  set_header( $blosxom::header, Status => '304 Not Modified' );
+
+If you prefer OO interface to procedural one,
+
+  my $h = Blosxom::Header->new;
+  $h->set( Status => '304 Not Modified' );
+
+You don't have to mind whether to put a dash before a key, nor whether to
+choose between 'type' and 'content-type' when you specify the
+Content-Type header, any more.
 
 =head2 SUBROUTINES
 
@@ -189,7 +218,7 @@ Returns a Boolean value telling whether the specified HTTP header exists.
 
 Deletes all the specified elements from HTTP headers.
 
-=item push_cookie( $blosxom::header, 'foo' )
+=item push_header( $blosxom::header, 'Set-Cookie', 'foo' )
 
 Pushes the Set-Cookie header onto HTTP headers.
 
@@ -199,10 +228,9 @@ Pushes the Set-Cookie header onto HTTP headers.
 
 =over 4
 
-=item $h = Blosxom::Header->new( $blosxom::header )
+=item $h = Blosxom::Header->new
 
 Creates a new Blosxom::Header object.
-Must pass a reference to hash.
 
 =item $bool = $h->exists( 'foo' )
 
@@ -222,13 +250,9 @@ A synonym for delete_header.
 
 A synonym for set_header.
 
-=item $h->push_cookie( 'foo' )
+=item $h->push( 'Set-Cookie', 'foo' )
 
-A synonym for push_cookie.
-
-=item $h->header
-
-Returns the same reference as $blosxom::header.
+A synonym for push_header.
 
 =back
 
@@ -317,7 +341,7 @@ L<Blosxom 2.1.2|http://blosxom.sourceforge.net/>
 
 =head1 SEE ALSO
 
-L<CGI>
+L<Blosxom::Header::Class>, L<CGI>
 
 =head1 AUTHOR
 
@@ -325,7 +349,7 @@ Ryo Anazawa (anazawa@cpan.org)
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2011 Ryo Anazawa. All rights reserved.
+Copyright (c) 2011-2012 Ryo Anazawa. All rights reserved.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.

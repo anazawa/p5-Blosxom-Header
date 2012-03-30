@@ -10,7 +10,7 @@ use Test::More;
 {
     undef $blosxom::header;
     eval { Blosxom::Header->new };
-    like $@, qr{^Must pass a reference to hash\.};
+    like $@, qr{^Not a HASH reference};
 }
 
 {
@@ -18,7 +18,7 @@ use Test::More;
     my $header_ref = {};
     my $h = Blosxom::Header->new( $header_ref );
     isa_ok $h, 'Blosxom::Header::Class';
-    can_ok $h, qw( new get set push_cookie exists delete );
+    can_ok $h, qw( new get set push exists delete );
     is $h->{header}, $header_ref;
 }
 

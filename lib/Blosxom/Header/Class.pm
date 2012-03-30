@@ -2,46 +2,20 @@ package Blosxom::Header::Class;
 use strict;
 use warnings;
 use Blosxom::Header;
+use Carp;
 
 sub new {
-    my $class      = shift;
+    my $class = shift;
     my $header_ref = shift || $blosxom::header;
-        
-    unless ( ref $header_ref eq 'HASH' ) {
-        require Carp;
-        Carp::croak( 'Must pass a reference to hash.' );
-    }
-
+    croak 'Not a HASH reference' unless ref $header_ref eq 'HASH';
     bless { header => $header_ref }, $class;
 }
 
-sub get {
-    my ( $self, $key ) = @_;
-    Blosxom::Header::get_header( $self->{header}, $key );
-}
-
-sub set {
-    my ( $self, $key, $value ) = @_;
-    Blosxom::Header::set_header( $self->{header}, $key => $value );
-    return;
-}
- 
-sub exists {
-    my ( $self, $key ) = @_;
-    Blosxom::Header::exists_header( $self->{header}, $key );
-}
-
-sub delete {
-    my ( $self, $key ) = @_;
-    Blosxom::Header::delete_header( $self->{header}, $key );
-    return;
-}
-
-sub push_cookie {
-    my ( $self, $key, $value ) = @_;
-    Blosxom::Header::push_cookie( $self->{header}, $key, $value );
-    return;
-}
+sub get    { Blosxom::Header::get_header( shift->{header}, @_ )    }
+sub set    { Blosxom::Header::set_header( shift->{header}, @_ )    }
+sub exists { Blosxom::Header::exists_header( shift->{header}, @_ ) }
+sub delete { Blosxom::Header::delete_header( shift->{header}, @_ ) }
+sub push   { Blosxom::Header::push_header( shift->{header}, @_ )   }
 
 1;
 
@@ -49,13 +23,18 @@ __END__
 
 =head1 NAME
 
-Blosxom::Header::Object - Wraps subroutines exported by Blosxom::Header in an object
+Blosxom::Header::Class - Provides OO interface
 
 =head1 SYNOPSIS
 
-  require Blosxom::Header::Object;
+  {
+      package blosxom;
+      our $header = { -type => 'text/html' };
+  }
 
-  my $h     = Blosxom::Header::Object->new( $blosxom::header );
+  require Blosxom::Header::Class;
+
+  my $h     = Blosxom::Header::Class->new;
   my $value = $h->get( 'foo' );
   my $bool  = $h->exists( 'foo' );
 
@@ -63,13 +42,17 @@ Blosxom::Header::Object - Wraps subroutines exported by Blosxom::Header in an ob
   $h->delete( 'foo' );
 
   my @cookies = $h->get( 'Set-Cookie' );
-  $h->push_cookie( 'foo' );
+  $h->push( 'Set-Cookie', 'foo' );
 
-  $h->header; # same reference as $blosxom::header
+  $h->{header}; # same reference as $blosxom::header
 
 =head1 DESCRIPTION
 
-Wraps subroutines exported by Blosxom::Header in an object.
+Provides OO interface.
+
+=head1 SEE ALSO
+
+L<Blosxom::Header>
 
 =head1 AUTHOR
 

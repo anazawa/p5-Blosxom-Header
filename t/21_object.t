@@ -20,7 +20,7 @@ use Test::More;
     my $header_ref = {};
     my $h = Blosxom::Header->new( $header_ref );
 
-    $h->push_cookie( 'foo' );
+    $h->push( 'Set-Cookie', 'foo' );
     is_deeply $header_ref, { cookie => [ 'foo' ] };
 }
 
