@@ -12,9 +12,9 @@ use Blosxom::Header;
 
 {
     my $h = Blosxom::Header->new({ '-cookie' => [ 'foo', 'bar' ] });
-    is $h->get( 'Set-Cookie' ), 'foo', 'get scalar context';
+    is $h->get( 'cookie' ), 'foo', 'get scalar context';
 
-    my @values = $h->get( 'Set-Cookie' );
+    my @values = $h->get( 'cookie' );
     is_deeply \@values, [ 'foo', 'bar' ], 'get list context';
 }
 

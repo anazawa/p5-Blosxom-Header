@@ -61,12 +61,16 @@ __DATA__
 ===
 --- input:    type
 --- expected: type
+--- SKIP
 ===
 --- input:    content-type
 --- expected: type
+--- SKIP
 ===
 --- input:    cookie
 --- expected: cookie
+--- SKIP
 ===
 --- input:    set-cookie
 --- expected: cookie
+--- SKIP

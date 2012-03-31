@@ -12,9 +12,9 @@ use Blosxom::Header qw(get_header);
 
 {
     my $header_ref = { '-cookie' => [ 'foo', 'bar' ] };
-    is get_header( $header_ref, 'Set-Cookie' ), 'foo', 'get scalar context';
+    is get_header( $header_ref, 'cookie' ), 'foo', 'get scalar context';
 
-    my @values = get_header( $header_ref, 'Set-Cookie' );
+    my @values = get_header( $header_ref, 'cookie' );
     is_deeply \@values, [ 'foo', 'bar' ], 'get list context';
 }
 

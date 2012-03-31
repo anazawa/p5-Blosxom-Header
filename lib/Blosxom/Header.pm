@@ -22,13 +22,11 @@ sub get_header {
     while ( my ( $k, $v ) = each %{ $header_ref } ) {
         push @values, $v if $key eq _norm( $k );
     }
-
     return unless @values;
     carp "Multiple elements specify the $key header." if @values > 1;
 
     my $value = shift @values;
     return $value unless ref $value eq 'ARRAY';
-
     carp "The $key header must be scalar." if $key ne 'cookie' and $key ne 'p3p';
     wantarray ? @{ $value } : $value->[0];
 }
@@ -73,38 +71,25 @@ sub push_header {
     my $key        = _norm( shift );
     my $value      = shift;
 
-    if ( $key eq 'cookie' or $key eq 'p3p' ) {
-        my @values = get_header( $header_ref, $key ) || ();
-        push @values, $value;
-        set_header( $header_ref, $key => \@values );
-    }
-    else {
-        croak "Can't push the $key header";
-    }
+    croak "Can't push the $key header" if $key ne 'cookie' and $key ne 'p3p';
+    my @values = get_header( $header_ref, $key );
+    push @values, $value;
+    set_header( $header_ref, $key => \@values );
 
     return;
 }
 
-{
-    # suppose read-only
-    my %alias_of = (
-        'content-type' => 'type',
-        'set-cookie'   => 'cookie',
-    );
+# normalize a given parameter
+sub _norm {
+    my $key = lc shift;
 
-    # normalize a given key
-    sub _norm {
-        my $key = lc shift;
+    # get rid of an initial dash if exists
+    $key =~ s{^\-}{};
 
-        # get rid of an initial dash if exists
-        $key =~ s{^\-}{};
+    # use dashes instead of underscores
+    $key =~ tr{_}{-};
 
-        # use dashes instead of underscores
-        $key =~ tr{_}{-};
-
-        # returns the alias of $key if exists
-        $alias_of{ $key } || $key;
-    }
+    $key;
 }
 
 1;
