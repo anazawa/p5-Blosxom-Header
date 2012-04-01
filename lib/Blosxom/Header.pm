@@ -18,14 +18,11 @@ sub get_header {
     my $header_ref = shift;
     my $key        = _norm( shift );
 
-    my @values;
-    while ( my ( $k, $v ) = each %{ $header_ref } ) {
-        push @values, $v if $key eq _norm( $k );
-    }
-    return unless @values;
-    carp "Multiple elements specify the $key header." if @values > 1;
+    my @keys = grep { _norm( $_ ) eq $key } keys %{ $header_ref };
+    return unless @keys;
+    carp "Multiple elements specify the $key header." if @keys > 1;
 
-    my $value = shift @values;
+    my $value = $header_ref->{ $keys[0] };
     return $value unless ref $value eq 'ARRAY';
     carp "The $key header must be scalar." if $key ne 'cookie' and $key ne 'p3p';
     wantarray ? @{ $value } : $value->[0];
@@ -37,7 +34,7 @@ sub delete_header {
 
     # deletes elements whose key matches $key
     my @keys = grep { _norm( $_ ) eq $key } keys %{ $header_ref };
-    delete @{ $header_ref }{ @keys };
+    delete @{ $header_ref }{ @keys } if @keys;
 
     return;
 }
@@ -47,7 +44,9 @@ sub set_header {
     my $key        = _norm( shift );
     my $value      = shift;
 
-    delete_header( $header_ref, $key );
+    my @keys = grep { _norm( $_ ) eq $key } keys %{ $header_ref };
+    $key = shift @keys if @keys;
+    delete @{ $header_ref }{ @keys } if @keys;
     $header_ref->{ $key } = $value;
 
     return;
@@ -63,6 +62,7 @@ sub exists_header {
     }
 
     carp "$exists elements specify the $key header." if $exists > 1;
+
     $exists;
 }
 
@@ -72,9 +72,20 @@ sub push_header {
     my $value      = shift;
 
     croak "Can't push the $key header" if $key ne 'cookie' and $key ne 'p3p';
-    my @values = get_header( $header_ref, $key );
-    push @values, $value;
-    set_header( $header_ref, $key => \@values );
+    my @keys = grep { _norm( $_ ) eq $key } keys %{ $header_ref };
+    croak "Multiple elements specify the $key header" if @keys > 1;
+    $key = shift @keys if @keys;
+    my $old_value = $header_ref->{ $key };
+
+    if ( ref $old_value eq 'ARRAY' ) {
+        push @{ $old_value }, $value;
+    }
+    elsif ( $old_value ) {
+        $header_ref->{ $key } = [ $old_value, $value ];
+    }
+    else {
+        $header_ref->{ $key } = $value;
+    }
 
     return;
 }
@@ -112,7 +123,7 @@ Blosxom::Header - Missing interface to modify HTTP headers
       set_header
       delete_header
       exists_header
-      push_cookie
+      push_header
   );
 
   # Procedural interface
@@ -123,8 +134,8 @@ Blosxom::Header - Missing interface to modify HTTP headers
   set_header( $blosxom::header, foo => 'bar' );
   delete_header( $blosxom::header, 'foo' );
 
-  my @cookies = get_header( $blosxom::header, 'Set-Cookie' );
-  push_header( $blosxom::header, 'Set-Cookie', 'foo' );
+  my @cookies = get_header( $blosxom::header, 'cookie' );
+  push_header( $blosxom::header, 'cookie', 'foo' );
 
   # Object-oriented interface
 
@@ -135,10 +146,10 @@ Blosxom::Header - Missing interface to modify HTTP headers
   $h->set( foo => 'bar' );
   $h->delete( 'foo' );
 
-  my @cookies = $h->get( 'Set-Cookie' );
-  $h->push( 'Set-Cookie', 'foo' );
+  my @cookies = $h->get( 'cookie' );
+  $h->push( 'cookie', 'foo' );
 
-  $h->{header}; # same reference as $blosxom::header
+  $h->header; # same reference as $blosxom::header
 
 =head1 DESCRIPTION
 
@@ -173,9 +184,8 @@ If you prefer OO interface to procedural one,
   my $h = Blosxom::Header->new;
   $h->set( Status => '304 Not Modified' );
 
-You don't have to mind whether to put a dash before a key, nor whether to
-choose between 'type' and 'content-type' when you specify the
-Content-Type header, any more.
+You don't have to mind whether to put a dash before a key,
+nor whether to make a key lowercased, any more.
 
 =head2 SUBROUTINES
 
@@ -186,10 +196,6 @@ The following are exported on demand.
 =item $value = get_header( $blosxom::header, 'foo' )
 
 Returns a value of the specified HTTP header.
-
-=item @cookies = get_header( $blosxom::header, 'Set-Cookie' )
-
-Returns values of the Set-Cookie headers.
 
 =item set_header( $blosxom::header, 'foo' => 'bar' )
 
@@ -203,7 +209,7 @@ Returns a Boolean value telling whether the specified HTTP header exists.
 
 Deletes all the specified elements from HTTP headers.
 
-=item push_header( $blosxom::header, 'Set-Cookie', 'foo' )
+=item push_header( $blosxom::header, 'cookie', 'foo' )
 
 Pushes the Set-Cookie header onto HTTP headers.
 
@@ -217,13 +223,15 @@ Pushes the Set-Cookie header onto HTTP headers.
 
 Creates a new Blosxom::Header object.
 
+=item $h->header
+
+Returns the same reference as $blosxom::header.
+
 =item $bool = $h->exists( 'foo' )
 
 A synonym for exists_header.
 
 =item $value = $h->get( 'foo' )
-
-=item @cookies = $h->get( 'Set-Cookie' )
 
 A synonym for get_header.
 
@@ -235,7 +243,7 @@ A synonym for delete_header.
 
 A synonym for set_header.
 
-=item $h->push( 'Set-Cookie', 'foo' )
+=item $h->push( 'cookie', 'foo' )
 
 A synonym for push_header.
 

@@ -58,7 +58,7 @@ env:
 output: abcdj
 --- expected
 header:
-    type:   ''
+    -type:   ''
     -etag:  Foo
     status: 304 Not Modified
 output: ''
@@ -73,7 +73,7 @@ env:
 output: abcdj
 --- expected
 header:
-    type:           ''
+    -type:           ''
     -last-modified: Wed, 23 Sep 2009 13:36:33 GMT
     status:         304 Not Modified
 output: ''
@@ -102,7 +102,7 @@ env:
 output: abcdj
 --- expected
 header:
-    type:           ''
+    -type:           ''
     -last-modified: Wed, 23 Sep 2009 13:36:33 GMT
     status:         304 Not Modified
 output: ''

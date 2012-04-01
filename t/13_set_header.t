@@ -17,13 +17,13 @@ use Blosxom::Header qw(set_header);
 {
     my $header_ref = { '-foo' => 'bar' };
     set_header( $header_ref, '-foo' => 'baz' );
-    is_deeply $header_ref, { 'foo' => 'baz' }, 'set overwrite';
+    is_deeply $header_ref, { '-foo' => 'baz' }, 'set overwrite';
 }
 
 {
     my $header_ref = { '-foo' => 'bar' };
     set_header( $header_ref, Foo => 'baz' );
-    is_deeply $header_ref, { 'foo' => 'baz' }, 'set case-sensitive';
+    is_deeply $header_ref, { '-foo' => 'baz' }, 'set case-sensitive';
 }
 
 {
@@ -35,7 +35,7 @@ use Blosxom::Header qw(set_header);
 {
     my $header_ref = { foo => 'bar', '-foo' => 'baz' };
     set_header( $header_ref, foo => 'qux' );
-    is_deeply $header_ref, { 'foo' => 'qux' };
+    is_deeply $header_ref, { '-foo' => 'qux' };
 }
 
 done_testing;
