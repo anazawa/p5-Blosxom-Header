@@ -90,17 +90,25 @@ sub push_header {
     return;
 }
 
-# normalize a given parameter
-sub _norm {
-    my $key = lc shift;
+{
+    my %ALIAS_OF = (
+        'content-type' => 'type',
+        'set-cookie'  => 'cookie',
+    );
+    
+    # normalize a given parameter
+    sub _norm {
+        my $key = lc shift;
 
-    # get rid of an initial dash if exists
-    $key =~ s{^\-}{};
+        # get rid of an initial dash if exists
+        $key =~ s{^\-}{};
 
-    # use dashes instead of underscores
-    $key =~ tr{_}{-};
+        # use dashes instead of underscores
+        $key =~ tr{_}{-};
 
-    $key;
+        #$key;
+        $ALIAS_OF{ $key } || $key;
+    }
 }
 
 1;
@@ -352,3 +360,4 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 =cut
+
