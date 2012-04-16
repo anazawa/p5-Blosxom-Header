@@ -15,69 +15,54 @@ sub new {
 
 sub get {
     my $header = shift->{header};
-    my $key    = _norm( shift );
-
-    my @keys = grep { _norm( $_ ) eq $key } keys %{ $header };
-    return unless @keys;
-    carp "Multiple elements specify the $key header." if @keys > 1;
-
-    my $value = $header->{ shift @keys };
+    my $field = _normalize_field_name( shift );
+    return unless exists $header->{ $field };
+    my $value = $header->{ $field };
     return $value unless ref $value eq 'ARRAY';
-    carp "The $key header must be scalar." if $key ne 'cookie' and $key ne 'p3p';
     wantarray ? @{ $value } : $value->[0];
 }
 
 sub delete {
     my $header = shift->{header};
-    my $key    = _norm( shift );
+    my $field  = _normalize_field_name( shift );
 
-    # deletes elements whose key matches $key
-    my @keys = grep { _norm( $_ ) eq $key } keys %{ $header };
-    delete @{ $header }{ @keys } if @keys;
+    delete $header->{ $field };
 
     return;
 }
 
 sub set {
-    my ( $self, $key, $value ) = @_;
-    $self->delete( $key );
-    $self->{header}->{ _norm( $key ) } = $value;
+    my $header = shift->{header};
+    my $field  = _normalize_field_name( shift );
+    my $value  = shift;
+
+    if ( ref $value eq 'ARRAY' and $field ne '-cookie' and $field ne '-p3p' ) {
+        croak "The $field header must be SCALAR";
+    }
+
+    $header->{ $field } = $value;
+
     return;
 }
 
 sub exists {
     my $header = shift->{header};
-    my $key    = _norm( shift );
-
-    my $exists = 0;
-    for my $k ( keys %{ $header } ) {
-        $exists++ if _norm( $k ) eq $key;
-    }
-
-    carp "$exists elements specify the $key header." if $exists > 1;
-
-    $exists;
+    my $field = _normalize_field_name( shift );
+    exists $header->{ $field };
 }
 
 sub push {
-    my $header = shift->{header};
-    my $key    = _norm( shift );
-    my $value  = shift;
+    my $self  = shift;
+    my $field = _normalize_field_name( shift );
+    my $value = shift;
 
-    croak "Can't push the $key header" if $key ne 'cookie' and $key ne 'p3p';
-    my @keys = grep { _norm( $_ ) eq $key } keys %{ $header };
-    croak "Multiple elements specify the $key header" if @keys > 1;
-    $key = shift @keys if @keys;
-    my $old_value = $header->{ $key };
-
+    my $old_value = $self->{header}->{ $field };
     if ( ref $old_value eq 'ARRAY' ) {
         push @{ $old_value }, $value;
     }
-    elsif ( $old_value ) {
-        $header->{ $key } = [ $old_value, $value ];
-    }
     else {
-        $header->{ $key } = $value;
+        $value = [ $old_value, $value ] if $old_value;
+        $self->set( $field => $value );
     }
 
     return;
@@ -86,23 +71,47 @@ sub push {
 {
     # suppose read-only
     my %ALIAS_OF = (
-        'content-type' => 'type',
-        'set-cookie'   => 'cookie',
+        '-content-type' => '-type',
+        '-set-cookie'   => '-cookie',
     );
     
-    # normalize a given parameter
-    sub _norm {
-        my $key = lc shift;
+    # cache (how do we prove cache works?)
+    my %norm_of = %ALIAS_OF;
+
+    sub _normalize_field_name {
+        my $field = shift;
+        return unless $field;
+
+        # return cached value if exists
+        return $norm_of{ $field } if exists $norm_of{ $field };
+
+        # lowercase $field
+        my $norm = lc $field;
 
         # get rid of an initial dash if exists
-        $key =~ s{^\-}{};
+        #$norm =~ s{^-}{};
+        $norm = "-$norm" unless $norm =~ /^-/;
 
         # use dashes instead of underscores
-        $key =~ tr{_}{-};
+        $norm =~ tr{_}{-};
 
-        $ALIAS_OF{ $key } || $key;
+        # use alias if exists
+        $norm = $ALIAS_OF{ $norm } if exists $ALIAS_OF{ $norm };
+
+        $norm_of{ $field } = $norm;
     }
 }
+
+sub _field_names { keys %{ shift->{header} } }
+
+#sub _get_field_name {
+#    my $self = shift;
+#    my $field = _normalize_field_name( shift );
+#    my @fields = keys %{ $self->{header} };
+#    @fields = grep { _normalize_field_name( $_ ) eq $field } @fields;
+#    croak "Multiple elements specify the $field header" if @fields > 1;
+#    $fields[0];
+#}
 
 1;
 

@@ -10,13 +10,13 @@ use Blosxom::Header;
     ok $header->exists( 'Foo' ),   'exists, not case-sensitive';
 }
 
-{
-    my $header = Blosxom::Header->new({
-        -foo => 'bar',
-        foo  => 'baz',
-    });
-    warning_is { $header->exists( 'foo' ) }
-        '2 elements specify the foo header.';
-}
+#{
+#    my $header = Blosxom::Header->new({
+#        -foo => 'bar',
+#        foo  => 'baz',
+#    });
+#    warning_is { $header->exists( 'foo' ) }
+#        '2 elements specify the foo header.';
+#}
 
 done_testing;

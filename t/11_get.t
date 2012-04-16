@@ -6,7 +6,7 @@ use Blosxom::Header;
 {
     my $header = Blosxom::Header->new({ -foo => 'bar' });
     is $header->get( '-foo' ), 'bar';
-    is $header->get( 'Foo' ),  'bar', 'get, case-sensitive';
+    is $header->get( 'Foo' ),  'bar', 'get, not case-sensitive';
     is $header->get( '-bar' ), undef, 'get undef';
 }
 
@@ -24,18 +24,18 @@ use Blosxom::Header;
     is_deeply \@values, [ 'foo', 'bar' ], 'get p3p, list context';
 }
 
-{
-    my $header = Blosxom::Header->new({ foo => [ 'foo', 'bar' ] });
-    warning_is { $header->get( 'foo' ) } 'The foo header must be scalar.';
-}
+#{
+#    my $header = Blosxom::Header->new({ foo => [ 'foo', 'bar' ] });
+#    warning_is { $header->get( 'foo' ) } 'The foo header must be SCALAR.';
+#}
 
-{
-    my $header = Blosxom::Header->new({
-        -foo => 'bar',
-        foo  => 'baz',
-    });
-    warning_is { $header->get( 'foo' ) }
-        'Multiple elements specify the foo header.';
-}
+#{
+#    my $header = Blosxom::Header->new({
+#        -foo => 'bar',
+#        foo  => 'baz',
+#    });
+#    warning_is { $header->get( 'foo' ) }
+#        'Multiple elements specify the foo header.';
+#}
 
 done_testing;

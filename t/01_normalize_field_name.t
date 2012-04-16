@@ -5,68 +5,68 @@ plan tests => 1 * blocks;
 
 run {
     my $block  = shift;
-    my $output = Blosxom::Header::_norm( $block->input );
+    my $output = Blosxom::Header::_normalize_field_name( $block->input );
     is $output, $block->expected;
 };
 
 __DATA__
 ===
 --- input:    foo
---- expected: foo
+--- expected: -foo
 ===
 --- input:    Foo
---- expected: foo
+--- expected: -foo
 ===
 --- input:    -foo
---- expected: foo
+--- expected: -foo
 ===
 --- input:    -Foo
---- expected: foo
+--- expected: -foo
 ===
 --- input:    foo-bar
---- expected: foo-bar
+--- expected: -foo-bar
 ===
 --- input:    Foo-bar
---- expected: foo-bar
+--- expected: -foo-bar
 ===
 --- input:    Foo-Bar
---- expected: foo-bar
+--- expected: -foo-bar
 ===
 --- input:    foo_bar
---- expected: foo-bar
+--- expected: -foo-bar
 ===
 --- input:    Foo_bar
---- expected: foo-bar
+--- expected: -foo-bar
 ===
 --- input:    Foo_Bar
---- expected: foo-bar
+--- expected: -foo-bar
 ===
 --- input:    -foo-bar
---- expected: foo-bar
+--- expected: -foo-bar
 ===
 --- input:    -Foo-bar
---- expected: foo-bar
+--- expected: -foo-bar
 ===
 --- input:    -Foo-Bar
---- expected: foo-bar
+--- expected: -foo-bar
 ===
 --- input:    -foo_bar
---- expected: foo-bar
+--- expected: -foo-bar
 ===
 --- input:    -Foo_bar
---- expected: foo-bar
+--- expected: -foo-bar
 ===
 --- input:    -Foo_Bar
---- expected: foo-bar
+--- expected: -foo-bar
 ===
 --- input:    type
---- expected: type
+--- expected: -type
 ===
 --- input:    content-type
---- expected: type
+--- expected: -type
 ===
 --- input:    cookie
---- expected: cookie
+--- expected: -cookie
 ===
 --- input:    set-cookie
---- expected: cookie
+--- expected: -cookie
