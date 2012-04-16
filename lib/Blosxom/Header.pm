@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Carp;
 
-our $VERSION = '0.02005';
+our $VERSION = '0.03000';
 
 sub new {
     my $class = shift;
@@ -14,12 +14,12 @@ sub new {
 }
 
 sub get {
-    my $header = shift->{header};
-    my $field = _normalize_field_name( shift );
-    return unless exists $header->{ $field };
-    my $value = $header->{ $field };
+    my ( $self, $field ) = @_;
+    return unless $self->exists( $field );
+    my $value = $self->{header}->{ _normalize_field_name( $field ) };
     return $value unless ref $value eq 'ARRAY';
-    wantarray ? @{ $value } : $value->[0];
+    return @{ $value } if wantarray;
+    $value->[0];
 }
 
 sub delete {
@@ -37,7 +37,7 @@ sub set {
     my $value  = shift;
 
     if ( ref $value eq 'ARRAY' and $field ne '-cookie' and $field ne '-p3p' ) {
-        croak "The $field header must be SCALAR";
+        croak "The $field header must be SCALAR. See 'perldoc CGI'";
     }
 
     $header->{ $field } = $value;
@@ -52,16 +52,18 @@ sub exists {
 }
 
 sub push {
-    my $self  = shift;
-    my $field = _normalize_field_name( shift );
-    my $value = shift;
+    my ( $self, $field, $value ) = @_;
 
-    my $old_value = $self->{header}->{ $field };
-    if ( ref $old_value eq 'ARRAY' ) {
-        push @{ $old_value }, $value;
+    if ( $self->exists( $field ) ) {
+        my $old_value = $self->{header}->{ _normalize_field_name( $field ) };
+        if ( ref $old_value eq 'ARRAY' ) {
+            push @{ $old_value }, $value;
+        }
+        else {
+            $self->set( $field => [ $old_value, $value ] );
+        }
     }
     else {
-        $value = [ $old_value, $value ] if $old_value;
         $self->set( $field => $value );
     }
 
@@ -88,8 +90,7 @@ sub push {
         # lowercase $field
         my $norm = lc $field;
 
-        # get rid of an initial dash if exists
-        #$norm =~ s{^-}{};
+        # add initial dash if not exists
         $norm = "-$norm" unless $norm =~ /^-/;
 
         # use dashes instead of underscores
@@ -102,17 +103,6 @@ sub push {
     }
 }
 
-sub _field_names { keys %{ shift->{header} } }
-
-#sub _get_field_name {
-#    my $self = shift;
-#    my $field = _normalize_field_name( shift );
-#    my @fields = keys %{ $self->{header} };
-#    @fields = grep { _normalize_field_name( $_ ) eq $field } @fields;
-#    croak "Multiple elements specify the $field header" if @fields > 1;
-#    $fields[0];
-#}
-
 1;
 
 __END__
@@ -123,11 +113,10 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
 =head1 SYNOPSIS
 
-  {
-      package blosxom;
-      our $header = { -type => 'text/html' };
-  }
+  package blosxom;
+  our $header = { -type => 'text/html' };
 
+  package plugin_foo;
   use Blosxom::Header;
 
   my $header = Blosxom::Header->new;
@@ -138,10 +127,10 @@ Blosxom::Header - Missing interface to modify HTTP headers
   $header->delete( 'Foo' );
 
   my @cookies = $header->get( 'Set-Cookie' );
-  $header->push( 'Set-Cookie', 'foo' );
+  $header->push( 'Set-Cookie' => 'foo' );
 
   my @p3p = $header->get( 'P3P' );
-  $header->push( 'P3P', 'foo' );
+  $header->push( P3P => 'foo' );
 
   $header->{header}; # same reference as $blosxom::header
 
@@ -202,7 +191,7 @@ Returns a Boolean value telling whether the specified HTTP header exists.
 
 Deletes all the specified elements from HTTP headers.
 
-=item $header->push( 'Set-Cookie', 'foo' )
+=item $header->push( 'Set-Cookie' => 'foo' )
 
 Pushes the Set-Cookie header onto HTTP headers.
 
