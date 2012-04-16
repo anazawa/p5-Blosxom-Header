@@ -14,57 +14,61 @@ sub new {
 }
 
 sub get {
-    my ( $self, $field ) = @_;
+    my $self = shift;
+    my $field = _normalize_field_name( shift );
     return unless $self->exists( $field );
-    my $value = $self->{header}->{ _normalize_field_name( $field ) };
+    my $value = $self->{header}->{ $field };
     return $value unless ref $value eq 'ARRAY';
     return @{ $value } if wantarray;
     $value->[0];
 }
 
 sub delete {
-    my $header = shift->{header};
-    my $field  = _normalize_field_name( shift );
-
-    delete $header->{ $field };
-
-    return;
+    my ( $self, @fields ) = @_;
+    @fields = map { _normalize_field_name( $_ ) } @fields;
+    delete @{ $self->{header} }{ @fields };
 }
 
 sub set {
-    my $header = shift->{header};
-    my $field  = _normalize_field_name( shift );
-    my $value  = shift;
+    my ( $self, @fields ) = @_;
 
-    if ( ref $value eq 'ARRAY' and $field ne '-cookie' and $field ne '-p3p' ) {
-        croak "The $field header must be SCALAR. See 'perldoc CGI'";
+    # why not 'while -> each %field'?
+    while ( my ( $field, $value ) = splice @fields, 0, 2 ) {
+        $field = _normalize_field_name( $field );
+
+        croak "The $field header can't be an ARRAY reference. See 'perldoc CGI'"
+            if ref $value eq 'ARRAY' and $field ne '-cookie' and $field ne '-p3p';
+
+        $self->{header}->{ $field } = $value;
     }
-
-    $header->{ $field } = $value;
 
     return;
 }
 
 sub exists {
     my $header = shift->{header};
-    my $field = _normalize_field_name( shift );
+    my $field  = _normalize_field_name( shift );
+
     exists $header->{ $field };
 }
 
 sub push {
-    my ( $self, $field, $value ) = @_;
+    my ( $self, @fields ) = @_;
 
-    if ( $self->exists( $field ) ) {
-        my $old_value = $self->{header}->{ _normalize_field_name( $field ) };
-        if ( ref $old_value eq 'ARRAY' ) {
-            push @{ $old_value }, $value;
+    while ( my ( $field, $value ) = splice @fields, 0, 2 ) {
+        $field = _normalize_field_name( $field );
+
+        if ( my $old_value = $self->{header}->{ $field } ) {
+            if ( ref $old_value eq 'ARRAY' ) {
+                push @{ $old_value }, $value;
+            }
+            else {
+                $self->set( $field => [ $old_value, $value ] );
+            }
         }
         else {
-            $self->set( $field => [ $old_value, $value ] );
+            $self->set( $field => $value );
         }
-    }
-    else {
-        $self->set( $field => $value );
     }
 
     return;
@@ -76,30 +80,23 @@ sub push {
         '-content-type' => '-type',
         '-set-cookie'   => '-cookie',
     );
-    
-    # cache (how do we prove cache works?)
-    my %norm_of = %ALIAS_OF;
 
+    # how should I call this process?
     sub _normalize_field_name {
         my $field = shift;
+
         return unless $field;
 
-        # return cached value if exists
-        return $norm_of{ $field } if exists $norm_of{ $field };
-
         # lowercase $field
-        my $norm = lc $field;
+        $field = lc $field; # Content_Type -> content_type
 
         # add initial dash if not exists
-        $norm = "-$norm" unless $norm =~ /^-/;
+        $field = "-$field" unless $field =~ /^-/; # -> -content_type
 
         # use dashes instead of underscores
-        $norm =~ tr{_}{-};
+        $field =~ tr{_}{-}; # -> -content-type
 
-        # use alias if exists
-        $norm = $ALIAS_OF{ $norm } if exists $ALIAS_OF{ $norm };
-
-        $norm_of{ $field } = $norm;
+        $ALIAS_OF{ $field } || $field;
     }
 }
 

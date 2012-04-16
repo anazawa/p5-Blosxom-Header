@@ -10,6 +10,16 @@ use Blosxom::Header;
 
 {
     my $header = Blosxom::Header->new({});
+    $header->push(
+        -foo => 'bar',
+        -bar => 'baz',
+    );
+    my $expected = { -foo => 'bar', -bar => 'baz' };
+    is_deeply $header->{header}, $expected, 'push multiple elements';
+}
+
+{
+    my $header = Blosxom::Header->new({});
     $header->push( Foo => 'bar' );
     is_deeply $header->{header}, { -foo => 'bar' }, 'push, not case-sensitive';
 }
@@ -23,12 +33,11 @@ use Blosxom::Header;
 
 {
     my @cookies = ( 'foo' );
-    my $header_ref = { -cookie => \@cookies };
-    my $header = Blosxom::Header->new( $header_ref );
+    my $header = Blosxom::Header->new({ -cookie => \@cookies });
     $header->push( 'Set-Cookie' => 'bar' );
     my $expected = { -cookie => [ 'foo', 'bar' ] };
-    is_deeply $header_ref, $expected, 'push';
-    is $header_ref->{-cookie}, \@cookies, 'push';
+    is_deeply $header->{header}, $expected, 'push';
+    is $header->{header}->{-cookie}, \@cookies, 'push';
 }
 
 done_testing;
