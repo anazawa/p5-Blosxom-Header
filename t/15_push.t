@@ -1,5 +1,6 @@
 use strict;
 use Test::More;
+use Test::Warn;
 use Blosxom::Header;
 
 {
@@ -10,12 +11,9 @@ use Blosxom::Header;
 
 {
     my $header = Blosxom::Header->new({});
-    $header->push(
-        -foo => 'bar',
-        -bar => 'baz',
-    );
-    my $expected = { -foo => 'bar', -bar => 'baz' };
-    is_deeply $header->{header}, $expected, 'push multiple elements';
+    $header->push( -cookie => qw/foo bar/ );
+    my $expected = { -cookie => [ 'foo', 'bar' ] };
+    is_deeply $header->{header}, $expected, 'push multiple values';
 }
 
 {
@@ -38,6 +36,11 @@ use Blosxom::Header;
     my $expected = { -cookie => [ 'foo', 'bar' ] };
     is_deeply $header->{header}, $expected, 'push';
     is $header->{header}->{-cookie}, \@cookies, 'push';
+}
+
+{
+    my $header = Blosxom::Header->new({});
+    warning_is { $header->push( 'Foo' ) } 'Useless use of push with no values';
 }
 
 done_testing;

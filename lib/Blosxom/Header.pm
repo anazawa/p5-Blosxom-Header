@@ -9,94 +9,107 @@ our $VERSION = '0.03000';
 sub new {
     my $class = shift;
     my $header = shift || $blosxom::header;
-    croak 'Not a HASH reference' unless ref $header eq 'HASH';
+    croak( 'Not a HASH reference' ) unless ref $header eq 'HASH';
     bless { header => $header }, $class;
 }
 
 sub get {
-    my $self = shift;
+    my $header = shift->{header};
     my $field = _normalize_field_name( shift );
-    return unless $self->exists( $field );
-    my $value = $self->{header}->{ $field };
+    my $value = $header->{ $field };
     return $value unless ref $value eq 'ARRAY';
     return @{ $value } if wantarray;
     $value->[0];
 }
 
 sub delete {
-    my ( $self, @fields ) = @_;
-    @fields = map { _normalize_field_name( $_ ) } @fields;
-    delete @{ $self->{header} }{ @fields };
+    my $header = shift->{header};
+    my @fields = map { _normalize_field_name( $_ ) } @_;
+    delete @{ $header }{ @fields };
+}
+
+sub exists {
+    my $header = shift->{header};
+    my $field = _normalize_field_name( shift );
+    exists $header->{ $field };
 }
 
 sub set {
     my ( $self, @fields ) = @_;
 
-    # why not 'while -> each %field'?
-    while ( my ( $field, $value ) = splice @fields, 0, 2 ) {
-        $field = _normalize_field_name( $field );
-
-        croak "The $field header can't be an ARRAY reference. See 'perldoc CGI'"
-            if ref $value eq 'ARRAY' and $field ne '-cookie' and $field ne '-p3p';
-
-        $self->{header}->{ $field } = $value;
+    if ( @fields == 2 ) {
+        $self->_set( @fields );
+    }
+    else {
+        while ( my ( $field, $value ) = splice @fields, 0, 2 ) {
+            $self->_set( $field => $value );
+        }
     }
 
     return;
 }
 
-sub exists {
+sub _set {
     my $header = shift->{header};
     my $field  = _normalize_field_name( shift );
+    my $value  = shift;
 
-    exists $header->{ $field };
+    croak( "The $field header can't be an ARRAY reference. See 'perldoc CGI'" )
+        if ref $value eq 'ARRAY' and $field ne '-cookie' and $field ne '-p3p';
+
+    $header->{ $field } = $value;
+
+    return;
 }
 
 sub push {
-    my ( $self, @fields ) = @_;
+    my $self   = shift;
+    my $field  = _normalize_field_name( shift );
+    my @values = @_;
 
-    while ( my ( $field, $value ) = splice @fields, 0, 2 ) {
-        $field = _normalize_field_name( $field );
-
-        if ( my $old_value = $self->{header}->{ $field } ) {
-            if ( ref $old_value eq 'ARRAY' ) {
-                push @{ $old_value }, $value;
-            }
-            else {
-                $self->set( $field => [ $old_value, $value ] );
-            }
-        }
-        else {
-            $self->set( $field => $value );
-        }
+    unless ( @values ) {
+        carp( 'Useless use of push with no values' );
+        return;
     }
+
+    if ( my $old_value = $self->{header}->{ $field } ) {
+        if ( ref $old_value eq 'ARRAY' ) {
+            push @{ $old_value }, @values;
+            return;
+        }
+        unshift @values, $old_value;
+    }
+
+    $self->_set( $field => @values > 1 ? \@values : shift @values );
 
     return;
 }
 
 {
-    # suppose read-only
-    my %ALIAS_OF = (
-        '-content-type' => '-type',
-        '-set-cookie'   => '-cookie',
-    );
+    my %norm_of; # cache
 
-    # how should I call this process?
     sub _normalize_field_name {
         my $field = shift;
 
         return unless $field;
 
+        # use cache if exists
+        return $norm_of{ $field } if exists $norm_of{ $field };
+
         # lowercase $field
-        $field = lc $field; # Content_Type -> content_type
+        my $norm = lc $field;
 
         # add initial dash if not exists
-        $field = "-$field" unless $field =~ /^-/; # -> -content_type
+        $norm = "-$norm" unless $norm =~ /^-/;
 
         # use dashes instead of underscores
-        $field =~ tr{_}{-}; # -> -content-type
+        $norm =~ tr{_}{-};
 
-        $ALIAS_OF{ $field } || $field;
+        # use alias if exists
+        $norm = '-type'   if $norm eq '-content-type';
+        $norm = '-cookie' if $norm eq '-set-cookie';
+
+        $norm_of{ $field } = $norm;
     }
 }
 
