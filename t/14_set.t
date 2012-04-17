@@ -1,5 +1,6 @@
 use strict;
 use Test::More;
+use Test::Warn;
 use Blosxom::Header;
 
 {
@@ -40,14 +41,29 @@ use Blosxom::Header;
 {
     my $header = Blosxom::Header->new({});
     $header->set( 'Set-Cookie' => [ 'foo', 'bar' ] );
-    is_deeply $header->{header}, { -cookie => [ 'foo', 'bar' ] }, 'set cookie arrayref';
+    my $expected = { -cookie => [ 'foo', 'bar' ] };
+    is_deeply $header->{header}, $expected, 'set cookie arrayref';
 }
 
 {
     my $header = Blosxom::Header->new({});
     $header->set( P3P => [ 'foo', 'bar' ] );
-    is_deeply $header->{header}, { -p3p => [ 'foo', 'bar' ] }, 'set p3p arrayref';
+    my $expected = { -p3p => [ 'foo', 'bar' ] };
+    is_deeply $header->{header}, $expected, 'set p3p arrayref';
 }
+
+#{
+#    my $header = Blosxom::Header->new({ -type => 'text/plain; charset=utf-8' });
+#    warning_like { $header->set( charset => 'EUC-JP' ) }
+#        qr{^The -type header contains a charset};
+#}
+
+#{
+#    my $header = Blosxom::Header->new({ -type => 'text/plain' });
+#    $header->set( charset => 'utf-8' );
+#    my $expected = { -type => 'text/plain', -charset => 'utf-8' };
+#    is_deeply $header->{header}, $expected, 'set p3p arrayref';
+#}
 
 {
     my $header = Blosxom::Header->new({});

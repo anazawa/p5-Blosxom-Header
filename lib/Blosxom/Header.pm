@@ -48,17 +48,24 @@ sub set {
     return;
 }
 
-sub _set {
-    my $header = shift->{header};
-    my $field  = _normalize_field_name( shift );
-    my $value  = shift;
+{
+    my %isa_ArrayRef = (
+        -cookie => 1,
+        -p3p    => 1,
+    );
 
-    croak( "The $field header can't be an ARRAY reference. See 'perldoc CGI'" )
-        if ref $value eq 'ARRAY' and $field ne '-cookie' and $field ne '-p3p';
+    sub _set {
+        my $header = shift->{header};
+        my $field  = _normalize_field_name( shift );
+        my $value  = shift;
 
-    $header->{ $field } = $value;
+        croak( "The $field header can't be an ARRAY reference" )
+            if ref $value eq 'ARRAY' and !$isa_ArrayRef{ $field };
 
-    return;
+        $header->{ $field } = $value;
+
+        return;
+    }
 }
 
 sub push {
@@ -79,13 +86,13 @@ sub push {
         unshift @values, $old_value;
     }
 
-    $self->_set( $field, @values > 1 ? \@values : shift @values );
+    $self->_set( $field => @values > 1 ? \@values : $values[0] );
 
     return;
 }
 
 # make accessors
-for my $method ( qw/attachment charset cookie expires nph p3p type/ ) {
+for my $method ( qw/attachment charset cookie expires nph p3p target type/ ) {
     my $slot  = __PACKAGE__ . "::$method";
     my $field = "-$method";
 
@@ -98,6 +105,11 @@ for my $method ( qw/attachment charset cookie expires nph p3p type/ ) {
     };
 }
 
+#sub _as_string {
+#    require CGI;
+#    CGI::header( shift->{header} );
+#}
+
 {
     my %norm_of; # cache
 
@@ -106,7 +118,7 @@ for my $method ( qw/attachment charset cookie expires nph p3p type/ ) {
 
         return unless $field;
 
-        # use cache if exists
+        # return cache if exists
         return $norm_of{ $field } if exists $norm_of{ $field };
 
         # lowercase $field
