@@ -18,8 +18,7 @@ sub get {
     my $field = _normalize_field_name( shift );
     my $value = $header->{ $field };
     return $value unless ref $value eq 'ARRAY';
-    return @{ $value } if wantarray;
-    $value->[0];
+    wantarray ? @{ $value } : $value->[0];
 }
 
 sub delete {
@@ -80,9 +79,23 @@ sub push {
         unshift @values, $old_value;
     }
 
-    $self->_set( $field => @values > 1 ? \@values : shift @values );
+    $self->_set( $field, @values > 1 ? \@values : shift @values );
 
     return;
+}
+
+# make accessors
+for my $method ( qw/attachment charset cookie expires nph p3p type/ ) {
+    my $slot  = __PACKAGE__ . "::$method";
+    my $field = "-$method";
+
+    no strict 'refs';
+
+    *$slot = sub {
+        my $self = shift;
+        $self->_set( $field => shift ) if @_;
+        $self->get( $field );
+    };
 }
 
 {
