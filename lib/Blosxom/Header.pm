@@ -2,7 +2,7 @@ package Blosxom::Header;
 use 5.008_009;
 use strict;
 use warnings;
-use Carp;
+use Carp qw/carp croak/;
 
 our $VERSION = '0.03001';
 
@@ -68,50 +68,38 @@ sub set {
     }
 }
 
-sub push {
-    my $self   = shift;
-    my $field  = _normalize_field_name( shift );
-    my @values = @_;
+sub push_cookie {
+    my ( $self, @cookies ) = @_;
 
-    unless ( @values ) {
-        carp( 'Useless use of push with no values' );
+    unless ( @cookies ) {
+        carp( 'Useless use of push_cookie with no values' );
         return;
     }
 
-    if ( my $old_value = $self->{header}->{ $field } ) {
-        if ( ref $old_value eq 'ARRAY' ) {
-            push @{ $old_value }, @values;
-            return;
-        }
-        unshift @values, $old_value;
+    if ( my $cookie = $self->{header}->{-cookie} ) {
+        return push @{ $cookie }, @cookies if ref $cookie eq 'ARRAY';
+        unshift @cookies, $cookie;
     }
 
-    $self->_set( $field => @values > 1 ? \@values : $values[0] );
+    $self->_set( 'Set-Cookie' => @cookies > 1 ? \@cookies : $cookies[0] );
 
-    return;
+    scalar @cookies;
 }
-
-# make accessors
-for my $method ( qw/attachment charset cookie expires nph p3p target type/ ) {
-    my $slot  = __PACKAGE__ . "::$method";
-    my $field = "-$method";
-
-    no strict 'refs';
-
-    *$slot = sub {
-        my $self = shift;
-        $self->_set( $field => shift ) if @_;
-        $self->get( $field );
-    };
-}
-
-#sub _as_string {
-#    require CGI;
-#    CGI::header( shift->{header} );
-#}
 
 {
-    my %norm_of; # cache
+    # cache
+    my %norm_of = (
+        'attachment'   => '-attachment',
+        'charset'      => '-charset',
+        'nph'          => '-nph',
+        'target'       => '-target',
+        'Content-Type' => '-type',
+        'Expires'      => '-expires',
+        'P3P'          => '-p3p',
+        'Set-Cookie'   => '-cookie',
+    );
+
+    #sub _is_normalized {}
 
     sub _normalize_field_name {
         my $field = shift;

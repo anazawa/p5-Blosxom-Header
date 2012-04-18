@@ -5,20 +5,26 @@ use Blosxom::Header;
 
 {
     my $header = Blosxom::Header->new({});
-    is $header->push_cookie( 'foo' ), 1;
+    $header->push_cookie( 'foo' );
     is_deeply $header->{header}, { -cookie => 'foo' }, 'push';
 }
 
 {
     my $header = Blosxom::Header->new({});
-    is $header->push_cookie( qw/foo bar/ ), 2;
+    $header->push_cookie( qw/foo bar/ );
     my $expected = { -cookie => [ 'foo', 'bar' ] };
     is_deeply $header->{header}, $expected, 'push multiple values';
 }
 
+#{
+#    my $header = Blosxom::Header->new({});
+#    $header->push_cookie('=> 'bar' );
+#    is_deeply $header->{header}, { -foo => 'bar' }, 'push, not case-sensitive';
+#}
+
 {
     my $header = Blosxom::Header->new({ -cookie => 'foo' });
-    is $header->push_cookie( 'bar' ), 2;
+    $header->push_cookie( 'bar' );
     my $expected = { -cookie => [ 'foo', 'bar' ] };
     is_deeply $header->{header}, $expected, 'push';
 }
@@ -26,7 +32,7 @@ use Blosxom::Header;
 {
     my @cookies = ( 'foo' );
     my $header = Blosxom::Header->new({ -cookie => \@cookies });
-    is $header->push_cookie( 'bar' ), 2;
+    $header->push_cookie( 'bar' );
     my $expected = { -cookie => [ 'foo', 'bar' ] };
     is_deeply $header->{header}, $expected, 'push';
     is $header->{header}->{-cookie}, \@cookies, 'push';
