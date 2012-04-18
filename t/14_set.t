@@ -34,6 +34,12 @@ use Blosxom::Header;
 
 {
     my $header = Blosxom::Header->new({});
+    eval { $header->set( '-foo' ) };
+    like $@, qr{^Odd number of elements are passed to set()};
+}
+
+{
+    my $header = Blosxom::Header->new({});
     $header->set( Foo => 'bar' );
     is_deeply $header->{header}, { -foo => 'bar' }, 'set, not case-sensitive';
 }
@@ -51,19 +57,6 @@ use Blosxom::Header;
     my $expected = { -p3p => [ 'foo', 'bar' ] };
     is_deeply $header->{header}, $expected, 'set p3p arrayref';
 }
-
-#{
-#    my $header = Blosxom::Header->new({ -type => 'text/plain; charset=utf-8' });
-#    warning_like { $header->set( charset => 'EUC-JP' ) }
-#        qr{^The -type header contains a charset};
-#}
-
-#{
-#    my $header = Blosxom::Header->new({ -type => 'text/plain' });
-#    $header->set( charset => 'utf-8' );
-#    my $expected = { -type => 'text/plain', -charset => 'utf-8' };
-#    is_deeply $header->{header}, $expected, 'set p3p arrayref';
-#}
 
 {
     my $header = Blosxom::Header->new({});

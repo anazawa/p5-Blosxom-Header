@@ -39,10 +39,13 @@ sub set {
     if ( @fields == 2 ) {
         $self->_set( @fields );
     }
-    else {
+    elsif ( @fields % 2 == 0 ) {
         while ( my ( $field, $value ) = splice @fields, 0, 2 ) {
             $self->_set( $field => $value );
         }
+    }
+    else {
+        croak( 'Odd number of elements are passed to set()' );
     }
 
     return;
@@ -72,7 +75,7 @@ sub push_cookie {
     my ( $self, @cookies ) = @_;
 
     unless ( @cookies ) {
-        carp( 'Useless use of push_cookie with no values' );
+        carp( 'Useless use of push_cookie() with no values' );
         return;
     }
 
@@ -98,8 +101,6 @@ sub push_cookie {
         'P3P'          => '-p3p',
         'Set-Cookie'   => '-cookie',
     );
-
-    #sub _is_normalized {}
 
     sub _normalize_field_name {
         my $field = shift;
