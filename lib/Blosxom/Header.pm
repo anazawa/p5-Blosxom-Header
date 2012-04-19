@@ -71,23 +71,28 @@ sub set {
     }
 }
 
-sub push_cookie {
-    my ( $self, @cookies ) = @_;
+sub _push {
+    my ( $self, $field, @values ) = @_;
 
-    unless ( @cookies ) {
-        carp( 'Useless use of push_cookie() with no values' );
+    unless ( @values ) {
+        carp( 'Useless use of _push() with no values' );
         return;
     }
 
-    if ( my $cookie = $self->{header}->{-cookie} ) {
-        return push @{ $cookie }, @cookies if ref $cookie eq 'ARRAY';
-        unshift @cookies, $cookie;
+    my $norm = _normalize_field_name( $field );
+
+    if ( my $old_value = $self->{header}->{$norm} ) {
+        return push @{ $old_value }, @values if ref $old_value eq 'ARRAY';
+        unshift @values, $old_value;
     }
 
-    $self->_set( Set_Cookie => @cookies > 1 ? \@cookies : $cookies[0] );
+    $self->_set( $field => @values > 1 ? \@values : $values[0] );
 
-    scalar @cookies;
+    scalar @values;
 }
+
+sub push_cookie { shift->_push( Set_Cookie => @_ ) }
+sub push_p3p    { shift->_push( P3P        => @_ ) }
 
 {
     # cache
@@ -102,6 +107,18 @@ sub push_cookie {
         target       => '-target',
     );
 
+    while ( my ( $field, $method ) = each %norm_of ) {
+        $method =~ s/^-//;
+
+        no strict 'refs';
+
+        *{$method} = sub {
+            my $self = shift;
+            $self->_set( $field => shift ) if @_;
+            $self->get( $field );
+        };
+    }
+
     sub _normalize_field_name {
         my $field = shift;
 
@@ -115,11 +132,9 @@ sub push_cookie {
 
         # add initial dash if not exists
         $norm = "-$norm" unless $norm =~ /^-/;
-        #$norm =~ s/^-//;
 
         # use dashes instead of underscores
         $norm =~ tr{_}{-};
-        #$norm =~ tr/-/_/;
 
         # use alias if exists
         $norm = '-type'   if $norm eq '-content-type';
