@@ -82,7 +82,7 @@ sub _push {
     my $norm = _normalize_field_name( $field );
 
     if ( my $old_value = $self->{header}->{$norm} ) {
-        return push @{ $old_value }, @values if ref $old_value eq 'ARRAY';
+        return CORE::push @{ $old_value }, @values if ref $old_value eq 'ARRAY';
         unshift @values, $old_value;
     }
 
@@ -90,6 +90,9 @@ sub _push {
 
     scalar @values;
 }
+
+# Will be removed in 0.03003
+sub push { shift->_push( @_ ) }
 
 sub push_cookie { shift->_push( Set_Cookie => @_ ) }
 sub push_p3p    { shift->_push( P3P        => @_ ) }
@@ -107,12 +110,13 @@ sub push_p3p    { shift->_push( P3P        => @_ ) }
         target       => '-target',
     );
 
-    while ( my ( $field, $method ) = each %norm_of ) {
-        $method =~ s/^-//;
+    # make accessors
+    while ( my ( $field, $norm ) = each %norm_of ) {
+        $norm =~ s/^-//;
 
         no strict 'refs';
 
-        *{$method} = sub {
+        *{$norm} = sub {
             my $self = shift;
             $self->_set( $field => shift ) if @_;
             $self->get( $field );
@@ -238,24 +242,33 @@ In list context, a list of scalars is returned.
   my @cookie = $header->get( 'Set_Cookie' );
   my @p3p    = $header->get( 'P3P' );
 
-=item $bool = $header->exists( 'Foo' )
+=item $bool = $header->exists( $field )
 
 Returns a Boolean value telling whether the specified HTTP header exists.
 
-=item @deleted = $header->delete( 'Foo', 'Bar' )
+=item @deleted = $header->delete( @fields )
 
 Deletes the specified elements from HTTP headers.
 Returns values of deleted elements.
 
-=item $header->push()
+=item $header->push( $field => @values )
 
-Became OBSOLETE.
-See push_cookie().
+This method is deprecated and will be removed in 0.03003.
+Use push_cookie() or push_p3p() instead.
+An example convension is:
+
+  $header->push( Set_Cookie => @cookies );
+  $header->push( P3P => @p3p );
+
+  # Becomes
+
+  $header->push_cookie( @cookies );
+  $header->push_p3p( @p3p );
 
 =item $header->push_cookie( @cookies )
 
 Pushes the Set-Cookie headers onto HTTP headers.
-Returns the number of the Set-Cookie headers following the completed
+Returns the number of the elements following the completed
 push_cookie().  
 
   use CGI::Cookie;
@@ -267,83 +280,87 @@ push_cookie().
 
   $header->push_cookie( $cookie );
 
+=item $header->push_p3p( @p3p )
+
 =back
 
-=head2 EXAMPLES
-
-CGI::header() recognizes the following parameters.
+=head2 ACCESSORS
 
 =over 4
 
-=item Content_Type a.k.a. '-type'
-
-Represents the Content-Type header.
-
-  $header->set( Content_Type => 'text/plain' );
-  $header->set( Content_Type => 'text/plain; charset=utf-8' );
-
-=item Expires
-
-Represents the Expires header.
-You can specify an absolute or relative expiration interval.
-The following forms are all valid for this field.
-
-  '+30s' # 30 seconds from now
-  '+10m' # ten minutes from now
-  '+1h'  # one hour from now
-  '-1d'  # yesterday
-  'now'  # immediately
-  '+3M'  # in three months
-  '+10y' # in ten years time
-
-  # at the indicated time & date
-  'Thu, 25 Apr 1999 00:40:33 GMT'
-
-=item P3P
-
-Will add a P3P tag to the outgoing header.
-The parameter can be an arrayref or a space-delimited string.
-
-  $header->set( P3P => [ qw/CAO DSP LAW CURa/ ] );
-  $header->set( P3P => 'CAO DSP LAW CURa' );
-
-In either case, the outgoing header will be formatted as:
-
-  P3P: policyref="/w3c/p3p.xml" CP="CAO DSP LAW CURa"
-
-=item Set_Cookie a.k.a. '-cookie'
-
-Represents the Set-Cookie headers.
-The parameter can be an arrayref or a string.
-
-  $header->set( Set_Cookie => [ 'foo', 'bar' ] );
-  $header->set( Set_Cookie => 'baz' );
-
-=item attachment
+=item $header->attachment
 
 Can be used to turn the page into an attachment.
 Represents suggested name for the saved file.
 
-  $header->set( attachment => 'foo.png' );
+  $header->attachment( 'foo.png' );
 
 In this case, the outgoing header will be formatted as:
 
   Content-Disposition: attachment; filename="foo.png"
 
-=item charset
+=item $header->charset
 
 Represents the character set sent to the browser.
 If not provided, defaults to ISO-8859-1.
 
-  $header->set( charset => 'utf-8' );
+  $header->charset( 'utf-8' );
 
-=item nph
+=item $header->cookie
+
+Represents the Set-Cookie headers.
+The parameter can be an arrayref or a string.
+
+  $header->cookie( [ 'foo', 'bar' ] );
+  $header->cookie( 'baz' );
+
+=item $header->expires
+
+The Expires header gives the date and time after which the entity should be
+considered stale.
+You can specify an absolute or relative expiration interval.
+The following forms are all valid for this field:
+
+  $header->expires( '+30s' ); # 30 seconds from now
+  $header->expires( '+10m' ); # ten minutes from now
+  $header->expires( '+1h'  ); # one hour from now
+  $header->expires( '-1d'  ); # yesterday
+  $header->expires( 'now'  ); # immediately
+  $header->expires( '+3M'  ); # in three months
+  $header->expires( '+10y' ); # in ten years time
+
+  # at the indicated time & date
+  $header->expires( 'Thu, 25 Apr 1999 00:40:33 GMT' );
+
+=item $header->nph
 
 If set to a true value,
 will issue the correct headers to work with
 a NPH (no-parse-header) script:
 
-  $header->set( nph => 1 );
+  $header->nph( 1 );
+
+=item $header->p3p
+
+Will add a P3P tag to the outgoing header.
+The parameter can be an arrayref or a space-delimited string.
+
+  $header->p3p( [ qw/CAO DSP LAW CURa/ ] );
+  $header->p3p( 'CAO DSP LAW CURa' );
+
+In either case, the outgoing header will be formatted as:
+
+  P3P: policyref="/w3c/p3p.xml" CP="CAO DSP LAW CURa"
+
+=item $header->target
+
+Represents the Window-Target header.
+
+=item $header->type
+
+The Content-Type header indicates the media type of the mssage content.
+
+  $header->type( 'text/plain' );
 
 =back
 
