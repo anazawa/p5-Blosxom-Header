@@ -84,7 +84,7 @@ sub push_cookie {
         unshift @cookies, $cookie;
     }
 
-    $self->_set( 'Set-Cookie' => @cookies > 1 ? \@cookies : $cookies[0] );
+    $self->_set( Set_Cookie => @cookies > 1 ? \@cookies : $cookies[0] );
 
     scalar @cookies;
 }
@@ -92,14 +92,14 @@ sub push_cookie {
 {
     # cache
     my %norm_of = (
-        'attachment'   => '-attachment',
-        'charset'      => '-charset',
-        'nph'          => '-nph',
-        'target'       => '-target',
-        'Content-Type' => '-type',
-        'Expires'      => '-expires',
-        'P3P'          => '-p3p',
-        'Set-Cookie'   => '-cookie',
+        Content_Type => '-type',
+        Expires      => '-expires',
+        P3P          => '-p3p',
+        Set_Cookie   => '-cookie',
+        attachment   => '-attachment',
+        charset      => '-charset',
+        nph          => '-nph',
+        target       => '-target',
     );
 
     sub _normalize_field_name {
@@ -115,9 +115,11 @@ sub push_cookie {
 
         # add initial dash if not exists
         $norm = "-$norm" unless $norm =~ /^-/;
+        #$norm =~ s/^-//;
 
         # use dashes instead of underscores
         $norm =~ tr{_}{-};
+        #$norm =~ tr/-/_/;
 
         # use alias if exists
         $norm = '-type'   if $norm eq '-content-type';
@@ -137,59 +139,52 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
 =head1 SYNOPSIS
 
-  package blosxom;
-  our $header = { -type => 'text/html' };
-
-  package plugin_foo;
   use Blosxom::Header;
 
   my $header = Blosxom::Header->new;
-  my $value  = $header->get( 'Foo' );
-  my $bool   = $header->exists( 'Foo' );
 
-  $header->set( Foo => 'bar' );
-  $header->delete( 'Foo' );
+  $header->set(
+      Status        => '304 Not Modified',
+      Last_Modified => 'Wed, 23 Sep 2009 13:36:33 GMT',
+  );
 
-  my @cookies = $header->get( 'Set-Cookie' );
-  $header->push( 'Set-Cookie' => 'foo' );
+  my $status  = $header->get( 'Status' );
+  my @cookies = $header->get( 'Set_Cookie' );
+  my @p3p     = $header->get( 'P3P' );
 
-  my @p3p = $header->get( 'P3P' );
-  $header->push( P3P => 'foo' );
+  my $bool = $header->exists( 'ETag' );
+
+  my @deleted = $header->delete( qw/Content_Disposition Content_Length/ );
+
+  $header->push_cookie( @cookies );
 
   $header->{header}; # same reference as $blosxom::header
 
 =head1 DESCRIPTION
 
-Blosxom, a weblog application, exports a global variable $header
-which is a reference to hash.
-This application passes $header L<CGI>::header() to generate
-HTTP headers.
+Blosxom, an weblog application, exports a global variable $header
+which is a reference to hash. This application passes $header L<CGI>::header()
+to generate HTTP headers.
 
-When plugin developers modify HTTP headers, they must write as follows:
+  package blosxom;
+  use CGI;
+  our $header = { -type => 'text/html' };
+  # Loads plugins
+  print CGI::header( $header );
 
-  package foo;
-  $blosxom::header->{'-status'} = '304 Not Modified';
-
-It's obviously bad practice.
+Though keys of $header are case-sensitive,
+header() doesn't care whether they are lowecased
+nor starting with a dash.
 The problem is multiple elements may specify the same field:
 
-  package bar;
-  $blosxom::header->{'status'} = '404 Not Found';
+  package plugin_foo;
+  $blosxom::header->{-status} = '304 Not Modified';
 
-  package baz;
-  $blosxom::header->{'-Status'} = '301 Moved Permanently';
+  package plugin_bar;
+  $blosxom::header->{Status} = '404 Not Found';
 
 Blosxom misses the interface to modify HTTP headers.
-
-If you used this module, you might write as follows:
-
-  package foo;
-  use Blosxom::Header;
-  my $header = Blosxom::Header->new;
-  $header->set( Status => '304 Not Modified' );
-
-You don't have to mind whether to put a dash before a key,
-nor whether to make a key lowercased, any more.
+This module provides you the alternative way described below.
 
 =head2 METHODS
 
@@ -199,33 +194,115 @@ nor whether to make a key lowercased, any more.
 
 Creates a new Blosxom::Header object.
 
-=item $value = $header->get( 'Foo' )
+=item $header->set( $field => $value )
+
+=item $header->set( $f1 => $v1, $f2 => $v2, ... )
+
+Sets the value of one or more header fields.
+Accepts a list of named arguments.
+The header field name ($field) isn't case-sensitive.
+We follow L<HTTP::Headers>'s way:
+
+  "To make the life easier for perl users who wants to avoid quoting before the
+  => operator, you can use '_' as a replacement for '-' in header names."
+
+The $value argument must be a plain string, except for when the Set-Cookie
+or P3P response header is specified.
+In exceptional cases, $value may be a reference to an array.
+
+  $header->set( Set_Cookie => [ $cookie1, $cookie2 ] );
+  $header->set( P3P => [ qw/CAO DSP LAW CURa/ ] );
+
+=item $value = $header->get( $field )
+
+=item @values = $header->get( $field )
 
 Returns a value of the specified HTTP header.
+In list context, a list of scalars is returned.
 
-=item $header->set( Foo => 'bar' )
-
-Sets a value of the specified HTTP header.
+  my @cookie = $header->get( 'Set_Cookie' );
+  my @p3p    = $header->get( 'P3P' );
 
 =item $bool = $header->exists( 'Foo' )
 
 Returns a Boolean value telling whether the specified HTTP header exists.
 
-=item $header->delete( 'Foo' )
+=item @deleted = $header->delete( 'Foo', 'Bar' )
 
-Deletes all the specified elements from HTTP headers.
+Deletes the specified elements from HTTP headers.
+Returns values of deleted elements.
 
-=item $header->push( 'Set-Cookie' => 'foo' )
+=item $header->push()
 
-Pushes the Set-Cookie header onto HTTP headers.
+Became OBSOLETE.
+See push_cookie().
+
+=item $header->push_cookie( @cookies )
+
+Pushes the Set-Cookie headers onto HTTP headers.
+Returns the number of the Set-Cookie headers following the completed
+push_cookie().  
+
+  use CGI::Cookie;
+
+  my $cookie = CGI::Cookie->new(
+      -name  => 'ID',
+      -value => 123456,
+  );
+
+  $header->push_cookie( $cookie );
 
 =back
 
-=head1 EXAMPLES
+=head2 EXAMPLES
 
-L<CGI>::header recognizes the following parameters.
+CGI::header() recognizes the following parameters.
 
 =over 4
+
+=item Content_Type a.k.a. '-type'
+
+Represents the Content-Type header.
+
+  $header->set( Content_Type => 'text/plain' );
+  $header->set( Content_Type => 'text/plain; charset=utf-8' );
+
+=item Expires
+
+Represents the Expires header.
+You can specify an absolute or relative expiration interval.
+The following forms are all valid for this field.
+
+  '+30s' # 30 seconds from now
+  '+10m' # ten minutes from now
+  '+1h'  # one hour from now
+  '-1d'  # yesterday
+  'now'  # immediately
+  '+3M'  # in three months
+  '+10y' # in ten years time
+
+  # at the indicated time & date
+  'Thu, 25 Apr 1999 00:40:33 GMT'
+
+=item P3P
+
+Will add a P3P tag to the outgoing header.
+The parameter can be an arrayref or a space-delimited string.
+
+  $header->set( P3P => [ qw/CAO DSP LAW CURa/ ] );
+  $header->set( P3P => 'CAO DSP LAW CURa' );
+
+In either case, the outgoing header will be formatted as:
+
+  P3P: policyref="/w3c/p3p.xml" CP="CAO DSP LAW CURa"
+
+=item Set_Cookie a.k.a. '-cookie'
+
+Represents the Set-Cookie headers.
+The parameter can be an arrayref or a string.
+
+  $header->set( Set_Cookie => [ 'foo', 'bar' ] );
+  $header->set( Set_Cookie => 'baz' );
 
 =item attachment
 
@@ -245,31 +322,6 @@ If not provided, defaults to ISO-8859-1.
 
   $header->set( charset => 'utf-8' );
 
-=item cookie
-
-Represents the Set-Cookie headers.
-The parameter can be an arrayref or a string.
-
-  $header->set( cookie => [ 'foo', 'bar' ] );
-  $header->set( cookie => 'baz' );
-
-=item expires
-
-Represents the Expires header.
-You can specify an absolute or relative expiration interval.
-The following forms are all valid for this field.
-
-  $header->set( expires => '+30s' ); # 30 seconds from now
-  $header->set( expires => '+10m' ); # ten minutes from now
-  $header->set( expires => '+1h'  ); # one hour from now
-  $header->set( expires => '-1d'  ); # yesterday
-  $header->set( expires => 'now'  ); # immediately
-  $header->set( expires => '+3M'  ); # in three months
-  $header->set( expires => '+10y' ); # in ten years time
-
-  # at the indicated time & date
-  $header->set( expires => 'Thu, 25 Apr 1999 00:40:33 GMT' );
-
 =item nph
 
 If set to a true value,
@@ -278,27 +330,11 @@ a NPH (no-parse-header) script:
 
   $header->set( nph => 1 );
 
-=item p3p
-
-Will add a P3P tag to the outgoing header.
-The parameter can be an arrayref or a space-delimited string.
-
-  $header->set( p3p => [ qw/CAO DSP LAW CURa/ ] );
-  $header->set( p3p => 'CAO DSP LAW CURa' );
-
-In either case, the outgoing header will be formatted as:
-
-  P3P: policyref="/w3c/p3p.xml" CP="CAO DSP LAW CURa"
-
-=item type
-
-Represents the Content-Type header.
-
-  $header->set( type => 'text/plain' );
-
 =back
 
 =head1 DEPENDENCIES
+
+Perl 5.8.9 or higher.
 
 L<Blosxom 2.0.0|http://blosxom.sourceforge.net/> or higher.
 
