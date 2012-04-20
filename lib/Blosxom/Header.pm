@@ -219,7 +219,7 @@ Creates a new Blosxom::Header object.
 Sets the value of one or more header fields.
 Accepts a list of named arguments.
 The header field name ($field) isn't case-sensitive.
-We follow L<HTTP::Headers>'s way:
+We follow L<HTTP::Headers>' way:
 
   "To make the life easier for perl users who wants to avoid quoting before the
   => operator, you can use '_' as a replacement for '-' in header names."
