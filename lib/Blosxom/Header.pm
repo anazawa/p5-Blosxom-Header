@@ -167,15 +167,13 @@ Blosxom::Header - Missing interface to modify HTTP headers
       Last_Modified => 'Wed, 23 Sep 2009 13:36:33 GMT',
   );
 
-  my $status  = $header->get( 'Status' );
-  my @cookies = $header->get( 'Set_Cookie' );
-  my @p3p     = $header->get( 'P3P' );
-
-  my $bool = $header->exists( 'ETag' );
+  my $status = $header->get( 'Status' );
+  my $bool   = $header->exists( 'ETag' );
 
   my @deleted = $header->delete( qw/Content_Disposition Content_Length/ );
 
   $header->push_cookie( @cookies );
+  $header->push_p3p( @p3p );
 
   $header->{header}; # same reference as $blosxom::header
 
@@ -183,7 +181,7 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
 Blosxom, an weblog application, exports a global variable $header
 which is a reference to hash. This application passes $header L<CGI>::header()
-to generate HTTP headers.
+to generate HTTP response headers.
 
   package blosxom;
   use CGI;
@@ -191,10 +189,9 @@ to generate HTTP headers.
   # Loads plugins
   print CGI::header( $header );
 
-Though keys of $header are case-sensitive,
-header() doesn't care whether they are lowecased
+header() doesn't care whether keys of $header are lowecased
 nor starting with a dash.
-The problem is multiple elements may specify the same field:
+The problem is multiple elements of $header may specify the same field:
 
   package plugin_foo;
   $blosxom::header->{-status} = '304 Not Modified';
@@ -202,8 +199,10 @@ The problem is multiple elements may specify the same field:
   package plugin_bar;
   $blosxom::header->{Status} = '404 Not Found';
 
-Blosxom misses the interface to modify HTTP headers.
-This module provides you the alternative way described below.
+In above way, plugin developers can't modify HTTP headers consistently.
+Blosxom misses the interface.
+This module provides you the alternative way, and also some convenient methods
+described below.
 
 =head2 METHODS
 
@@ -253,7 +252,7 @@ Returns values of deleted elements.
 
 =item $header->push( $field => @values )
 
-This method is deprecated and will be removed in 0.03003.
+This method is deprecated and will be removed in 0.04.
 Use push_cookie() or push_p3p() instead.
 An example convension is:
 
@@ -282,9 +281,15 @@ push_cookie().
 
 =item $header->push_p3p( @p3p )
 
+  $header->push_p3p( qw/foo bar/ );
+
 =back
 
 =head2 ACCESSORS
+
+These methods can both be used to get() and set() the value of a header.
+The header value is set if you pass an argument to the method.
+If the given header didn't exists then undef is returned.
 
 =over 4
 
@@ -356,9 +361,11 @@ In either case, the outgoing header will be formatted as:
 
 Represents the Window-Target header.
 
+  $header->target( 'ResultsWindow' );
+
 =item $header->type
 
-The Content-Type header indicates the media type of the mssage content.
+The Content-Type header indicates the media type of the message content.
 
   $header->type( 'text/plain' );
 
