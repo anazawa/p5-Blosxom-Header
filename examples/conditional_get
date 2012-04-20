@@ -7,8 +7,6 @@
 package conditional_get;
 use strict;
 use warnings;
-use FindBin;
-use lib "$FindBin::Bin/../lib";
 use Blosxom::Header;
 
 our $VERSION = '0.01004';
@@ -18,20 +16,21 @@ sub start { !$blosxom::static_entries }
 sub last {
     return unless $ENV{REQUEST_METHOD} =~ /^(GET|HEAD)$/;
     my $header = Blosxom::Header->new;
-    return unless etag_matches( $header ) or not_modified_since( $header );
 
-    $header->delete( qw/Content-Disposition attachment Content-Length/ );
+    if ( etag_matches( $header ) or not_modified_since( $header ) ) {
+        $header->delete( qw/Content-Disposition attachment Content-Length/ );
 
-    # If Content-Type isn't defined,
-    # CGI::header() will add the default value.
-    # And so makes it defined.
-    $header->set(
-        'Content-Type' => q{},
-        'Status'       => '304 Not Modified',
-    );
+        # If Content-Type isn't defined,
+        # CGI::header() will add the default value.
+        # And so makes it defined.
+        $header->set(
+            Content_Type => q{},
+            Status       => '304 Not Modified',
+        );
 
-    # Truncate output
-    $blosxom::output = q{};
+        # Truncate output
+        $blosxom::output = q{};
+    }
 
     return;
 }

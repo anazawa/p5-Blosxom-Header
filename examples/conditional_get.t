@@ -1,6 +1,8 @@
 use strict;
-#use FindBin;
+use FindBin;
+use lib "$FindBin::Bin/../lib";
 use Test::Base;
+
 plan tests => 2 + 2 * blocks;
 
 {
@@ -11,8 +13,7 @@ plan tests => 2 + 2 * blocks;
 }
 
 my $plugin = 'conditional_get';
-#require "$FindBin::Bin/plugins/$plugin";
-require $plugin;
+require "$FindBin::Bin/$plugin";
 
 can_ok $plugin, qw( start last );
 ok $plugin->start;
