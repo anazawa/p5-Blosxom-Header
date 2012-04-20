@@ -94,45 +94,31 @@ sub _push {
 # Will be removed in 0.04
 sub push { shift->_push( @_ ) }
 
-sub push_cookie { shift->_push( Set_Cookie => @_ ) }
-sub push_p3p    { shift->_push( P3P        => @_ ) }
+sub push_cookie { shift->_push( -cookie => @_ ) }
+sub push_p3p    { shift->_push( -p3p    => @_ ) }
+
+# make accessors
+for my $method ( qw/attachment charset cookie expires nph p3p target type/ ) {
+    my $slot  = __PACKAGE__ . "::$method";
+    my $field = "-$method";
+
+    no strict 'refs';
+
+    *$slot = sub {
+        my $self = shift;
+        $self->_set( $field => shift ) if @_;
+        $self->get( $field );
+    };
+}
 
 {
-    # cache
-    my %norm_of = (
-        Content_Type => '-type',
-        Expires      => '-expires',
-        P3P          => '-p3p',
-        Set_Cookie   => '-cookie',
-        attachment   => '-attachment',
-        charset      => '-charset',
-        nph          => '-nph',
-        target       => '-target',
+    my %ALIAS_OF = (
+        '-content-type' => '-type',
+        '-set-cookie'   => '-cookie',
     );
 
-    # make accessors
-    while ( my ( $field, $norm ) = each %norm_of ) {
-        $norm =~ s/^-//;
-
-        no strict 'refs';
-
-        *{$norm} = sub {
-            my $self = shift;
-            $self->_set( $field => shift ) if @_;
-            $self->get( $field );
-        };
-    }
-
     sub _normalize_field_name {
-        my $field = shift;
-
-        return unless $field;
-
-        # return cache if exists
-        return $norm_of{ $field } if exists $norm_of{ $field };
-
-        # lowercase $field
-        my $norm = lc $field;
+        my $norm = lc shift;
 
         # add initial dash if not exists
         $norm = "-$norm" unless $norm =~ /^-/;
@@ -140,11 +126,8 @@ sub push_p3p    { shift->_push( P3P        => @_ ) }
         # use dashes instead of underscores
         $norm =~ tr{_}{-};
 
-        # use alias if exists
-        $norm = '-type'   if $norm eq '-content-type';
-        $norm = '-cookie' if $norm eq '-set-cookie';
-
-        $norm_of{ $field } = $norm;
+        # return alias if exists
+        $ALIAS_OF{ $norm } || $norm;
     }
 }
 
