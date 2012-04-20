@@ -91,7 +91,7 @@ sub _push {
     scalar @values;
 }
 
-# Will be removed in 0.03003
+# Will be removed in 0.04
 sub push { shift->_push( @_ ) }
 
 sub push_cookie { shift->_push( Set_Cookie => @_ ) }
