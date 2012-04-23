@@ -14,23 +14,45 @@ sub new {
 }
 
 sub get {
-    my $header = shift->{header};
+    my $self = shift;
     my $field = _normalize_field_name( shift );
-    my $value = $header->{ $field };
+    my $value = $self->{header}->{$field};
     return $value unless ref $value eq 'ARRAY';
-    wantarray ? @{ $value } : $value->[0];
+    return @{ $value } if wantarray;
+    return $value->[0] if defined wantarray;
+    return;
 }
 
 sub delete {
-    my $header = shift->{header};
+    my $self = shift;
     my @fields = map { _normalize_field_name( $_ ) } @_;
-    delete @{ $header }{ @fields };
+    delete @{ $self->{header} }{ @fields };
 }
 
 sub exists {
-    my $header = shift->{header};
+    my $self = shift;
     my $field = _normalize_field_name( shift );
-    exists $header->{ $field };
+    exists $self->{header}->{$field};
+}
+
+{
+    my %is_reserved = map { $_ => 1 }
+        qw( attachment charset cookie expires nph p3p status target type );
+
+    # most useless method in this module :(
+    sub keys {
+        my $self = shift;
+        map {
+            my $norm = $_;
+            $norm =~ s/^-//;
+            $is_reserved{ $norm } ? $norm : ucfirst $norm
+        } keys %{ $self->{header} };
+    }
+}
+
+sub clear {
+    my $self = shift;
+    %{ $self->{header} } = ();
 }
 
 sub set {
@@ -52,20 +74,20 @@ sub set {
 }
 
 {
-    my %isa_ArrayRef = (
+    my %is_multi_valued_field = (
         -cookie => 1,
         -p3p    => 1,
     );
 
     sub _set {
-        my $header = shift->{header};
-        my $field  = _normalize_field_name( shift );
-        my $value  = shift;
+        my $self  = shift;
+        my $field = _normalize_field_name( shift );
+        my $value = shift;
 
         croak( "The $field header can't be an ARRAY reference" )
-            if ref $value eq 'ARRAY' and !$isa_ArrayRef{ $field };
+            if ref $value eq 'ARRAY' and !$is_multi_valued_field{ $field };
 
-        $header->{ $field } = $value;
+        $self->{header}->{$field} = $value;
 
         return;
     }
@@ -87,8 +109,7 @@ sub _push {
     }
 
     $self->_set( $field => @values > 1 ? \@values : $values[0] );
-
-    scalar @values;
+    scalar @values if defined wantarray;
 }
 
 # Will be removed in 0.04
@@ -98,23 +119,31 @@ sub push_cookie { shift->_push( -cookie => @_ ) }
 sub push_p3p    { shift->_push( -p3p    => @_ ) }
 
 # make accessors
-for my $method ( qw/attachment charset cookie expires nph p3p target type/ ) {
-    my $slot  = __PACKAGE__ . "::$method";
-    my $field = "-$method";
+{
+    my @methods = qw(
+        attachment charset cookie expires nph
+        p3p        status  target type
+    );
 
-    no strict 'refs';
+    for my $method ( @methods ) {
+        my $slot  = __PACKAGE__ . "::$method";
+        my $field = "-$method";
 
-    *$slot = sub {
-        my $self = shift;
-        $self->_set( $field => shift ) if @_;
-        $self->get( $field );
-    };
+        no strict 'refs';
+
+        *$slot = sub {
+            my $self = shift;
+            $self->_set( $field => shift ) if @_;
+            $self->get( $field );
+        };
+    }
 }
 
 {
     my %ALIAS_OF = (
         '-content-type' => '-type',
         '-set-cookie'   => '-cookie',
+        '-cookies'      => '-cookie',
     );
 
     sub _normalize_field_name {
