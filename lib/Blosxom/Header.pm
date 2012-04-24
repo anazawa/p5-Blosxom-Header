@@ -6,26 +6,6 @@ use Carp qw/carp croak/;
 
 our $VERSION = '0.03002';
 
-sub TIEHASH { shift->new( @_ )    }
-sub FETCH   { shift->get( @_ )    }
-sub STORE   { shift->_set( @_ )   }
-sub EXISTS  { shift->exists( @_ ) }
-sub DELETE  { shift->delete( @_ ) }
-sub CLEAR   { shift->clear        }
-
-sub FIRSTKEY {
-    my $self = shift;
-    keys %{ $self->{header} };
-    my $first_key = each %{ $self->{header} };
-    $first_key;
-}
-
-sub NEXTKEY {
-    my ( $self, $nextkey ) = @_;
-    my $next_key = each %{ $self->{header} };
-    $next_key;
-}
-
 sub new {
     my $class = shift;
     my $header = shift || $blosxom::header;
@@ -39,8 +19,7 @@ sub get {
     my $value = $self->{header}->{$field};
     return $value unless ref $value eq 'ARRAY';
     return @{ $value } if wantarray;
-    return $value->[0] if defined wantarray;
-    return;
+    return $value if defined wantarray;
 }
 
 sub delete {
@@ -53,21 +32,6 @@ sub exists {
     my $self = shift;
     my $field = _normalize_field_name( shift );
     exists $self->{header}->{$field};
-}
-
-{
-    my %is_reserved = map { $_ => 1 }
-        qw( attachment charset cookie expires nph p3p status target type );
-
-    # most useless method in this module :(
-    sub keys {
-        my $self = shift;
-        map {
-            my $norm = $_;
-            $norm =~ s/^-//;
-            $is_reserved{ $norm } ? $norm : ucfirst $norm
-        } keys %{ $self->{header} };
-    }
 }
 
 sub clear {
@@ -124,19 +88,21 @@ sub _push {
     my $norm = _normalize_field_name( $field );
 
     if ( my $old_value = $self->{header}->{$norm} ) {
-        return CORE::push @{ $old_value }, @values if ref $old_value eq 'ARRAY';
+        return push @{ $old_value }, @values if ref $old_value eq 'ARRAY';
         unshift @values, $old_value;
     }
 
     $self->_set( $field => @values > 1 ? \@values : $values[0] );
+
+    # returns the number of elements of @values like CORE::push
     scalar @values if defined wantarray;
 }
 
-# Will be removed in 0.04
-sub push { shift->_push( @_ ) }
-
 sub push_cookie { shift->_push( -cookie => @_ ) }
 sub push_p3p    { shift->_push( -p3p    => @_ ) }
+
+# Will be removed in 0.04
+sub push { shift->_push( @_ ) }
 
 # make accessors
 {
@@ -180,6 +146,41 @@ sub push_p3p    { shift->_push( -p3p    => @_ ) }
     }
 }
 
+# tie() interface 
+
+sub TIEHASH { shift->new( @_ )    }
+sub FETCH   { shift->get( @_ )    }
+sub STORE   { shift->_set( @_ )   }
+sub EXISTS  { shift->exists( @_ ) }
+sub DELETE  { shift->delete( @_ ) }
+sub CLEAR   { shift->clear        }
+
+{
+    my %is_reserved = map { $_ => 1 }
+        qw( attachment charset cookie expires nph p3p status target type );
+
+    sub FIRSTKEY {
+        my $self = shift;
+        keys %{ $self->{header} };
+        my $first_key = each %{ $self->{header} };
+        if ( $first_key ) {
+            $first_key =~ s/^-//;
+            return $first_key if $is_reserved{ $first_key }; 
+            ucfirst $first_key; 
+        }
+    }
+
+    sub NEXTKEY {
+        my $self = shift;
+        my $next_key = each %{ $self->{header} };
+        if ( $next_key ) {
+            $next_key =~ s/^-//;
+            return $next_key if $is_reserved{ $next_key }; 
+            ucfirst $next_key; 
+        }
+    }
+}
+
 1;
 
 __END__
@@ -192,6 +193,19 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
   use Blosxom::Header;
 
+  tie my %header, 'Blosxom::Header';
+
+  $header{Status} = '304 Not Modified';
+
+  my $value   = $header{Status}; 
+  my $bool    = exists $header{Status}; 
+  my $deleted = delete $header{Status};
+  my @keys    = keys %header;
+
+  %header = ();
+
+  # object-oriented interface
+
   my $header = Blosxom::Header->new;
 
   $header->set(
@@ -199,15 +213,11 @@ Blosxom::Header - Missing interface to modify HTTP headers
       Last_Modified => 'Wed, 23 Sep 2009 13:36:33 GMT',
   );
 
-  my $status = $header->get( 'Status' );
-  my $bool   = $header->exists( 'ETag' );
-
+  my $status  = $header->get( 'Status' );
+  my $bool    = $header->exists( 'ETag' );
   my @deleted = $header->delete( qw/Content_Disposition Content_Length/ );
 
   $header->push_cookie( @cookies );
-  $header->push_p3p( @p3p );
-
-  $header->{header}; # same reference as $blosxom::header
 
 =head1 DESCRIPTION
 
