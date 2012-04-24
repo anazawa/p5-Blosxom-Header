@@ -8,7 +8,7 @@ use Carp qw/carp croak/;
 use constant ATTRIBUTES
     => qw/attachment charset cookie expires nph p3p status target type/;
 
-our $VERSION = '0.03002';
+our $VERSION = '0.03003';
 
 sub new {
     my $class = shift;
