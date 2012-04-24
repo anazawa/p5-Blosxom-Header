@@ -3,6 +3,8 @@ use 5.008_009;
 use strict;
 use warnings;
 use Carp qw/carp croak/;
+
+# parameters recognized by CGI::header()
 use constant ATTRIBUTES
     => qw/attachment charset cookie expires nph p3p status target type/;
 
@@ -59,25 +61,18 @@ sub set {
     return;
 }
 
-{
-    my %isa_ArrayRef = (
-        -cookie => 1,
-        -p3p    => 1,
-    );
+sub _set {
+    my $self  = shift;
+    my $field = _normalize_field_name( shift );
+    my $value = shift;
 
-    sub _set {
-        my $self  = shift;
-        my $field = _normalize_field_name( shift );
-        my $value = shift;
+    $self->{header}->{$field} = $value;
 
-        croak( "The $field header can't be an ARRAY reference" )
-            if ref $value eq 'ARRAY' and !$isa_ArrayRef{ $field };
-
-        $self->{header}->{$field} = $value;
-
-        return;
-    }
+    return;
 }
+
+sub push_cookie { shift->_push( -cookie => @_ ) }
+sub push_p3p    { shift->_push( -p3p    => @_ ) }
 
 sub _push {
     my $self   = shift;
@@ -99,9 +94,6 @@ sub _push {
     # returns the number of elements in @values like CORE::push
     scalar @values if defined wantarray;
 }
-
-sub push_cookie { shift->_push( -cookie => @_ ) }
-sub push_p3p    { shift->_push( -p3p    => @_ ) }
 
 # Will be removed in 0.04
 sub push { shift->_push( @_ ) }
@@ -142,10 +134,10 @@ sub NEXTKEY {
     _denormalize_field_name( $next_key ) if $next_key;
 }
 
-# Utilities
+# Uilities
 
 {
-    my %alias_of = (
+    my %ALIAS_OF = (
         '-content-type' => '-type',
         '-set-cookie'   => '-cookie',
         '-cookies'      => '-cookie',
@@ -161,17 +153,17 @@ sub NEXTKEY {
         $norm =~ tr{_}{-};
 
         # return alias if exists
-        $alias_of{ $norm } || $norm;
+        $ALIAS_OF{ $norm } || $norm;
     }
 }
 
 {
-    my %is_attribute = map { $_ => 1 } ATTRIBUTES;
+    my %IS_ATTRIBUTE = map { $_ => 1 } ATTRIBUTES;
 
     sub _denormalize_field_name {
         my $field = shift;
         $field =~ s/^-//;
-        return $field if $is_attribute{ $field }; 
+        return $field if $IS_ATTRIBUTE{ $field }; 
         ucfirst $field; 
     }
 }
