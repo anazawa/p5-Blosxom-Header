@@ -6,6 +6,26 @@ use Carp qw/carp croak/;
 
 our $VERSION = '0.03002';
 
+sub TIEHASH { shift->new( @_ )    }
+sub FETCH   { shift->get( @_ )    }
+sub STORE   { shift->_set( @_ )   }
+sub EXISTS  { shift->exists( @_ ) }
+sub DELETE  { shift->delete( @_ ) }
+sub CLEAR   { shift->clear        }
+
+sub FIRSTKEY {
+    my $self = shift;
+    keys %{ $self->{header} };
+    my $first_key = each %{ $self->{header} };
+    $first_key;
+}
+
+sub NEXTKEY {
+    my ( $self, $nextkey ) = @_;
+    my $next_key = each %{ $self->{header} };
+    $next_key;
+}
+
 sub new {
     my $class = shift;
     my $header = shift || $blosxom::header;
