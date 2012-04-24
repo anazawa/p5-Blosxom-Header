@@ -3,6 +3,8 @@ use 5.008_009;
 use strict;
 use warnings;
 use Carp qw/carp croak/;
+use constant ATTRIBUTES
+    => qw/attachment charset cookie expires nph p3p status target type/;
 
 our $VERSION = '0.03002';
 
@@ -58,7 +60,7 @@ sub set {
 }
 
 {
-    my %is_multi_valued_field = (
+    my %isa_ArrayRef = (
         -cookie => 1,
         -p3p    => 1,
     );
@@ -69,7 +71,7 @@ sub set {
         my $value = shift;
 
         croak( "The $field header can't be an ARRAY reference" )
-            if ref $value eq 'ARRAY' and !$is_multi_valued_field{ $field };
+            if ref $value eq 'ARRAY' and !$isa_ArrayRef{ $field };
 
         $self->{header}->{$field} = $value;
 
@@ -78,23 +80,23 @@ sub set {
 }
 
 sub _push {
-    my ( $self, $field, @values ) = @_;
+    my $self   = shift;
+    my $field  = _normalize_field_name( shift );
+    my @values = @_;
 
     unless ( @values ) {
         carp( 'Useless use of _push() with no values' );
         return;
     }
 
-    my $norm = _normalize_field_name( $field );
-
-    if ( my $old_value = $self->{header}->{$norm} ) {
+    if ( my $old_value = $self->{header}->{$field} ) {
         return push @{ $old_value }, @values if ref $old_value eq 'ARRAY';
         unshift @values, $old_value;
     }
 
     $self->_set( $field => @values > 1 ? \@values : $values[0] );
 
-    # returns the number of elements of @values like CORE::push
+    # returns the number of elements in @values like CORE::push
     scalar @values if defined wantarray;
 }
 
@@ -105,28 +107,45 @@ sub push_p3p    { shift->_push( -p3p    => @_ ) }
 sub push { shift->_push( @_ ) }
 
 # make accessors
-{
-    my @methods = qw(
-        attachment charset cookie expires nph
-        p3p        status  target type
-    );
+for my $method ( ATTRIBUTES ) {
+    my $slot  = __PACKAGE__ . "::$method";
+    my $field = "-$method";
 
-    for my $method ( @methods ) {
-        my $slot  = __PACKAGE__ . "::$method";
-        my $field = "-$method";
+    no strict 'refs';
 
-        no strict 'refs';
-
-        *$slot = sub {
-            my $self = shift;
-            $self->_set( $field => shift ) if @_;
-            $self->get( $field );
-        };
-    }
+    *$slot = sub {
+        my $self = shift;
+        $self->_set( $field => shift ) if @_;
+        $self->get( $field );
+    };
 }
 
+# tie() interface 
+
+sub TIEHASH { shift->new( @_ )    }
+sub FETCH   { shift->get( @_ )    }
+sub STORE   { shift->_set( @_ )   }
+sub EXISTS  { shift->exists( @_ ) }
+sub DELETE  { shift->delete( @_ ) }
+sub CLEAR   { shift->clear        }
+
+sub FIRSTKEY {
+    my $self = shift;
+    keys %{ $self->{header} };
+    my $first_key = each %{ $self->{header} };
+    _denormalize_field_name( $first_key ) if $first_key;
+}
+
+sub NEXTKEY {
+    my $self = shift;
+    my $next_key = each %{ $self->{header} };
+    _denormalize_field_name( $next_key ) if $next_key;
+}
+
+# Utilities
+
 {
-    my %ALIAS_OF = (
+    my %alias_of = (
         '-content-type' => '-type',
         '-set-cookie'   => '-cookie',
         '-cookies'      => '-cookie',
@@ -142,42 +161,18 @@ sub push { shift->_push( @_ ) }
         $norm =~ tr{_}{-};
 
         # return alias if exists
-        $ALIAS_OF{ $norm } || $norm;
+        $alias_of{ $norm } || $norm;
     }
 }
 
-# tie() interface 
-
-sub TIEHASH { shift->new( @_ )    }
-sub FETCH   { shift->get( @_ )    }
-sub STORE   { shift->_set( @_ )   }
-sub EXISTS  { shift->exists( @_ ) }
-sub DELETE  { shift->delete( @_ ) }
-sub CLEAR   { shift->clear        }
-
 {
-    my %is_reserved = map { $_ => 1 }
-        qw( attachment charset cookie expires nph p3p status target type );
+    my %is_attribute = map { $_ => 1 } ATTRIBUTES;
 
-    sub FIRSTKEY {
-        my $self = shift;
-        keys %{ $self->{header} };
-        my $first_key = each %{ $self->{header} };
-        if ( $first_key ) {
-            $first_key =~ s/^-//;
-            return $first_key if $is_reserved{ $first_key }; 
-            ucfirst $first_key; 
-        }
-    }
-
-    sub NEXTKEY {
-        my $self = shift;
-        my $next_key = each %{ $self->{header} };
-        if ( $next_key ) {
-            $next_key =~ s/^-//;
-            return $next_key if $is_reserved{ $next_key }; 
-            ucfirst $next_key; 
-        }
+    sub _denormalize_field_name {
+        my $field = shift;
+        $field =~ s/^-//;
+        return $field if $is_attribute{ $field }; 
+        ucfirst $field; 
     }
 }
 
@@ -414,8 +409,6 @@ The Content-Type header indicates the media type of the message content.
 =back
 
 =head1 DEPENDENCIES
-
-Perl 5.8.9 or higher.
 
 L<Blosxom 2.0.0|http://blosxom.sourceforge.net/> or higher.
 
