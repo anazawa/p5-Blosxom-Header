@@ -180,19 +180,6 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
   use Blosxom::Header;
 
-  tie my %header, 'Blosxom::Header';
-
-  $header{Status} = '304 Not Modified';
-
-  my $value   = $header{Status}; 
-  my $bool    = exists $header{Status}; 
-  my $deleted = delete $header{Status};
-  my @keys    = keys %header;
-
-  %header = ();
-
-  # object-oriented interface
-
   my $header = Blosxom::Header->new;
 
   $header->set(
@@ -206,11 +193,26 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
   $header->push_cookie( @cookies );
 
+  $header->clear;
+
+  # tie() interface (EXPERIMENTAL)
+
+  tie my %header, 'Blosxom::Header';
+
+  $header{Status} = '304 Not Modified';
+
+  my $value   = $header{Status}; 
+  my $bool    = exists $header{Status}; 
+  my $deleted = delete $header{Status};
+  my @keys    = keys %header;
+
+  %header = ();
+
 =head1 DESCRIPTION
 
 Blosxom, an weblog application, exports a global variable $header
 which is a reference to hash. This application passes $header L<CGI>::header()
-to generate HTTP response headers.
+to generate HTTP headers.
 
   package blosxom;
   use CGI;
@@ -312,6 +314,10 @@ push_cookie().
 
   $header->push_p3p( qw/foo bar/ );
 
+=item $header->clear
+
+  This will remove all header fields.
+
 =back
 
 =head2 ACCESSORS
@@ -385,6 +391,12 @@ The parameter can be an arrayref or a space-delimited string.
 In either case, the outgoing header will be formatted as:
 
   P3P: policyref="/w3c/p3p.xml" CP="CAO DSP LAW CURa"
+
+=item $header->status
+
+Represents the Status header.
+
+  $header->status( '304 Not Modified' );
 
 =item $header->target
 
