@@ -321,11 +321,11 @@ This will remove all header fields.
 
 =back
 
-=head2 ACCESSORS
+=head2 ATTRIBUTES
 
-These methods can both be used to get() and set() the value of a header.
-The header value is set if you pass an argument to the method.
-If the given header didn't exists then undef is returned.
+These methods can both be used to get() and set() the value of an attribute.
+The attribute value is set if you pass an argument to the method.
+If the given attribute didn't exists then undef is returned.
 
 =over 4
 
@@ -410,8 +410,14 @@ Represents the Window-Target header.
 =item $header->type
 
 The Content-Type header indicates the media type of the message content.
+If not defined, defaults to 'text/html'.
 
   $header->type( 'text/plain' );
+
+NOTE: If you don't want to output the Content-Type header, 
+you have to set to an empty string:
+
+  $header->type( q{} );
 
 =back
 
