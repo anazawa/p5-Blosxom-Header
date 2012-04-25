@@ -26,9 +26,9 @@ Blosxom::Header::ja - 一意に HTTP ヘッダを指定する
 
 =head1 仕様
 
-ブロッサムは単一の CGI スクリプトで動作する、
+ブロッサムは単一の CGI スクリプトとして動作する、
 ウェブログ・アプリケーションの一つである。
-このアプリケーションは、$header というハッシュのリファレンスをエクスポートする。
+このアプリケーションは、$header というハッシュのリファレンスをグローバル化する。
 $header は古き良き CGI モジュールの header() 関数に渡され、HTTP ヘッダを生成する。
 
   package blosxom;
@@ -142,6 +142,6 @@ Set-Cookie ヘッダを追加する。
 
 =head1 著作権
 
-Perl Artistic ライセンスに準じる。
+Perl Artistic ライセンスに準ずる。
 
 =cut

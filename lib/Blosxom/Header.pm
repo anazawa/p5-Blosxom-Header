@@ -211,9 +211,9 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
 =head1 DESCRIPTION
 
-Blosxom, an weblog application, exports a global variable $header
-which is a reference to hash. This application passes $header L<CGI>::header()
-to generate HTTP headers.
+Blosxom, an weblog application, globalizes $header which is a reference to
+hash. This application passes $header L<CGI>::header() to generate HTTP
+headers.
 
   package blosxom;
   use CGI;
