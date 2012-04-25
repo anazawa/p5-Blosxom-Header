@@ -134,7 +134,7 @@ sub NEXTKEY {
     _denormalize_field_name( $next_key ) if $next_key;
 }
 
-# Uilities
+# Utilities
 
 {
     my %ALIAS_OF = (
@@ -192,6 +192,7 @@ Blosxom::Header - Missing interface to modify HTTP headers
   my @deleted = $header->delete( qw/Content_Disposition Content_Length/ );
 
   $header->push_cookie( @cookies );
+  $header->push_p3p( @p3p );
 
   $header->clear;
 
@@ -256,7 +257,7 @@ We follow L<HTTP::Headers>' way:
   => operator, you can use '_' as a replacement for '-' in header names."
 
 The $value argument must be a plain string, except for when the Set-Cookie
-or P3P response header is specified.
+or P3P header is specified.
 In exceptional cases, $value may be a reference to an array.
 
   $header->set( Set_Cookie => [ $cookie1, $cookie2 ] );
@@ -316,7 +317,7 @@ push_cookie().
 
 =item $header->clear
 
-  This will remove all header fields.
+This will remove all header fields.
 
 =back
 
@@ -345,6 +346,8 @@ Represents the character set sent to the browser.
 If not provided, defaults to ISO-8859-1.
 
   $header->charset( 'utf-8' );
+
+NOTE: If $header->type() contains 'charset', this attribute will be ignored.
 
 =item $header->cookie
 
