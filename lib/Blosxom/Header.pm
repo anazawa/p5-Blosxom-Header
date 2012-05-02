@@ -3,6 +3,7 @@ use 5.008_009;
 use strict;
 use warnings;
 use Carp qw/carp croak/;
+use List::MoreUtils qw/any/;
 
 # parameters recognized by CGI::header()
 use constant ATTRIBUTES
@@ -10,58 +11,20 @@ use constant ATTRIBUTES
 
 our $VERSION = '0.03004';
 
-sub new {
+sub TIEHASH {
     my $class = shift;
     my $header = shift || $blosxom::header;
     croak( 'Not a HASH reference' ) unless ref $header eq 'HASH';
-    bless { header => $header }, $class;
+    bless { header => $header, is => 'rw' }, $class;
 }
 
-sub get {
+sub FETCH {
     my $self = shift;
     my $field = _normalize_field_name( shift );
-    my $value = $self->{header}->{$field};
-    return $value unless ref $value eq 'ARRAY';
-    return @{ $value } if wantarray;
-    return $value if defined wantarray;
+    $self->{header}->{$field};
 }
 
-sub delete {
-    my $self = shift;
-    my @fields = map { _normalize_field_name( $_ ) } @_;
-    delete @{ $self->{header} }{ @fields };
-}
-
-sub exists {
-    my $self = shift;
-    my $field = _normalize_field_name( shift );
-    exists $self->{header}->{$field};
-}
-
-sub clear {
-    my $self = shift;
-    %{ $self->{header} } = ();
-}
-
-sub set {
-    my ( $self, @fields ) = @_;
-
-    if ( @fields == 2 ) {
-        $self->_set( @fields );
-    }
-    elsif ( @fields % 2 == 0 ) {
-        while ( my ( $field, $value ) = splice @fields, 0, 2 ) {
-            $self->_set( $field => $value );
-        }
-    }
-    else {
-        croak( 'Odd number of elements are passed to set()' );
-    }
-
-    return;
-}
-
-sub _set {
+sub STORE {
     my $self  = shift;
     my $field = _normalize_field_name( shift );
     my $value = shift;
@@ -71,55 +34,22 @@ sub _set {
     return;
 }
 
-sub push_cookie { shift->_push( -cookie => @_ ) }
-sub push_p3p    { shift->_push( -p3p    => @_ ) }
-
-sub _push {
-    my $self   = shift;
-    my $field  = _normalize_field_name( shift );
-    my @values = @_;
-
-    unless ( @values ) {
-        carp( 'Useless use of _push() with no values' );
-        return;
-    }
-
-    if ( my $old_value = $self->{header}->{$field} ) {
-        return push @{ $old_value }, @values if ref $old_value eq 'ARRAY';
-        unshift @values, $old_value;
-    }
-
-    $self->_set( $field => @values > 1 ? \@values : $values[0] );
-
-    # returns the number of elements in @values like CORE::push
-    scalar @values if defined wantarray;
+sub EXISTS {
+    my $self = shift;
+    my $field = _normalize_field_name( shift );
+    exists $self->{header}->{$field};
 }
 
-# Will be removed in 0.04
-sub push { shift->_push( @_ ) }
-
-# make accessors
-for my $method ( ATTRIBUTES ) {
-    my $slot  = __PACKAGE__ . "::$method";
-    my $field = "-$method";
-
-    no strict 'refs';
-
-    *$slot = sub {
-        my $self = shift;
-        $self->_set( $field => shift ) if @_;
-        $self->get( $field );
-    };
+sub DELETE {
+    my $self = shift;
+    my $field = _normalize_field_name( shift );
+    delete $self->{header}->{$field};
 }
 
-# tie() interface 
-
-sub TIEHASH { shift->new( @_ )    }
-sub FETCH   { shift->get( @_ )    }
-sub STORE   { shift->_set( @_ )   }
-sub EXISTS  { shift->exists( @_ ) }
-sub DELETE  { shift->delete( @_ ) }
-sub CLEAR   { shift->clear        }
+sub CLEAR {
+    my $self = shift;
+    %{ $self->{header} } = ();
+}
 
 sub FIRSTKEY {
     my $self = shift;
@@ -133,8 +63,6 @@ sub NEXTKEY {
     my $next_key = each %{ $self->{header} };
     _denormalize_field_name( $next_key ) if $next_key;
 }
-
-# Utilities
 
 {
     my %ALIAS_OF = (
@@ -157,15 +85,83 @@ sub NEXTKEY {
     }
 }
 
-{
-    my %IS_ATTRIBUTE = map { $_ => 1 } ATTRIBUTES;
+sub _denormalize_field_name {
+    my $field = shift;
+    $field =~ s/^-//;
+    return $field if any { $_ eq $field } ATTRIBUTES; 
+    ucfirst $field; 
+}
 
-    sub _denormalize_field_name {
-        my $field = shift;
-        $field =~ s/^-//;
-        return $field if $IS_ATTRIBUTE{ $field }; 
-        ucfirst $field; 
+sub new    { shift->TIEHASH( @_ ) }
+sub exists { shift->EXISTS( @_ )  }
+sub delete { shift->DELETE( @_ )  }
+sub clear  { shift->CLEAR         }
+
+sub get {
+    my $self = shift;
+    my $value = $self->FETCH( shift );
+    return $value unless ref $value eq 'ARRAY';
+    return @{ $value } if wantarray;
+    return $value->[0] if defined wantarray;
+}
+
+sub set {
+    my ( $self, @fields ) = @_;
+
+    if ( @fields == 2 ) {
+        $self->STORE( @fields );
     }
+    elsif ( @fields % 2 == 0 ) {
+        while ( my ( $field, $value ) = splice @fields, 0, 2 ) {
+            $self->STORE( $field => $value );
+        }
+    }
+    else {
+        croak( 'Odd number of elements are passed to set()' );
+    }
+
+    return;
+}
+
+sub push_cookie { shift->_push( -cookie => @_ ) }
+sub push_p3p    { shift->_push( -p3p    => @_ ) }
+
+sub _push {
+    my $self   = shift;
+    my $field  = _normalize_field_name( shift );
+    my @values = @_;
+
+    unless ( @values ) {
+        carp( 'Useless use of _push() with no values' );
+        return;
+    }
+
+    if ( my $old_value = $self->{header}->{$field} ) {
+        return push @{ $old_value }, @values if ref $old_value eq 'ARRAY';
+        unshift @values, $old_value;
+    }
+
+    $self->STORE( $field => @values > 1 ? \@values : $values[0] );
+
+    # returns the number of elements in @values like CORE::push
+    scalar @values if defined wantarray;
+}
+
+# Will be removed in 0.04
+sub push { shift->_push( @_ ) }
+
+# make accessors
+for my $method ( ATTRIBUTES ) {
+    my $slot  = __PACKAGE__ . "::$method";
+    my $field = "-$method";
+
+    no strict 'refs';
+
+    *$slot = sub {
+        my $self = shift;
+        $self->STORE( $field => shift ) if @_;
+        $self->FETCH( $field );
+    };
 }
 
 1;

@@ -15,16 +15,16 @@ use Test::More;
     is_deeply $header->{header}, { -bar => 'baz' }, 'delete nothing';
 }
 
-{
-    my $header = Blosxom::Header->new({
-        -foo => 'bar',
-        -bar => 'baz',
-        -baz => 'qux',
-    });
+#{
+#    my $header = Blosxom::Header->new({
+#        -foo => 'bar',
+#        -bar => 'baz',
+#        -baz => 'qux',
+#    });
 
-    is_deeply [ $header->delete( '-foo', '-bar' ) ], [ qw/bar baz/ ];
-    is_deeply $header->{header}, { -baz => 'qux' }, 'delete multiple elements';
-}
+#    is_deeply [ $header->delete( '-foo', '-bar' ) ], [ qw/bar baz/ ];
+#    is_deeply $header->{header}, { -baz => 'qux' }, 'delete multiple elements';
+#}
 
 {
     my $header = Blosxom::Header->new({
