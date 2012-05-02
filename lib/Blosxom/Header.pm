@@ -2,66 +2,79 @@ package Blosxom::Header;
 use 5.008_009;
 use strict;
 use warnings;
+use parent 'Class::Singleton';
 use Carp qw/carp croak/;
-use List::MoreUtils qw/any/;
-
-# parameters recognized by CGI::header()
-use constant ATTRIBUTES
-    => qw/attachment charset cookie expires nph p3p status target type/;
 
 our $VERSION = '0.03004';
 
-sub TIEHASH {
+sub _new_instance {
     my $class = shift;
-    my $header = shift || $blosxom::header;
-    croak( 'Not a HASH reference' ) unless ref $header eq 'HASH';
-    bless { header => $header, is => 'rw' }, $class;
+
+    my %header;
+    while ( my ( $field, $value ) = each %{ $blosxom::header } ) {
+        my $norm = _normalize_field_name( $field );
+        $header{$norm} = {
+            key   => $field,
+            value => $value,
+        };
+    }
+
+    bless \%header, $class;
 }
+
+sub TIEHASH { shift->instance }
 
 sub FETCH {
     my $self = shift;
-    my $field = _normalize_field_name( shift );
-    $self->{header}->{$field};
+    my $norm = _normalize_field_name( shift );
+    $self->{$norm}->{value} if exists $self->{$norm};
 }
 
 sub STORE {
-    my $self  = shift;
-    my $field = _normalize_field_name( shift );
-    my $value = shift;
+    my ( $self, $field, $value ) = @_;
+    my $norm  = _normalize_field_name( $field );
 
-    $self->{header}->{$field} = $value;
+    $self->{$norm} = {
+        key   => $field,
+        value => $value,
+    };
+
+    $blosxom::header->{$norm} = $value;
 
     return;
 }
 
 sub EXISTS {
     my $self = shift;
-    my $field = _normalize_field_name( shift );
-    exists $self->{header}->{$field};
+    my $norm = _normalize_field_name( shift );
+    exists $self->{$norm};
 }
 
 sub DELETE {
     my $self = shift;
-    my $field = _normalize_field_name( shift );
-    delete $self->{header}->{$field};
+    my $norm = _normalize_field_name( shift );
+    delete $self->{$norm};
+    delete $blosxom::header->{$norm};
 }
 
 sub CLEAR {
     my $self = shift;
-    %{ $self->{header} } = ();
+    %{ $self } = %{ $blosxom::header } = ();
 }
 
 sub FIRSTKEY {
     my $self = shift;
-    keys %{ $self->{header} };
-    my $first_key = each %{ $self->{header} };
-    _denormalize_field_name( $first_key ) if $first_key;
+    keys %{ $self };
+    my $first_key = each %{ $self };
+    return unless defined $first_key;
+    $self->{$first_key}->{key};
 }
 
 sub NEXTKEY {
     my $self = shift;
-    my $next_key = each %{ $self->{header} };
-    _denormalize_field_name( $next_key ) if $next_key;
+    my $next_key = each %{ $self };
+    return unless defined $next_key;
+    $self->{$next_key}->{key};
 }
 
 {
@@ -83,85 +96,6 @@ sub NEXTKEY {
         # return alias if exists
         $ALIAS_OF{ $norm } || $norm;
     }
-}
-
-sub _denormalize_field_name {
-    my $field = shift;
-    $field =~ s/^-//;
-    return $field if any { $_ eq $field } ATTRIBUTES; 
-    ucfirst $field; 
-}
-
-sub new    { shift->TIEHASH( @_ ) }
-sub exists { shift->EXISTS( @_ )  }
-sub delete { shift->DELETE( @_ )  }
-sub clear  { shift->CLEAR         }
-
-sub get {
-    my $self = shift;
-    my $value = $self->FETCH( shift );
-    return $value unless ref $value eq 'ARRAY';
-    return @{ $value } if wantarray;
-    return $value->[0] if defined wantarray;
-}
-
-sub set {
-    my ( $self, @fields ) = @_;
-
-    if ( @fields == 2 ) {
-        $self->STORE( @fields );
-    }
-    elsif ( @fields % 2 == 0 ) {
-        while ( my ( $field, $value ) = splice @fields, 0, 2 ) {
-            $self->STORE( $field => $value );
-        }
-    }
-    else {
-        croak( 'Odd number of elements are passed to set()' );
-    }
-
-    return;
-}
-
-sub push_cookie { shift->_push( -cookie => @_ ) }
-sub push_p3p    { shift->_push( -p3p    => @_ ) }
-
-sub _push {
-    my $self   = shift;
-    my $field  = _normalize_field_name( shift );
-    my @values = @_;
-
-    unless ( @values ) {
-        carp( 'Useless use of _push() with no values' );
-        return;
-    }
-
-    if ( my $old_value = $self->{header}->{$field} ) {
-        return push @{ $old_value }, @values if ref $old_value eq 'ARRAY';
-        unshift @values, $old_value;
-    }
-
-    $self->STORE( $field => @values > 1 ? \@values : $values[0] );
-
-    # returns the number of elements in @values like CORE::push
-    scalar @values if defined wantarray;
-}
-
-# Will be removed in 0.04
-sub push { shift->_push( @_ ) }
-
-# make accessors
-for my $method ( ATTRIBUTES ) {
-    my $slot  = __PACKAGE__ . "::$method";
-    my $field = "-$method";
-
-    no strict 'refs';
-
-    *$slot = sub {
-        my $self = shift;
-        $self->STORE( $field => shift ) if @_;
-        $self->FETCH( $field );
-    };
 }
 
 1;
