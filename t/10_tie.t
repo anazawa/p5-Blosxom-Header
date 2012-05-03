@@ -10,9 +10,9 @@ use Test::More;
 eval { Blosxom::Header->TIEHASH };
 like $@, qr{^\$blosxom::header hasn't been initialized yet};
 
-$blosxom::header = { -foo => 'bar' };
 
 {
+    $blosxom::header = { -foo => 'bar' };
     tie my %header, 'Blosxom::Header';
 
     ok exists $header{-foo}, 'EXISTS() returns true';
@@ -24,18 +24,17 @@ $blosxom::header = { -foo => 'bar' };
     is $header{Foo}, 'bar', 'FETCH(), not case-sensitive';
 
     %header = ();
+    is_deeply $blosxom::header, {}, 'CLEAR()';
 }
-
-is_deeply $blosxom::header, {}, 'CLEAR()';
-
-$blosxom::header = {
-    Last_Modified => 'Thu, 03 Feb 1994 00:00:00 GMT',
-    status        => '304 Not Modified',
-    type          => 'text/html',
-};
 
 {
     tie my %header, 'Blosxom::Header';
+
+    %header = (
+        Last_Modified => 'Thu, 03 Feb 1994 00:00:00 GMT',
+        status        => '304 Not Modified',
+        type          => 'text/html',
+    );
 
     my @got = sort keys %header;
     my @expected = qw/Last_Modified status type/;
@@ -62,13 +61,13 @@ $blosxom::header = {
     is_deeply $blosxom::header, \%expected;
 }
 
-$blosxom::header = {
-    -foo => 'bar',
-    -bar => 'baz',
-};
-
 {
     tie my %header, 'Blosxom::Header';
+
+    %header = (
+        -foo => 'bar',
+        -bar => 'baz',
+    );
 
     is delete $header{-foo}, 'bar', 'DELETE()';
     is delete $header{-foo}, undef, 'DELETE() nothing';

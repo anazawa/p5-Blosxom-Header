@@ -2,6 +2,7 @@ package Blosxom::Header;
 use 5.008_009;
 use strict;
 use warnings;
+use parent 'Class::Singleton'; # see Object::Container
 use Carp qw/carp croak/;
 
 # parameters recognized by CGI::header()
@@ -10,7 +11,11 @@ use constant ATTRIBUTES
 
 our $VERSION = '0.03004';
 
-sub TIEHASH {
+# Convention
+#   $field : raw field name (e.g. Foo-Bar)
+#   $norm  : normalized field name (e.g. foo_bar)
+
+sub _new_instance {
     my $class = shift;
 
     unless ( ref $blosxom::header eq 'HASH' ) {
@@ -20,7 +25,7 @@ sub TIEHASH {
     my %header;
     while ( my ( $field, $value ) = each %{ $blosxom::header } ) {
         my $norm = _normalize_field_name( $field );
-        $header{$norm} = {
+        $header{ $norm } = {
             key   => $field,
             value => $value,
         };
@@ -28,6 +33,8 @@ sub TIEHASH {
 
     bless \%header, $class;
 }
+
+sub TIEHASH { shift->instance }
 
 sub FETCH {
     my $self = shift;
@@ -41,7 +48,13 @@ sub STORE {
 
     my $norm = _normalize_field_name( $field );
 
-    $self->{$norm} = {
+    if ( my $old = $self->{ $norm } ) {
+        delete $blosxom::header->{ $old->{key} };
+    }
+
+    $blosxom::header->{ $field } = $value;
+
+    $self->{ $norm } = {
         key   => $field,
         value => $value,
     };
@@ -59,12 +72,12 @@ sub DELETE {
     my $self = shift;
     my $norm = _normalize_field_name( shift );
     my $deleted = delete $self->{$norm};
-    $deleted->{value} if $deleted;
+    delete $blosxom::header->{ $deleted->{key} } if $deleted;
 }
 
 sub CLEAR {
     my $self = shift;
-    %{ $self } = ();
+    %{ $self } = %{ $blosxom::header } = ();
 }
 
 sub FIRSTKEY {
@@ -80,12 +93,6 @@ sub NEXTKEY {
     my $next_key = each %{ $self };
     return unless defined $next_key;
     $self->{$next_key}->{key};
-}
-
-sub DESTROY {
-    my $self = shift;
-    my %header = map { @{ $_ }{ 'key', 'value' } } values %{ $self };
-    %{ $blosxom::header } = %header;
 }
 
 {
@@ -110,17 +117,21 @@ sub DESTROY {
 
 # HTTP::Headers-like interface
 
-sub new    { shift->TIEHASH( @_ ) }
-sub exists { shift->EXISTS( @_ )  }
-sub clear  { shift->CLEAR         }
+# new() is deprecated and will be removed in 0.04.
+# use instance() istead
+sub new { shift->instance }
+
+sub exists { shift->EXISTS( @_ ) }
+sub clear  { shift->CLEAR        }
 
 sub delete {
     my $self = shift;
-    my @deleted = map { $self->DELETE( $_ ) } @_;
-    return unless @deleted;
-    return @deleted if wantarray;
-    return $deleted[-1] if defined wantarray;
-    return;
+    map { $self->DELETE( $_ ) } @_;
+    #my @deleted = map { $self->DELETE( $_ ) } @_;
+    #return unless @deleted;
+    #return @deleted if wantarray;
+    #return $deleted[-1] if defined wantarray;
+    #return;
 }
 
 sub get {
@@ -168,23 +179,26 @@ sub _push {
 
     $self->STORE( $field => @values > 1 ? \@values : $values[0] );
 
-    return scalar @values if defined wantarray;
-    return;
+#return scalar @values if defined wantarray;
+# return;
+    scalar @values;
 }
 
-# will be removed in 0.04
+# push() is deprecated and will be removed in 0.04.
+# use push_cookie() or push_p3p() instead
 sub push { shift->_push( @_ ) }
 
 # make accessors
 for my $attr ( ATTRIBUTES ) {
-    my $slot = __PACKAGE__ . "::$attr";
+    my $slot  = __PACKAGE__ . "::$attr";
+    my $field = "-$attr";
 
     no strict 'refs';
 
     *$slot = sub {
         my $self = shift;
-        $self->STORE( $attr => shift ) if @_;
-        $self->FETCH( $attr );
+        $self->STORE( $field => shift ) if @_;
+        $self->FETCH( $field );
     }
 }
 
