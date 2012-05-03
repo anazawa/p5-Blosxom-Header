@@ -2,13 +2,20 @@ package Blosxom::Header;
 use 5.008_009;
 use strict;
 use warnings;
-use parent 'Class::Singleton';
 use Carp qw/carp croak/;
+
+# parameters recognized by CGI::header()
+use constant ATTRIBUTES
+    => qw/attachment charset cookie expires nph p3p status target type/;
 
 our $VERSION = '0.03004';
 
-sub _new_instance {
+sub TIEHASH {
     my $class = shift;
+
+    unless ( ref $blosxom::header eq 'HASH' ) {
+        croak q{$blosxom::header hasn't been initialized yet};
+    }
 
     my %header;
     while ( my ( $field, $value ) = each %{ $blosxom::header } ) {
@@ -22,24 +29,22 @@ sub _new_instance {
     bless \%header, $class;
 }
 
-sub TIEHASH { shift->instance }
-
 sub FETCH {
     my $self = shift;
     my $norm = _normalize_field_name( shift );
-    $self->{$norm}->{value} if exists $self->{$norm};
+    return unless exists $self->{$norm};
+    $self->{$norm}->{value};
 }
 
 sub STORE {
     my ( $self, $field, $value ) = @_;
-    my $norm  = _normalize_field_name( $field );
+
+    my $norm = _normalize_field_name( $field );
 
     $self->{$norm} = {
         key   => $field,
         value => $value,
     };
-
-    $blosxom::header->{$norm} = $value;
 
     return;
 }
@@ -53,13 +58,13 @@ sub EXISTS {
 sub DELETE {
     my $self = shift;
     my $norm = _normalize_field_name( shift );
-    delete $self->{$norm};
-    delete $blosxom::header->{$norm};
+    my $deleted = delete $self->{$norm};
+    $deleted->{value} if $deleted;
 }
 
 sub CLEAR {
     my $self = shift;
-    %{ $self } = %{ $blosxom::header } = ();
+    %{ $self } = ();
 }
 
 sub FIRSTKEY {
@@ -77,24 +82,109 @@ sub NEXTKEY {
     $self->{$next_key}->{key};
 }
 
+sub DESTROY {
+    my $self = shift;
+    my %header = map { @{ $_ }{ 'key', 'value' } } values %{ $self };
+    %{ $blosxom::header } = %header;
+}
+
 {
     my %ALIAS_OF = (
-        '-content-type' => '-type',
-        '-set-cookie'   => '-cookie',
-        '-cookies'      => '-cookie',
+        content_type => 'type',
+        set_cookie   => 'cookie',
+        cookies      => 'cookie',
     );
 
     sub _normalize_field_name {
         my $norm = lc shift;
 
-        # add initial dash if not exists
-        $norm = "-$norm" unless $norm =~ /^-/;
+        # get rid of an initial dash if exists
+        $norm =~ s/^-//;
 
-        # use dashes instead of underscores
-        $norm =~ tr{_}{-};
+        # use underscores instead of dashes 
+        $norm =~ tr{-}{_};
 
-        # return alias if exists
         $ALIAS_OF{ $norm } || $norm;
+    }
+}
+
+# HTTP::Headers-like interface
+
+sub new    { shift->TIEHASH( @_ ) }
+sub exists { shift->EXISTS( @_ )  }
+sub clear  { shift->CLEAR         }
+
+sub delete {
+    my $self = shift;
+    my @deleted = map { $self->DELETE( $_ ) } @_;
+    return unless @deleted;
+    return @deleted if wantarray;
+    return $deleted[-1] if defined wantarray;
+    return;
+}
+
+sub get {
+    my $self = shift;
+    my $value = $self->FETCH( shift );
+    return $value unless ref $value eq 'ARRAY';
+    return @{ $value } if wantarray;
+    return $value->[0] if defined wantarray;
+    return;
+}
+
+sub set {
+    my ( $self, @fields ) = @_;
+
+    if ( @fields == 2 ) {
+        $self->STORE( @fields );
+    }
+    elsif ( @fields % 2 == 0 ) {
+        while ( my ( $field, $value ) = splice @fields, 0, 2 ) {
+            $self->STORE( $field => $value );
+        }
+    }
+    else {
+        croak 'Odd number of elements are passed to set()';
+    }
+
+    return;
+}
+
+sub push_cookie { shift->_push( -cookie => @_ ) }
+sub push_p3p    { shift->_push( -p3p    => @_ ) }
+
+sub _push {
+    my ( $self, $field, @values ) = @_;
+
+    unless ( @values ) {
+        carp 'Useless use of _push() with no values';
+        return;
+    }
+
+    if ( my $value = $self->FETCH( $field ) ) {
+        return push @{ $value }, @values if ref $value eq 'ARRAY';
+        unshift @values, $value;
+    }
+
+    $self->STORE( $field => @values > 1 ? \@values : $values[0] );
+
+    return scalar @values if defined wantarray;
+    return;
+}
+
+# will be removed in 0.04
+sub push { shift->_push( @_ ) }
+
+# make accessors
+for my $attr ( ATTRIBUTES ) {
+    my $slot = __PACKAGE__ . "::$attr";
+
+    no strict 'refs';
+
+    *$slot = sub {
+        my $self = shift;
+        $self->STORE( $attr => shift ) if @_;
+        $self->FETCH( $attr );
     }
 }
 
