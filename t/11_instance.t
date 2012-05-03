@@ -7,59 +7,40 @@ use Test::More;
     our $header;
 }
 
+eval { Blosxom::Header->instance };
+like $@, qr{^\$blosxom::header hasn't been initialized yet};
+
+# initialize
 $blosxom::header = { -cookie => ['foo', 'bar'] };
 
-{
-    my $header = Blosxom::Header->instance; # creates singleton object
-    is $header->get( 'cookie' ), 'foo', 'get() in scalar context';
+my $header = Blosxom::Header->instance;
+isa_ok $header, 'Blosxom::Header';
+can_ok $header, qw(
+    exists clear delete get set push_cookie push_p3p
+    attachment charset cookie expires nph p3p status target type
+);
 
+is $header->get( 'cookie' ), 'foo', 'get() in scalar context';
+
+{
     my @got = $header->get( 'cookie' );
     my @expected = qw/foo bar/;
     is_deeply \@got, \@expected, 'get() in list context';
-#}
-
-#$blosxom::header = {
-#    -foo => 'bar',
-#    -bar => 'baz',
-#    -baz => 'qux',
-#};
-
-#{
-    #my $header = Blosxom::Header->instance;
-    $header->set(
-        -foo => 'bar',
-        -bar => 'baz',
-        -baz => 'qux',
-    );
-
-    @got = $header->delete( qw/foo bar/ );
-    @expected = qw/bar baz/;
-    is_deeply \@got, \@expected, 'delete() multiple elements';
-#}
-
-#is_deeply $blosxom::header, { -baz => 'qux' };
-
-#$blosxom::header = {};
-
-#{
-    #my $header = Blosxom::Header->new;
-    eval { $header->set( 'foo' ) };
-    like $@, qr{^Odd number of elements are passed to set()};
 }
 
-    #$header->set(
-    #    foo => 'bar',
-    #    bar => 'baz',
-    #);
-#}
+$header->set(
+    -foo => 'bar',
+    -bar => 'baz',
+    -baz => 'qux',
+);
 
-#{
-#    my %expected = (
-#        foo => 'bar',
-#        bar => 'baz',
-#    );
+{
+    my @got = $header->delete( qw/foo bar/ );
+    my @expected = qw/bar baz/;
+    is_deeply \@got, \@expected, 'delete() multiple elements';
+}
 
-#    is_deeply $blosxom::header, \%expected, 'set() multiple elements';
-#}
+eval { $header->set( 'foo' ) };
+like $@, qr{^Odd number of elements are passed to set()};
 
 done_testing;

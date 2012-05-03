@@ -2,36 +2,45 @@ package Blosxom::Header;
 use 5.008_009;
 use strict;
 use warnings;
-use parent 'Class::Singleton'; # see Object::Container
 use Carp qw/carp croak/;
 
-# parameters recognized by CGI::header()
+our $VERSION = '0.03004';
+
+# Parameters recognized by CGI::header()
 use constant ATTRIBUTES
     => qw/attachment charset cookie expires nph p3p status target type/;
-
-our $VERSION = '0.03004';
 
 # Convention
 #   $field : raw field name (e.g. Foo-Bar)
 #   $norm  : normalized field name (e.g. foo_bar)
 
-sub _new_instance {
+{
+    my $INSTANCE;
+
+    sub instance {
+        my $class = shift;
+        $INSTANCE ||= $class->_new;
+    }
+
+    sub has_instance { $INSTANCE }
+}
+
+sub _new {
     my $class = shift;
 
     unless ( ref $blosxom::header eq 'HASH' ) {
         croak q{$blosxom::header hasn't been initialized yet};
     }
 
-    my %header;
-    while ( my ( $field, $value ) = each %{ $blosxom::header } ) {
-        my $norm = _normalize_field_name( $field );
-        $header{ $norm } = {
+    my ( $field, $value ) = each %{ $blosxom::header };
+    my $norm = _normalize_field_name( $field );
+
+    bless {
+        $norm => {
             key   => $field,
             value => $value,
-        };
-    }
-
-    bless \%header, $class;
+        },
+    }, $class;
 }
 
 sub TIEHASH { shift->instance }
@@ -49,15 +58,16 @@ sub STORE {
     my $norm = _normalize_field_name( $field );
 
     if ( my $old = $self->{ $norm } ) {
-        delete $blosxom::header->{ $old->{key} };
+        $blosxom::header->{ $old->{key} } = $value; # overwrite
+        $old->{value} = $value;
     }
-
-    $blosxom::header->{ $field } = $value;
-
-    $self->{ $norm } = {
-        key   => $field,
-        value => $value,
-    };
+    else {
+        $blosxom::header->{ $field } = $value;
+        $self->{ $norm } = {
+            key   => $field,
+            value => $value,
+        };
+    }
 
     return;
 }
@@ -140,11 +150,13 @@ sub get {
     return $value unless ref $value eq 'ARRAY';
     return @{ $value } if wantarray;
     return $value->[0] if defined wantarray;
-    return;
+    carp 'Useless use of get() in void context';
 }
 
 sub set {
     my ( $self, @fields ) = @_;
+
+    return unless @fields;
 
     if ( @fields == 2 ) {
         $self->STORE( @fields );
@@ -179,9 +191,7 @@ sub _push {
 
     $self->STORE( $field => @values > 1 ? \@values : $values[0] );
 
-#return scalar @values if defined wantarray;
-# return;
-    scalar @values;
+    scalar @values if defined wantarray;
 }
 
 # push() is deprecated and will be removed in 0.04.
@@ -198,7 +208,7 @@ for my $attr ( ATTRIBUTES ) {
     *$slot = sub {
         my $self = shift;
         $self->STORE( $field => shift ) if @_;
-        $self->FETCH( $field );
+        $self->get( $field );
     }
 }
 
