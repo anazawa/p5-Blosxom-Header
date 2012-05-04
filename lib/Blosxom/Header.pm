@@ -19,28 +19,26 @@ use constant ATTRIBUTES
 
     sub instance {
         my $class = shift;
-        $INSTANCE ||= $class->_new;
+
+        return $INSTANCE if defined $INSTANCE;
+
+        unless ( ref $blosxom::header eq 'HASH' ) {
+            croak q{$blosxom::header hasn't been initialized yet};
+        }
+
+        my %header;
+        while ( my ( $field, $value ) = each %{ $blosxom::header } ) {
+            my $norm = _normalize_field_name( $field );
+            $header{ $norm } = {
+                key   => $field,
+                value => $value,
+            };
+        }
+
+        $INSTANCE = bless \%header, $class;
     }
 
     sub has_instance { $INSTANCE }
-}
-
-sub _new {
-    my $class = shift;
-
-    unless ( ref $blosxom::header eq 'HASH' ) {
-        croak q{$blosxom::header hasn't been initialized yet};
-    }
-
-    my ( $field, $value ) = each %{ $blosxom::header };
-    my $norm = _normalize_field_name( $field );
-
-    bless {
-        $norm => {
-            key   => $field,
-            value => $value,
-        },
-    }, $class;
 }
 
 sub TIEHASH { shift->instance }
@@ -48,7 +46,7 @@ sub TIEHASH { shift->instance }
 sub FETCH {
     my $self = shift;
     my $norm = _normalize_field_name( shift );
-    return unless exists $self->{$norm};
+    return unless exists $self->{ $norm };
     $self->{$norm}->{value};
 }
 
@@ -75,13 +73,13 @@ sub STORE {
 sub EXISTS {
     my $self = shift;
     my $norm = _normalize_field_name( shift );
-    exists $self->{$norm};
+    exists $self->{ $norm };
 }
 
 sub DELETE {
     my $self = shift;
     my $norm = _normalize_field_name( shift );
-    my $deleted = delete $self->{$norm};
+    my $deleted = delete $self->{ $norm };
     delete $blosxom::header->{ $deleted->{key} } if $deleted;
 }
 
@@ -137,11 +135,6 @@ sub clear  { shift->CLEAR        }
 sub delete {
     my $self = shift;
     map { $self->DELETE( $_ ) } @_;
-    #my @deleted = map { $self->DELETE( $_ ) } @_;
-    #return unless @deleted;
-    #return @deleted if wantarray;
-    #return $deleted[-1] if defined wantarray;
-    #return;
 }
 
 sub get {
@@ -224,7 +217,16 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
   use Blosxom::Header;
 
-  my $header = Blosxom::Header->new;
+  my $header = tie my %header, 'Blosxom::Header';
+
+  $header{status} = '304 Not Modified';
+
+  my $value   = $header{status}; 
+  my $bool    = exists $header{satus}; 
+  my $deleted = delete $header{status};
+  my @keys    = keys %header;
+
+  %header = ();
 
   $header->set(
       Status        => '304 Not Modified',
@@ -233,25 +235,12 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
   my $status  = $header->get( 'Status' );
   my $bool    = $header->exists( 'ETag' );
-  my @deleted = $header->delete( qw/Content_Disposition Content_Length/ );
+  my @deleted = $header->delete( qw/Content-Disposition Content-Length/ );
 
   $header->push_cookie( @cookies );
   $header->push_p3p( @p3p );
 
   $header->clear;
-
-  # tie() interface (EXPERIMENTAL)
-
-  tie my %header, 'Blosxom::Header';
-
-  $header{Status} = '304 Not Modified';
-
-  my $value   = $header{Status}; 
-  my $bool    = exists $header{Status}; 
-  my $deleted = delete $header{Status};
-  my @keys    = keys %header;
-
-  %header = ();
 
 =head1 DESCRIPTION
 
@@ -284,9 +273,19 @@ described below.
 
 =over 4
 
+=item $header = Blosxom::Header->instance
+
+Returns a current Blosxom::Header object instance or create a new one.
+
+=item $header = Blosxom::Header->has_instance
+
+Returns a reference to existing Blosxom::Header instance or undef if none is
+defiend.
+
 =item $header = Blosxom::Header->new
 
-Creates a new Blosxom::Header object.
+This method is deprecated and will be removed in 0.04.
+Use instance() instead.
 
 =item $header->set( $field => $value )
 
@@ -295,10 +294,7 @@ Creates a new Blosxom::Header object.
 Sets the value of one or more header fields.
 Accepts a list of named arguments.
 The header field name ($field) isn't case-sensitive.
-We follow L<HTTP::Headers>' way:
-
-  "To make the life easier for perl users who wants to avoid quoting before the
-  => operator, you can use '_' as a replacement for '-' in header names."
+You can use '_' as a replacement for '-' in header names.
 
 The $value argument must be a plain string, except for when the Set-Cookie
 or P3P header is specified.
@@ -314,7 +310,7 @@ In exceptional cases, $value may be a reference to an array.
 Returns a value of the specified HTTP header.
 In list context, a list of scalars is returned.
 
-  my @cookie = $header->get( 'Set_Cookie' );
+  my @cookie = $header->get( 'Set-Cookie' );
   my @p3p    = $header->get( 'P3P' );
 
 =item $bool = $header->exists( $field )
@@ -345,15 +341,6 @@ An example convension is:
 Pushes the Set-Cookie headers onto HTTP headers.
 Returns the number of the elements following the completed
 push_cookie().  
-
-  use CGI::Cookie;
-
-  my $cookie = CGI::Cookie->new(
-      -name  => 'ID',
-      -value => 123456,
-  );
-
-  $header->push_cookie( $cookie );
 
 =item $header->push_p3p( @p3p )
 
@@ -471,7 +458,7 @@ L<Blosxom 2.0.0|http://blosxom.sourceforge.net/> or higher.
 
 =head1 SEE ALSO
 
-L<CGI>
+L<CGI>, L<Class::Singleton>, L<perltie>
 
 =head1 AUTHOR
 

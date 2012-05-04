@@ -8,7 +8,16 @@ Blosxom::Header::ja - 一意に HTTP ヘッダを指定する
 
   use Blosxom::Header;
 
-  my $header = Blosxom::Header->new;
+  my $header = tie my %header, 'Blosxom::Header';
+
+  $header{status} = '304 Not Modified';
+
+  my $value   = $header{status}; 
+  my $bool    = exists $header{satus}; 
+  my $deleted = delete $header{status};
+  my @keys    = keys %header;
+
+  %header = ();
 
   $header->set(
       Status        => '304 Not Modified',
@@ -17,7 +26,7 @@ Blosxom::Header::ja - 一意に HTTP ヘッダを指定する
 
   my $status  = $header->get( 'Status' );
   my $bool    = $header->exists( 'ETag' );
-  my @deleted = $header->delete( qw/Content_Disposition Content_Length/ );
+  my @deleted = $header->delete( qw/Content-Disposition Content-Length/ );
 
   $header->push_cookie( @cookies );
   $header->push_p3p( @p3p );
@@ -29,7 +38,7 @@ Blosxom::Header::ja - 一意に HTTP ヘッダを指定する
 ブロッサムは単一の CGI スクリプトとして動作する、
 ウェブログ・アプリケーションの一つである。
 このアプリケーションは、$header というハッシュのリファレンスをグローバル化する。
-$header は古き良き CGI モジュールの header() 関数に渡され、HTTP ヘッダを生成する。
+$header は CGI モジュールの header() 関数に渡され、HTTP ヘッダを生成する。
 
   package blosxom;
   use CGI;
@@ -43,18 +52,46 @@ header() は $header のキーについて、大文字と小文字を区別し�
 したがって、複数のプラグインが共存するような状況では、一意に $header
 を操作することができない。
 
-このモジュールは、$header を操作するためのインターフェイスである。
+このモジュールは、$header を操作するためのインタフェースである。
 具体的には、キーの大文字と小文字を区別しないハッシュとして実装した。
 
   tie my %header, 'Blosxom::Header';
+
+Blosxom::Header インスタンスは、メモリ空間内に１つしか作成されない。
+これは、$header がグローバル変数であるということに対応している。
+
+L<HTTP::Headers> に似たインタフェースも用意されている。
+
+  my $h = Blosxom::Header->instance; 
+  # または
+  my $h = tied %header;
+
+$h は tie() インタフェースと互いに矛盾しない。
+L<HTTP::Headers> との違いは、１つのフィールドに１つの値しか割り当てられない
+という点だ。したがって、push() メソッドがない。
+ただし、Set-Cookie ヘッダだけが複数の値を持つ。
+
+  $h->push_cookie( @cookies );
+
+これは、header() 関数の制約による。
 
 =head2 メソッド
 
 =over 4
 
+=item $header = Blosxom::Header->instance
+
+Blosxom::Header インスタンスを返す。インスタンスが存在しなければ、
+新たに作成する。
+
+=item $header = Blosxom::Header->has_instance
+
+Blosxom::Header インスタンスが存在すれば、インスタンスを返す。
+存在しなければ undef を返す。
+
 =item $header = Blosxom::Header->new
 
-Blosxom::Header オブジェクトを作る。
+このメソッドは 0.04 で取り除かれます。
 
 =item $header->set( $field => $value )
 
@@ -108,35 +145,71 @@ Set-Cookie ヘッダを追加する。
 
 =item $header->attachment
 
+  $header->attachment( 'foo.png' );
+
 =item $header->charset
 
-文字セットを指定する。
+文字セットを指定する。$header->type に 'charset' が含まれている場合、
+この属性は無視される。
+
+  $header->charset( 'utf-8' );
 
 =item $header->cookie
 
+  $header->cookie( [ 'foo', 'bar' ] );
+  $header->cookie( 'baz' );
+
 =item $header->expires
+
+  $header->expires( '+30s' ); # 30 秒後
+  $header->expires( '+10m' ); # 10 分後
+  $header->expires( '+1h'  ); # 1 時間後
+  $header->expires( '-1d'  ); # 昨日
+  $header->expires( 'now'  ); # 現在
+  $header->expires( '+3M'  ); # ３ヶ月後
+  $header->expires( '+10y' ); # 10 年後
+
+  # at the indicated time & date
+  $header->expires( 'Thu, 25 Apr 1999 00:40:33 GMT' );
 
 =item $header->nph
 
+  $header->nph( 1 );
+
 =item $header->p3p
+
+  $header->p3p( [ qw/CAO DSP LAW CURa/ ] );
+  $header->p3p( 'CAO DSP LAW CURa' );
 
 =item $header->status
 
+  $header->status( '304 Not Modified' );
+
 =item $header->target
+
+  $header->target( 'ResultsWindow' );
 
 =item $header->type
 
 メディア・タイプを指定する。
 
+  $header->type( 'text/plain' );
+
+この属性が undef の場合、header() 関数がデフォルトの Content-Type ヘッダを
+出力してしまう。Content-Type ヘッダを出力したくない場合、空の文字列を代入
+しなければならない。
+
+  $header->type( q{} );
+
 =back
 
-=head1 参考文献
+=head1 DEPENDENCIES
 
-=over 4
+L<Blosxom 2.0.0|http://blosxom.sourceforge.net/> or higher.
 
-=item L<CGI>
+=head1 SEE ALSO
 
-=back
+L<CGI>, L<Class::Singleton>, L<perltie>
 
 =head1 作者
 
@@ -144,6 +217,6 @@ Set-Cookie ヘッダを追加する。
 
 =head1 著作権
 
-Perl Artistic ライセンスに準ずる。
+L<Perl Artistic ライセンス|perlartistic>に準ずる。
 
 =cut
