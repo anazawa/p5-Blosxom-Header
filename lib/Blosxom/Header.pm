@@ -14,31 +14,27 @@ use constant ATTRIBUTES
 #   $field : raw field name (e.g. Foo-Bar)
 #   $norm  : normalized field name (e.g. foo_bar)
 
-{
-    my $INSTANCE;
+our $INSTANCE;
 
-    sub instance {
-        my $class = shift;
+sub instance {
+    my $class = shift;
 
-        return $INSTANCE if defined $INSTANCE;
+    return $INSTANCE if defined $INSTANCE;
 
-        unless ( ref $blosxom::header eq 'HASH' ) {
-            croak q{$blosxom::header hasn't been initialized yet};
-        }
-
-        my %header;
-        while ( my ( $field, $value ) = each %{ $blosxom::header } ) {
-            my $norm = _normalize_field_name( $field );
-            $header{ $norm } = {
-                key   => $field,
-                value => $value,
-            };
-        }
-
-        $INSTANCE = bless \%header, $class;
+    unless ( ref $blosxom::header eq 'HASH' ) {
+        croak q{$blosxom::header hasn't been initialized yet};
     }
 
-    sub has_instance { $INSTANCE }
+    my %header;
+    while ( my ( $field, $value ) = each %{ $blosxom::header } ) {
+        my $norm = _normalize_field_name( $field );
+        $header{ $norm } = {
+            key   => $field,
+            value => $value,
+        };
+    }
+
+    $INSTANCE = bless \%header, $class;
 }
 
 sub TIEHASH { shift->instance }
