@@ -102,7 +102,7 @@ $field で指定したフィールドに、$value を代入する。
 またハイフンの代わりに、アンダーバーを使うこともできる。
 
 $value は基本的に文字列をとる。
-特に、フィールド名として 'Set_Cookie' あるいは 'P3P'
+特に、フィールド名として 'Set-Cookie' あるいは 'P3P'
 を指定したとき、リストのリファレンスをとる。
 
   $header->set( Set_Cookie => [ $cookie1, $cookie2 ] );
@@ -113,7 +113,7 @@ $value は基本的に文字列をとる。
 =item @values = $header->get( $field )
 
 引数としてフィールド名をとり、文字列を返す。
-要素が存在しなければ undef を返す。
+フィールドが存在しなければ undef を返す。
 また、リスト・コンテキストで、リストを返す。
 
   my @cookie = $header->get( 'Set_Cookie' );
@@ -121,13 +121,13 @@ $value は基本的に文字列をとる。
 
 =item $bool = $header->exists( $field )
 
-引数としてフィールド名をとり、要素が存在するとき真を返す。
+引数としてフィールド名をとり、フィールドが存在するとき真を返す。
 存在しないとき偽を返す。
 
 =item @deleted = $header->delete( @fields )
 
 指定したフィールドをすべて削除する。
-削除した要素の値を返す。
+削除したフィールドの値を返す。
 
 =item $header->push_cookie( @cookies )
 

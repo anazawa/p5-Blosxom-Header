@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Carp qw/carp croak/;
 
-our $VERSION = '0.03004';
+our $VERSION = '0.03005';
 
 # Parameters recognized by CGI::header()
 use constant ATTRIBUTES
