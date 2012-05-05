@@ -7,16 +7,43 @@ use Carp qw/carp croak/;
 our $VERSION = '0.03005';
 
 # Parameters recognized by CGI::header()
-use constant ATTRIBUTES
-    => qw/attachment charset cookie expires nph p3p status target type/;
+#use constant ATTRIBUTES
+#    => qw/attachment charset cookie expires nph p3p status target type/;
 
-# Convention
+# Naming conventions
 #   $field : raw field name (e.g. Foo-Bar)
 #   $norm  : normalized field name (e.g. foo_bar)
 
 our $INSTANCE;
 
 sub instance {
+    require Blosxom::Header::Class;
+    Blosxom::Header::Class->instance;
+    #my $class = shift;
+
+    #return $INSTANCE if defined $INSTANCE;
+
+    #unless ( ref $blosxom::header eq 'HASH' ) {
+        #croak q{$blosxom::header hasn't been initialized yet};
+        #}
+
+    #my %header;
+    #while ( my ( $field, $value ) = each %{ $blosxom::header } ) {
+        #$header{ _normalize_field_name( $field ) } = {
+            #key   => $field,
+            #value => $value,
+            #};
+        #}
+
+    #$INSTANCE = bless \%header, $class;
+    #my %header;
+    #tie %header, $class;
+    #bless \%header, $class;
+}
+
+#sub TIEHASH { shift->instance }
+
+sub TIEHASH {
     my $class = shift;
 
     return $INSTANCE if defined $INSTANCE;
@@ -27,8 +54,7 @@ sub instance {
 
     my %header;
     while ( my ( $field, $value ) = each %{ $blosxom::header } ) {
-        my $norm = _normalize_field_name( $field );
-        $header{ $norm } = {
+        $header{ _normalize_field_name( $field ) } = {
             key   => $field,
             value => $value,
         };
@@ -36,8 +62,6 @@ sub instance {
 
     $INSTANCE = bless \%header, $class;
 }
-
-sub TIEHASH { shift->instance }
 
 sub FETCH {
     my $self = shift;
@@ -119,91 +143,106 @@ sub NEXTKEY {
     }
 }
 
-# HTTP::Headers-like interface
-
 # new() is deprecated and will be removed in 0.04.
 # use instance() istead
-sub new { shift->instance }
+#sub new { shift->instance }
 
-sub exists { shift->EXISTS( @_ ) }
-sub clear  { shift->CLEAR        }
+# Following methods are derivatives of FETCH(), STORE(), EXISTS(),
+# DELETE() and CLEAR()
 
-sub delete {
-    my $self = shift;
-    map { $self->DELETE( $_ ) } @_;
-}
+#sub exists { shift->EXISTS( @_ ) }
+#sub clear  { shift->CLEAR        }
+#sub exists { exists shift->{ $_[0] } }
+#sub clear  { shift->CLEAR        }
+#sub clear  { %{ $_[0] } = () }
 
-sub get {
-    my $self = shift;
-    my $value = $self->FETCH( shift );
-    return $value unless ref $value eq 'ARRAY';
-    return @{ $value } if wantarray;
-    return $value->[0] if defined wantarray;
-    carp 'Useless use of get() in void context';
-}
+#sub delete {
+    #my $self = shift;
+    #map { $self->DELETE( $_ ) } @_;
+#    my ( $self, @fields ) = @_;
+#    delete @{ $self }{ @fields };
+#}
 
-sub set {
-    my ( $self, @fields ) = @_;
+#sub get {
+#    my $self = shift;
+    #my $value = $self->FETCH( shift );
+    #die $self->{ $_[0] };
+#    my $value = $self->{ $_[0] };
+#    return $value unless ref $value eq 'ARRAY';
+#    return @{ $value } if wantarray;
+#    return $value->[0] if defined wantarray;
+#    carp 'Useless use of get() in void context';
+#}
 
-    return unless @fields;
+#sub set {
+#    my ( $self, @fields ) = @_;
 
-    if ( @fields == 2 ) {
-        $self->STORE( @fields );
-    }
-    elsif ( @fields % 2 == 0 ) {
-        while ( my ( $field, $value ) = splice @fields, 0, 2 ) {
-            $self->STORE( $field => $value );
-        }
-    }
-    else {
-        croak 'Odd number of elements are passed to set()';
-    }
+#    return unless @fields;
 
-    return;
-}
+#    if ( @fields == 2 ) {
+#        #$self->STORE( @fields );
+#        $self->{ $fields[0] } = $fields[1];
+#    }
+#    elsif ( @fields % 2 == 0 ) {
+#        while ( my ( $field, $value ) = splice @fields, 0, 2 ) {
+#            #$self->STORE( $field => $value );
+#            $self->{ $field } = $value ;
+#        }
+#    }
+#    else {
+#        croak 'Odd number of elements are passed to set()';
+#    }
 
-sub push_cookie { shift->_push( -cookie => @_ ) }
-sub push_p3p    { shift->_push( -p3p    => @_ ) }
+#    return;
+#}
 
-sub _push {
-    my ( $self, $field, @values ) = @_;
+#sub push_cookie { shift->_push( -cookie => @_ ) }
+#sub push_p3p    { shift->_push( -p3p    => @_ ) }
 
-    unless ( @values ) {
-        carp 'Useless use of _push() with no values';
-        return;
-    }
+#sub _push {
+#    my ( $self, $field, @values ) = @_;
 
-    if ( my $value = $self->FETCH( $field ) ) {
-        return push @{ $value }, @values if ref $value eq 'ARRAY';
-        unshift @values, $value;
-    }
+#    unless ( @values ) {
+#        carp 'Useless use of _push() with no values';
+#        return;
+#    }
 
-    $self->STORE( $field => @values > 1 ? \@values : $values[0] );
+    #if ( my $value = $self->FETCH( $field ) ) {
+#    if ( my $value = $self->{ $field } ) {
+#        return push @{ $value }, @values if ref $value eq 'ARRAY';
+#        unshift @values, $value;
+#    }
 
-    scalar @values if defined wantarray;
-}
+    #$self->STORE( $field => @values > 1 ? \@values : $values[0] );
+#    $self->{ $field } = @values > 1 ? \@values : $values[0] ;
+
+#    scalar @values if defined wantarray;
+#}
 
 # push() is deprecated and will be removed in 0.04.
 # use push_cookie() or push_p3p() instead
-sub push { shift->_push( @_ ) }
+#sub push { shift->_push( @_ ) }
 
 # make accessors
-for my $attr ( ATTRIBUTES ) {
-    my $slot  = __PACKAGE__ . "::$attr";
-    my $field = "-$attr";
+#for my $attr ( ATTRIBUTES ) {
+#    my $slot  = __PACKAGE__ . "::$attr";
+#    my $field = "-$attr";
 
-    no strict 'refs';
+#    no strict 'refs';
 
-    *$slot = sub {
-        my $self = shift;
-        $self->STORE( $field => shift ) if @_;
-        $self->get( $field );
-    }
-}
+#    *$slot = sub {
+#        my $self = shift;
+        #$self->STORE( $field => shift ) if @_;
+#        $self->{ $field } = shift if @_;
+#        $self->get( $field );
+#    }
+#}
 
 1;
 
 __END__
+
+=encoding utf-8
 
 =head1 NAME
 
@@ -454,7 +493,17 @@ L<Blosxom 2.0.0|http://blosxom.sourceforge.net/> or higher.
 
 =head1 SEE ALSO
 
-L<CGI>, L<Class::Singleton>, L<perltie>
+=over 4
+
+=item L<CGI>
+
+=item L<Class::Singleton>
+
+=item L<perltie>
+
+=item "Object Oriented Perl", Damian Conway, Manning Publications Co., 2000
+
+=back
 
 =head1 AUTHOR
 

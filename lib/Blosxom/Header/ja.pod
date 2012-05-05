@@ -208,9 +208,15 @@ Set-Cookie ヘッダを追加する。
 
 L<Blosxom 2.0.0|http://blosxom.sourceforge.net/> or higher.
 
-=head1 SEE ALSO
+=head1 参考文献
 
-L<CGI>, L<Class::Singleton>, L<perltie>
+=over 4
+
+=item L<CGI>, L<Class::Singleton>, L<perltie>
+
+=item 牧大輔「モダンPerl入門」, 翔泳社 (2009), p. 66
+
+=back
 
 =head1 作者
 
