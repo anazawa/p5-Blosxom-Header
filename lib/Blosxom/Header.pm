@@ -111,6 +111,9 @@ sub instance {
     Blosxom::Header::Class->instance;
 }
 
+# has_instance() is deprecated and will be removed in 0.04
+sub has_instance { $Blosxom::Header::Class::INSTANCE }
+
 # new() is deprecated and will be removed in 0.04.
 # use instance() istead
 sub new { shift->instance }
@@ -129,16 +132,7 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
   use Blosxom::Header;
 
-  my $header = tie my %header, 'Blosxom::Header';
-
-  $header{status} = '304 Not Modified';
-
-  my $value   = $header{status}; 
-  my $bool    = exists $header{satus}; 
-  my $deleted = delete $header{status};
-  my @keys    = keys %header;
-
-  %header = ();
+  my $header = Blosxom::Header->instance;
 
   $header->set(
       Status        => '304 Not Modified',
@@ -191,8 +185,7 @@ Returns a current Blosxom::Header object instance or create a new one.
 
 =item $header = Blosxom::Header->has_instance
 
-Returns a reference to existing Blosxom::Header instance or undef if none is
-defiend.
+This method is deprecated and will be removed in 0.04.
 
 =item $header = Blosxom::Header->new
 
@@ -372,13 +365,9 @@ L<Blosxom 2.0.0|http://blosxom.sourceforge.net/> or higher.
 
 =over 4
 
-=item L<CGI>
-
-=item L<Class::Singleton>
-
-=item L<perltie>
-
-=item "Object Oriented Perl", Damian Conway, Manning Publications Co., 2000
+L<CGI>,
+L<Class::Singleton>,
+L<perltie>
 
 =back
 

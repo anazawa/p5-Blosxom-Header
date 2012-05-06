@@ -1,23 +1,14 @@
 =encoding utf-8
 
-=head1 名前
+=head1 NAME
 
 Blosxom::Header::ja - 一意に HTTP ヘッダを指定する
 
-=head1 概要
+=head1 SYNOPSIS
 
   use Blosxom::Header;
 
-  my $header = tie my %header, 'Blosxom::Header';
-
-  $header{status} = '304 Not Modified';
-
-  my $value   = $header{status}; 
-  my $bool    = exists $header{satus}; 
-  my $deleted = delete $header{status};
-  my @keys    = keys %header;
-
-  %header = ();
+  my $header = Blosxom::Header->instance;
 
   $header->set(
       Status        => '304 Not Modified',
@@ -33,7 +24,7 @@ Blosxom::Header::ja - 一意に HTTP ヘッダを指定する
 
   $header->clear;
 
-=head1 仕様
+=head1 DESCRIPTION
 
 ブロッサムは単一の CGI スクリプトとして動作する、
 ウェブログ・アプリケーションの一つである。
@@ -55,28 +46,27 @@ header() は $header のキーについて、大文字と小文字を区別し�
 このモジュールは、$header を操作するためのインタフェースである。
 具体的には、キーの大文字と小文字を区別しないハッシュとして実装した。
 
+  use Blosxom::Header;
   tie my %header, 'Blosxom::Header';
 
-Blosxom::Header インスタンスは、メモリ空間内に１つしか作成されない。
+インスタンスは、メモリ空間内に１つしか作成されない。
 これは、$header がグローバル変数であるということに対応している。
 
-L<HTTP::Headers> に似たインタフェースも用意されている。
+さらに、%header を抽象化したクラスも用意した。
+set() や get() といったメソッドで %header を操作する。
 
-  my $h = Blosxom::Header->instance; 
-  # または
-  my $h = tied %header;
+  my $h = Blosxom::Header->instance;
 
-$h は tie() インタフェースと互いに矛盾しない。
-状況に応じて、２つのインタフェースを使い分けることができる。
-L<HTTP::Headers> との違いは、１つのフィールドに１つの値しか割り当てられない
-という点だ。したがって、push() メソッドがない。
-ただし、Set-Cookie ヘッダだけが複数の値を持つ。
+  $h->set(
+      Foo => 'bar',
+      Bar => 'baz',
+  );
 
-  $h->push_cookie( @cookies );
+  my @cookies = $h->get( 'Set-Cookie' );
 
-これは、header() 関数の制約による。
+状況に応じて、tie() インタフェースと使い分けることができる。
 
-=head2 メソッド
+=head2 METHODS
 
 =over 4
 
@@ -87,8 +77,7 @@ Blosxom::Header インスタンスを返す。インスタンスが存在しな�
 
 =item $header = Blosxom::Header->has_instance
 
-Blosxom::Header インスタンスが存在すれば、インスタンスを返す。
-存在しなければ undef を返す。
+このメソッドは 0.04 で取り除かれます。
 
 =item $header = Blosxom::Header->new
 
@@ -138,7 +127,7 @@ Set-Cookie ヘッダを追加する。
 
 =back
 
-=head2 CGI モジュール固有のパラメータ
+=head2 ACCESSORS
 
 以下のメソッドは、引数をつけたとき set()、つけないとき get() として働く。
 
@@ -208,21 +197,15 @@ Set-Cookie ヘッダを追加する。
 
 L<Blosxom 2.0.0|http://blosxom.sourceforge.net/> or higher.
 
-=head1 参考文献
+=head1 SEE ALSO
 
-=over 4
+L<CGI>, L<Class::Singleton>, L<perltie>
 
-=item L<CGI>, L<Class::Singleton>, L<perltie>
-
-=item 牧大輔「モダンPerl入門」, 翔泳社 (2009), p. 66
-
-=back
-
-=head1 作者
+=head1 AUTHOR
 
 穴澤亮 (anazawa@cpan.org)
 
-=head1 著作権
+=head1 LICENSE AND COPYRIGHT
 
 L<Perl Artistic ライセンス|perlartistic>に準ずる。
 
