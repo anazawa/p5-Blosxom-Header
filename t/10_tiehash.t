@@ -47,7 +47,4 @@ is delete $header{Bar}, 'baz', 'DELETE(), not case-sensitive';
 
 is_deeply $blosxom::header, { -baz => 'qux' };
 
-#my $header = bless \%header, 'Blosxom::Header';
-#warn $header->get( 'Baz' );
-
 done_testing;

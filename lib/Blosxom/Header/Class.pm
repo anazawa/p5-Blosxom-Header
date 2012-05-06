@@ -2,7 +2,7 @@ package Blosxom::Header::Class;
 use strict;
 use warnings;
 use Blosxom::Header;
-use Carp;
+use Carp qw/carp croak/;
 
 # Parameters recognized by CGI::header()
 use constant ATTRIBUTES
@@ -12,22 +12,17 @@ our $INSTANCE;
 
 sub instance {
     my $class = shift;
-
     return $INSTANCE if defined $INSTANCE;
-
-    #my %header;
-    #tie %header, 'Blosxom::Header';
     tie my %header, 'Blosxom::Header';
-
     $INSTANCE = bless \%header, $class;
 }
 
 sub exists { exists $_[0]->{ $_[1] } }
-sub clear  { %{ $_[0] } = () }
+sub clear  { %{ $_[0] } = ()         }
 
 sub delete {
-    my ( $self, @fields ) = @_;
-    delete @{ $self }{ @fields };
+    my $self = shift;
+    delete @{ $self }{ @_ };
 }
 
 sub get {
@@ -48,7 +43,7 @@ sub set {
     }
     elsif ( @fields % 2 == 0 ) {
         while ( my ( $field, $value ) = splice @fields, 0, 2 ) {
-            $self->{ $field } = $value ;
+            $self->{ $field } = $value;
         }
     }
     else {
@@ -79,17 +74,20 @@ sub _push {
     scalar @values if defined wantarray;
 }
 
+# push() is deprecated and will be removed in 0.04.
+# use push_cookie() or push_p3p() instead
+sub push { shift->_push( @_ ) }
+
 # make accessors
 for my $attr ( ATTRIBUTES ) {
     my $slot  = __PACKAGE__ . "::$attr";
-    my $field = "-$attr";
 
     no strict 'refs';
 
     *$slot = sub {
         my $self = shift;
-        $self->{ $field } = shift if @_;
-        $self->get( $field );
+        $self->{ $attr } = shift if @_;
+        $self->get( $attr );
     }
 }
 
