@@ -42,13 +42,14 @@ sub STORE {
 
     my $norm = _normalize_field_name( $field );
 
-    if ( my $old_key = $self->{ $norm } ) {
-        $blosxom::header->{ $old_key } = $value; # overwrite
+    if ( exists $self->{ $norm } ) {
+        $field = $self->{ $norm };
     }
     else {
-        $blosxom::header->{ $field } = $value;
         $self->{ $norm } = $field;
     }
+
+    $blosxom::header->{ $field } = $value;
 
     return;
 }

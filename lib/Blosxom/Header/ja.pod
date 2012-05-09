@@ -186,7 +186,7 @@ Set-Cookie ヘッダを追加する。
   $header->type( 'text/plain' );
 
 この属性が undef の場合、header() 関数がデフォルトの Content-Type ヘッダを
-出力してしまう。Content-Type ヘッダを出力したくない場合、空の文字列を代入
+出力する。Content-Type ヘッダを出力したくない場合、空の文字列を代入
 しなければならない。
 
   $header->type( q{} );

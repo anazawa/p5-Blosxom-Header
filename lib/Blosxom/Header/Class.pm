@@ -69,7 +69,7 @@ sub _push {
         unshift @values, $value;
     }
 
-    $self->{ $field } = @values > 1 ? \@values : $values[0] ;
+    $self->{ $field } = @values > 1 ? \@values : $values[0];
 
     scalar @values if defined wantarray;
 }
