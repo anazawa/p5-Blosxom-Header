@@ -64,6 +64,6 @@ $header->set(
 is $header->expires, undef;
 is $header->expires( 'now' ), 'now';
 is $header->expires, 'now';
-is_deeply $blosxom::header->{-expires}, 'now';
+is_deeply $blosxom::header->{expires}, 'now';
 
 done_testing;

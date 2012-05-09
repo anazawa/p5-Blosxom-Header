@@ -74,16 +74,10 @@ sub _push {
     scalar @values if defined wantarray;
 }
 
-# push() is deprecated and will be removed in 0.04.
-# use push_cookie() or push_p3p() instead
-sub push { shift->_push( @_ ) }
-
-# make accessors
+# Make accessors
 for my $attr ( ATTRIBUTES ) {
     my $slot  = __PACKAGE__ . "::$attr";
-
     no strict 'refs';
-
     *$slot = sub {
         my $self = shift;
         $self->{ $attr } = shift if @_;

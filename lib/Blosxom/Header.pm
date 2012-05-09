@@ -3,7 +3,7 @@ use 5.008_009;
 use strict;
 use warnings;
 
-our $VERSION = '0.03005';
+our $VERSION = '0.04000';
 
 # Naming conventions
 #   $field : raw field name (e.g. Foo-Bar)
@@ -112,18 +112,9 @@ sub instance {
     Blosxom::Header::Class->instance;
 }
 
-# has_instance() is deprecated and will be removed in 0.04
-sub has_instance { $Blosxom::Header::Class::INSTANCE }
-
-# new() is deprecated and will be removed in 0.04.
-# use instance() istead
-sub new { shift->instance }
-
 1;
 
 __END__
-
-=encoding utf-8
 
 =head1 NAME
 
@@ -184,15 +175,6 @@ described below.
 
 Returns a current Blosxom::Header object instance or create a new one.
 
-=item $header = Blosxom::Header->has_instance
-
-This method is deprecated and will be removed in 0.04.
-
-=item $header = Blosxom::Header->new
-
-This method is deprecated and will be removed in 0.04.
-Use instance() instead.
-
 =item $header->set( $field => $value )
 
 =item $header->set( $f1 => $v1, $f2 => $v2, ... )
@@ -227,20 +209,6 @@ Returns a Boolean value telling whether the specified HTTP header exists.
 
 Deletes the specified elements from HTTP headers.
 Returns values of deleted elements.
-
-=item $header->push( $field => @values )
-
-This method is deprecated and will be removed in 0.04.
-Use push_cookie() or push_p3p() instead.
-An example convension is:
-
-  $header->push( Set_Cookie => @cookies );
-  $header->push( P3P => @p3p );
-
-  # Becomes
-
-  $header->push_cookie( @cookies );
-  $header->push_p3p( @p3p );
 
 =item $header->push_cookie( @cookies )
 

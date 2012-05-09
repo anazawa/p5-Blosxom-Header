@@ -75,14 +75,6 @@ set() や get() といったメソッドで %header を操作する。
 Blosxom::Header インスタンスを返す。インスタンスが存在しなければ、
 新たに作成する。
 
-=item $header = Blosxom::Header->has_instance
-
-このメソッドは 0.04 で取り除かれます。
-
-=item $header = Blosxom::Header->new
-
-このメソッドは 0.04 で取り除かれます。
-
 =item $header->set( $field => $value )
 
 =item $header->set( $f1 => $v1, $f2 => $v2, ... )
