@@ -53,8 +53,8 @@ sub set {
 }
 
 sub delete {
-    my $self = shift;
-    delete @{ $self }{ @_ };
+    my ( $self, @fields ) = @_;
+    delete @{ $self }{ @fields };
 }
 
 sub clear  { %{ $_[0] } = ()         }
