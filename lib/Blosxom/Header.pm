@@ -197,7 +197,7 @@ Blosxom::Header - Missing interface to modify HTTP headers
 =head1 DESCRIPTION
 
 Blosxom, an weblog application, globalizes $header which is a reference to
-hash. This application passes $header L<CGI>::header() to generate HTTP
+a hash. This application passes $header to L<CGI>::header() to generate HTTP
 headers.
 
   package blosxom;
@@ -208,18 +208,35 @@ headers.
 
 header() doesn't care whether keys of $header are lowecased
 nor starting with a dash.
-The problem is multiple elements of $header may specify the same field:
 
-  package plugin_foo;
-  $blosxom::header->{-status} = '304 Not Modified';
+=head2 NORMALIZATION RULES
 
-  package plugin_bar;
-  $blosxom::header->{Status} = '404 Not Found';
+To specify field names consistently, we need to define how to normalize them.
+Remember how Blosxom initializes $header. 
+A key '-type' is starting with a dash and lowercased, and so normalized keys
+should follow the same rules:
 
-In above way, plugin developers can't modify HTTP headers consistently.
-Blosxom misses the interface.
-This module provides you the alternative way, and also some convenient methods
-described below.
+  'Status'  # not normalized
+  '-status' # normalized
+
+How about 'Content-Length'? It contains a dash.
+To avoid quoting when specifying hash keys, we should use underscores instead
+of dashes:
+
+  'Content-Length'  # not normalized
+  '-content_length' # normalized
+
+If you follow one of normalization rules like the above one, you can modify
+$header consistently. This module follows the above one, and so is compatible
+with the way as follows:
+
+  $blosxom::header->{-status} = '304 Not Modified'; # set
+
+  my $value   = $blosxom::header->{-status};                # get
+  my $bool    = exists $blosxom::header->{-etag};           # exists
+  my $deleted = delete $blosxom::header->{-content_length}; # delete
+
+  %{ $blosxom::header } = (); # clear
 
 =head2 METHODS
 
