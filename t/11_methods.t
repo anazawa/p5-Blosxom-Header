@@ -15,7 +15,7 @@ like $@, qr{^\$blosxom::header hasn't been initialized yet};
 $blosxom::header = { -cookie => ['foo', 'bar'] };
 my $header = Blosxom::Header->instance;
 
-isa_ok $header, 'Blosxom::Header::Class';
+isa_ok $header, 'Blosxom::Header';
 can_ok $header, qw(
     exists clear delete get set push_cookie push_p3p
     attachment charset cookie expires nph p3p status target type
@@ -64,6 +64,6 @@ $header->set(
 is $header->expires, undef;
 is $header->expires( 'now' ), 'now';
 is $header->expires, 'now';
-is_deeply $blosxom::header->{expires}, 'now';
+is_deeply $blosxom::header->{-expires}, 'now';
 
 done_testing;

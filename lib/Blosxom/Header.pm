@@ -2,114 +2,166 @@ package Blosxom::Header;
 use 5.008_009;
 use strict;
 use warnings;
+use Carp qw/carp croak/;
+
+# Parameters recognized by CGI::header()
+use constant ATTRIBUTES
+    => qw/attachment charset cookie expires nph p3p status target type/;
 
 our $VERSION = '0.04000';
 
-# Naming conventions
-#   $field : raw field name (e.g. Foo-Bar)
-#   $norm  : normalized field name (e.g. foo_bar)
-
 our $INSTANCE;
 
-sub TIEHASH {
+sub instance {
     my $class = shift;
-
     return $INSTANCE if defined $INSTANCE;
-
-    unless ( ref $blosxom::header eq 'HASH' ) {
-        require Carp;
-        Carp::croak q{$blosxom::header hasn't been initialized yet};
-    }
-
-    my %header;
-    while ( my ( $field, $value ) = each %{ $blosxom::header } ) {
-        my $norm = _normalize_field_name( $field );
-        $header{ $norm } = $field;
-    }
-
+    tie my %header, "$class";
     $INSTANCE = bless \%header, $class;
 }
 
-sub FETCH {
+sub exists { exists $_[0]->{ $_[1] } }
+sub clear  { %{ $_[0] } = ()         }
+
+sub delete {
     my $self = shift;
-    my $norm = _normalize_field_name( shift );
-    my $field = $self->{ $norm };
-    $blosxom::header->{ $field } if $field;
+    delete @{ $self }{ @_ };
 }
 
-sub STORE {
-    my ( $self, $field, $value ) = @_;
+sub get {
+    my $self = shift;
+    my $field = shift;
+    my $value = $self->{ $field };
+    return $value unless ref $value eq 'ARRAY';
+    return @{ $value } if wantarray;
+    return $value->[0] if defined wantarray;
+    carp( 'Useless use of get() in void context' );
+}
 
-    my $norm = _normalize_field_name( $field );
+sub set {
+    my ( $self, @fields ) = @_;
 
-    if ( exists $self->{ $norm } ) {
-        $field = $self->{ $norm };
+    return unless @fields;
+
+    if ( @fields == 2 ) {
+        $self->{ $fields[0] } = $fields[1];
+    }
+    elsif ( @fields % 2 == 0 ) {
+        while ( my ( $field, $value ) = splice @fields, 0, 2 ) {
+            $self->{ $field } = $value;
+        }
     }
     else {
-        $self->{ $norm } = $field;
+        croak( 'Odd number of elements are passed to set()' );
     }
-
-    $blosxom::header->{ $field } = $value;
 
     return;
 }
 
+sub push_cookie { shift->_push( -cookie => @_ ) }
+sub push_p3p    { shift->_push( -p3p    => @_ ) }
+
+sub _push {
+    my ( $self, $field, @values ) = @_;
+
+    unless ( @values ) {
+        carp( 'Useless use of _push() with no values' );
+        return;
+    }
+
+    if ( my $value = $self->{ $field } ) {
+        return push @{ $value }, @values if ref $value eq 'ARRAY';
+        unshift @values, $value;
+    }
+
+    $self->{ $field } = @values > 1 ? \@values : $values[0];
+
+    scalar @values if defined wantarray;
+}
+
+# Make accessors
+for my $attr ( ATTRIBUTES ) {
+    my $slot  = __PACKAGE__ . "::$attr";
+    no strict 'refs';
+    *$slot = sub {
+        my $self = shift;
+        $self->{ $attr } = shift if @_;
+        $self->get( $attr );
+    }
+}
+
+# Naming conventions
+#   $field : raw field name (e.g. Foo-Bar)
+#   $norm  : normalized field name (e.g. -foo_bar)
+
+sub TIEHASH {
+    my $class = shift;
+
+    unless ( ref $blosxom::header eq 'HASH' ) {
+        croak( "\$blosxom::header hasn't been initialized yet" );
+    }
+
+    bless { header => $blosxom::header }, $class;
+}
+
+sub FETCH {
+    my ( $self, $field ) = @_;
+    my $norm = _normalize_field_name( $field );
+    $self->{header}->{$norm};
+}
+
+sub STORE {
+    my ( $self, $field, $value ) = @_;
+    my $norm = _normalize_field_name( $field );
+    $self->{header}->{$norm} = $value;
+    return;
+}
+
 sub DELETE {
-    my $self = shift;
-    my $norm = _normalize_field_name( shift );
-    my $deleted = delete $self->{ $norm };
-    delete $blosxom::header->{ $deleted } if $deleted;
+    my ( $self, $field ) = @_;
+    my $norm = _normalize_field_name( $field );
+    delete $self->{header}->{$norm};
 }
 
 sub CLEAR {
     my $self = shift;
-    %{ $self } = %{ $blosxom::header } = ();
+    %{ $self->{header} } = ();
 }
 
 sub EXISTS {
-    my $self = shift;
-    my $norm = _normalize_field_name( shift );
-    exists $self->{ $norm };
+    my ( $self, $field ) = @_;
+    my $norm = _normalize_field_name( $field );
+    exists $self->{header}->{$norm};
 }
 
 sub FIRSTKEY {
     my $self = shift;
-    keys %{ $self };
-    my $first_key = each %{ $self };
-    return unless defined $first_key;
-    $self->{ $first_key };
+    keys %{ $self->{header} };
+    each %{ $self->{header} };
 }
 
 sub NEXTKEY {
     my $self = shift;
-    my $next_key = each %{ $self };
-    return unless defined $next_key;
-    $self->{ $next_key };
+    each %{ $self->{header} };
 }
 
 {
     my %ALIAS_OF = (
-        content_type => 'type',
-        set_cookie   => 'cookie',
-        cookies      => 'cookie',
+        -content_type => '-type',
+        -set_cookie   => '-cookie',
+        -cookies      => '-cookie',
     );
 
     sub _normalize_field_name {
         my $norm = lc shift;
 
-        # get rid of an initial dash if exists
-        $norm =~ s/^-//;
+        # add an initial dash if not exists
+        $norm = "-$norm" unless $norm =~ /^-/;
 
         # use underscores instead of dashes 
-        $norm =~ tr{-}{_};
+        substr( $norm, 1 ) =~ tr{-}{_};
 
         $ALIAS_OF{ $norm } || $norm;
     }
-}
-
-sub instance {
-    require Blosxom::Header::Class;
-    Blosxom::Header::Class->instance;
 }
 
 1;
