@@ -4,11 +4,15 @@ use strict;
 use warnings;
 use Carp qw/carp croak/;
 
+our $VERSION = '0.04000';
+
 # Parameters recognized by CGI::header()
 use constant ATTRIBUTES
     => qw/attachment charset cookie expires nph p3p status target type/;
 
-our $VERSION = '0.04000';
+# Naming conventions
+#   $field : raw field name (e.g. Foo-Bar)
+#   $norm  : normalized field name (e.g. -foo_bar)
 
 our $INSTANCE;
 
@@ -28,8 +32,7 @@ sub delete {
 }
 
 sub get {
-    my $self = shift;
-    my $field = shift;
+    my ( $self, $field ) = @_;
     my $value = $self->{ $field };
     return $value unless ref $value eq 'ARRAY';
     return @{ $value } if wantarray;
@@ -75,7 +78,8 @@ sub _push {
 
     $self->{ $field } = @values > 1 ? \@values : $values[0];
 
-    scalar @values if defined wantarray;
+    return scalar @values if defined wantarray;
+    return;
 }
 
 # Make accessors
@@ -86,12 +90,10 @@ for my $attr ( ATTRIBUTES ) {
         my $self = shift;
         $self->{ $attr } = shift if @_;
         $self->get( $attr );
-    }
+    };
 }
 
-# Naming conventions
-#   $field : raw field name (e.g. Foo-Bar)
-#   $norm  : normalized field name (e.g. -foo_bar)
+# tie() interface
 
 sub TIEHASH {
     my $class = shift;
@@ -384,13 +386,9 @@ L<Blosxom 2.0.0|http://blosxom.sourceforge.net/> or higher.
 
 =head1 SEE ALSO
 
-=over 4
-
 L<CGI>,
 L<Class::Singleton>,
 L<perltie>
-
-=back
 
 =head1 AUTHOR
 

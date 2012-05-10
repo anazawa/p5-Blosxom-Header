@@ -43,29 +43,6 @@ header() は $header のキーについて、大文字と小文字を区別し�
 したがって、複数のプラグインが共存するような状況では、一意に $header
 を操作することができない。
 
-このモジュールは、$header を操作するためのインタフェースである。
-具体的には、キーの大文字と小文字を区別しないハッシュとして実装した。
-
-  use Blosxom::Header;
-  tie my %header, 'Blosxom::Header';
-
-インスタンスは、メモリ空間内に１つしか作成されない。
-これは、$header がグローバル変数であるということに対応している。
-
-さらに、%header を抽象化したクラスも用意した。
-set() や get() といったメソッドで %header を操作する。
-
-  my $h = Blosxom::Header->instance;
-
-  $h->set(
-      Foo => 'bar',
-      Bar => 'baz',
-  );
-
-  my @cookies = $h->get( 'Set-Cookie' );
-
-状況に応じて、tie() インタフェースと使い分けることができる。
-
 =head2 METHODS
 
 =over 4

@@ -1,6 +1,7 @@
 use strict;
 use Blosxom::Header;
 use Test::Base;
+
 plan tests => 1 * blocks;
 
 run {
