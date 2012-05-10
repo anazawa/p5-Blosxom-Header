@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Carp qw/carp croak/;
 
-our $VERSION = '0.04000';
+our $VERSION = '0.04001';
 
 # Parameters recognized by CGI::header()
 use constant ATTRIBUTES
@@ -21,14 +21,6 @@ sub instance {
     return $INSTANCE if defined $INSTANCE;
     tie my %header, "$class";
     $INSTANCE = bless \%header, $class;
-}
-
-sub exists { exists $_[0]->{ $_[1] } }
-sub clear  { %{ $_[0] } = ()         }
-
-sub delete {
-    my $self = shift;
-    delete @{ $self }{ @_ };
 }
 
 sub get {
@@ -59,6 +51,14 @@ sub set {
 
     return;
 }
+
+sub delete {
+    my $self = shift;
+    delete @{ $self }{ @_ };
+}
+
+sub clear  { %{ $_[0] } = ()         }
+sub exists { exists $_[0]->{ $_[1] } }
 
 sub push_cookie { shift->_push( -cookie => @_ ) }
 sub push_p3p    { shift->_push( -p3p    => @_ ) }
