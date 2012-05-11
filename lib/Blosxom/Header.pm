@@ -209,34 +209,30 @@ headers.
 header() doesn't care whether keys of $header are lowecased
 nor starting with a dash.
 
-=head2 NORMALIZATION RULES
+=head2 HOW THIS MODULE NORMALIZES FIELD NAMES
 
-To specify field names consistently, we need to define how to normalize them.
-Remember how Blosxom initializes $header. 
-A key '-type' is starting with a dash and lowercased, and so normalized keys
-should follow the same rules:
+To specify field names consistently, we need to normalize them.
+If you follow one of normalization rules, you can modify $header
+consistently. This module normalizes field names as follows.
+
+Remember how Blosxom initializes $header:
+
+  $header = { -type => 'text/html' };
+
+A key '-type' is starting with a dash and lowercased, and so this module
+follows the same rules:
 
   'Status'  # not normalized
+  'status'  # not normalized
   '-status' # normalized
 
 How about 'Content-Length'? It contains a dash.
-To avoid quoting when specifying hash keys, we should use underscores instead
-of dashes:
+To avoid quoting when specifying hash keys, this module transliterates dashes
+into underscores in field names:
 
   'Content-Length'  # not normalized
+  '-content-length' # not normalized
   '-content_length' # normalized
-
-If you follow one of normalization rules like the above one, you can modify
-$header consistently. This module follows the above one, and so is compatible
-with the way as follows:
-
-  $blosxom::header->{-status} = '304 Not Modified'; # set
-
-  my $value   = $blosxom::header->{-status};                # get
-  my $bool    = exists $blosxom::header->{-etag};           # exists
-  my $deleted = delete $blosxom::header->{-content_length}; # delete
-
-  %{ $blosxom::header } = (); # clear
 
 =head2 METHODS
 
