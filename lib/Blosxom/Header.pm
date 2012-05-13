@@ -18,7 +18,8 @@ our $INSTANCE;
 
 sub instance {
     my $class = shift;
-    return $INSTANCE if defined $INSTANCE;
+    #return $INSTANCE if defined $INSTANCE;
+    return $INSTANCE if ref $INSTANCE eq __PACKAGE__;
     tie my %header, "$class";
     $INSTANCE = bless \%header, $class;
 }
@@ -83,20 +84,20 @@ sub _push {
 
 # Make accessors
 
-for my $attr (qw/attachment charset expires nph status target type/) {
-    my $slot  = __PACKAGE__ . "::$attr";
+for my $method ( qw/attachment charset expires nph status target type/ ) {
+    my $attr = "-$method";
     no strict 'refs';
-    *$slot = sub {
+    *$method = sub {
         my $self = shift;
         return $self->{ $attr } = shift if @_;
         $self->{ $attr };
     };
 }
 
-for my $attr (qw/cookie p3p/) {
-    my $slot  = __PACKAGE__ . "::$attr";
+for my $method ( qw/cookie p3p/ ) {
+    my $attr = "-$method";
     no strict 'refs';
-    *$slot = sub {
+    *$method = sub {
         my $self = shift;
         return $self->{ $attr } = [ @_ ] if @_ > 1;
         return $self->{ $attr } = shift if @_;
@@ -132,20 +133,23 @@ sub TIEHASH {
 
 sub FETCH {
     my ( $self, $field ) = @_;
-    my $norm = _normalize_field_name( $field );
+    #my $norm = _normalize_field_name( $field );
+    my $norm = $self->_normalize_field_name( $field );
     $self->{header}->{$norm};
 }
 
 sub STORE {
     my ( $self, $field, $value ) = @_;
-    my $norm = _normalize_field_name( $field );
+    #my $norm = _normalize_field_name( $field );
+    my $norm = $self->_normalize_field_name( $field );
     $self->{header}->{$norm} = $value;
     return;
 }
 
 sub DELETE {
     my ( $self, $field ) = @_;
-    my $norm = _normalize_field_name( $field );
+    #my $norm = _normalize_field_name( $field );
+    my $norm = $self->_normalize_field_name( $field );
     delete $self->{header}->{$norm};
 }
 
@@ -156,7 +160,8 @@ sub CLEAR {
 
 sub EXISTS {
     my ( $self, $field ) = @_;
-    my $norm = _normalize_field_name( $field );
+    #my $norm = _normalize_field_name( $field );
+    my $norm = $self->_normalize_field_name( $field );
     exists $self->{header}->{$norm};
 }
 
@@ -179,6 +184,7 @@ sub NEXTKEY {
     );
 
     sub _normalize_field_name {
+        my $self = shift;
         my $norm = lc shift;
 
         # add an initial dash if not exists
@@ -232,7 +238,8 @@ headers.
   print CGI::header( $header );
 
 header() doesn't care whether keys of $header are lowecased
-nor starting with a dash.
+nor starting with a dash, and also transliterates underscores into dashes
+in field names.
 
 =head2 HOW THIS MODULE NORMALIZES FIELD NAMES
 
