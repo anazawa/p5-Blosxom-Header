@@ -93,19 +93,30 @@ for my $attr (qw/attachment charset expires nph status target type/) {
     };
 }
 
-sub cookie {
-    my $self = shift;
-    return $self->{-cookie} = [ @_ ] if @_ > 1;
-    return $self->{-cookie} = shift if @_;
-    $self->{-cookie};
+for my $attr (qw/cookie p3p/) {
+    my $slot  = __PACKAGE__ . "::$attr";
+    no strict 'refs';
+    *$slot = sub {
+        my $self = shift;
+        return $self->{ $attr } = [ @_ ] if @_ > 1;
+        return $self->{ $attr } = shift if @_;
+        $self->{ $attr };
+    };
 }
 
-sub p3p {
-    my $self = shift;
-    return $self->{-p3p} = [ @_ ] if @_ > 1;
-    return $self->{-p3p} = shift if @_;
-    $self->{-p3p};
-}
+#sub cookie {
+#    my $self = shift;
+#    return $self->{-cookie} = [ @_ ] if @_ > 1;
+#    return $self->{-cookie} = shift if @_;
+#    $self->{-cookie};
+#}
+
+#sub p3p {
+#    my $self = shift;
+#    return $self->{-p3p} = [ @_ ] if @_ > 1;
+#    return $self->{-p3p} = shift if @_;
+#    $self->{-p3p};
+#}
 
 # tie() interface
 
@@ -247,6 +258,10 @@ into underscores in field names:
   'Content-Length'  # not normalized
   '-content-length' # not normalized
   '-content_length' # normalized
+
+If you follow the above normalization rule, you can modify $header directly.
+In other words, this module is compatible with the way modifying $header directly
+when you follow the above rule.
 
 =head2 METHODS
 
