@@ -34,21 +34,25 @@ sub get {
 }
 
 sub set {
-    my ( $self, @fields ) = @_;
+    #my ( $self, @fields ) = @_;
+    my ( $self, %fields ) = @_;
 
-    return unless @fields;
+    #return unless @fields;
+    return unless %fields;
 
-    if ( @fields == 2 ) {
-        $self->{ $fields[0] } = $fields[1];
-    }
-    elsif ( @fields % 2 == 0 ) {
-        while ( my ( $field, $value ) = splice @fields, 0, 2 ) {
-            $self->{ $field } = $value;
-        }
-    }
-    else {
-        croak( 'Odd number of elements are passed to set()' );
-    }
+    #if ( @fields == 2 ) {
+    #    $self->{ $fields[0] } = $fields[1];
+    #}
+    #elsif ( @fields % 2 == 0 ) {
+    #    while ( my ( $field, $value ) = splice @fields, 0, 2 ) {
+    #        $self->{ $field } = $value;
+    #    }
+    #}
+    #else {
+    #    croak( 'Odd number of elements are passed to set()' );
+    #}
+
+    @{ $self }{ keys %fields } = values %fields;
 
     return;
 }

@@ -43,8 +43,10 @@ is_deeply $blosxom::header, {}, 'clear()';
 
 # set()
 
-eval { $header->set( 'foo' ) };
-like $@, qr{^Odd number of elements are passed to set()};
+#eval { $header->set( 'foo' ) };
+#like $@, qr{^Odd number of elements are passed to set()};
+warning_is { $header->set( 'foo' ) }
+    'Odd number of elements in hash assignment';
 
 $header->set( -foo => 'bar' );
 is $blosxom::header->{-foo}, 'bar', 'set()';
