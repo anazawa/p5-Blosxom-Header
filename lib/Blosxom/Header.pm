@@ -7,8 +7,8 @@ use Carp qw/carp croak/;
 our $VERSION = '0.04001';
 
 # Parameters recognized by CGI::header()
-use constant ATTRIBUTES
-    => qw/attachment charset cookie expires nph p3p status target type/;
+#use constant ATTRIBUTES
+#    => qw/attachment charset cookie expires nph p3p status target type/;
 
 # Naming conventions
 #   $field : raw field name (e.g. Foo-Bar)
@@ -78,19 +78,33 @@ sub _push {
 
     $self->{ $field } = @values > 1 ? \@values : $values[0];
 
-    return scalar @values if defined wantarray;
-    return;
+    scalar @values;
 }
 
 # Make accessors
-for my $attr ( ATTRIBUTES ) {
+
+for my $attr (qw/attachment charset expires nph status target type/) {
     my $slot  = __PACKAGE__ . "::$attr";
     no strict 'refs';
     *$slot = sub {
         my $self = shift;
-        $self->{ $attr } = shift if @_;
-        $self->get( $attr );
+        return $self->{ $attr } = shift if @_;
+        $self->{ $attr };
     };
+}
+
+sub cookie {
+    my $self = shift;
+    return $self->{-cookie} = [ @_ ] if @_ > 1;
+    return $self->{-cookie} = shift if @_;
+    $self->{-cookie};
+}
+
+sub p3p {
+    my $self = shift;
+    return $self->{-p3p} = [ @_ ] if @_ > 1;
+    return $self->{-p3p} = shift if @_;
+    $self->{-p3p};
 }
 
 # tie() interface
