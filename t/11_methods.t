@@ -5,46 +5,33 @@ use Test::Warn;
 
 {
     package blosxom;
-    our $header = { -cookie => ['foo', 'bar'] };
+
+    our $header = {
+        -type   => 'text/html',
+        -cookie => ['foo', 'bar'],
+    };
 }
 
 my $header = Blosxom::Header->instance;
-
 isa_ok $header, 'Blosxom::Header';
-
 can_ok $header, qw(
-    exists clear delete get set
-    attachment charset expires nph status target type
-    cookie push_cookie
-    p3p    push_p3p
+    exists     clear       delete  get      set
+    attachment charset     expires nph      status target type
+    cookie     push_cookie p3p     push_p3p
 );
 
-# exists()
+ok $header->exists( 'type' ),    'exists() returns true';
+ok !$header->exists( 'status' ), 'exists() returns false';
 
-ok $header->exists( 'cookie' ), 'exists()';
-
-# get()
-
-warning_is { $header->get( 'cookie' ) }
-    'Useless use of get() in void context';
-
+is $header->get( 'type' ), 'text/html', 'get()';
 is $header->get( 'cookie' ), 'foo', 'get() in scalar context';
-
-{
-    my @got = $header->get( 'cookie' );
-    my @expected = qw/foo bar/;
-    is_deeply \@got, \@expected, 'get() in list context';
-}
-
-# clear()
+is_deeply [ $header->get('cookie') ], [qw/foo bar/], 'get() in list context';
 
 $header->clear;
 is_deeply $blosxom::header, {}, 'clear()';
 
 # set()
 
-#eval { $header->set( 'foo' ) };
-#like $@, qr{^Odd number of elements are passed to set()};
 warning_is { $header->set( 'foo' ) }
     'Odd number of elements in hash assignment';
 
@@ -95,14 +82,12 @@ $header->clear;
 
 is $header->cookie, undef;
 is $header->cookie( 'foo' ), 'foo', 'set cookie()';
-is $header->cookie, 'foo', 'get cookie()';
+is $header->cookie,          'foo', 'get cookie()';
 is $blosxom::header->{-cookie}, 'foo';
 
 my @cookies = qw(foo bar baz);
-is_deeply $header->cookie( @cookies ), \@cookies, 'cookie() receives LIST';
-is_deeply $blosxom::header->{-cookie}, \@cookies;
-
-$header->clear;
+$header->cookie( @cookies );
+is_deeply $blosxom::header->{-cookie}, \@cookies, 'cookie() receives LIST';
 
 # P3P
 
@@ -114,9 +99,7 @@ is $blosxom::header->{-p3p}, 'foo';
 $header->clear;
 
 my @p3p = qw(foo bar baz);
-is_deeply $header->p3p( @p3p ), \@p3p, 'p3p() receives LIST';
-is_deeply $blosxom::header->{-p3p}, \@p3p;
-
-$header->clear;
+$header->p3p( @p3p );
+is_deeply $blosxom::header->{-p3p}, \@p3p, 'p3p() receives LIST';
 
 done_testing;

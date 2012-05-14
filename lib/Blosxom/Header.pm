@@ -6,10 +6,6 @@ use Carp qw/carp croak/;
 
 our $VERSION = '0.04001';
 
-# Parameters recognized by CGI::header()
-#use constant ATTRIBUTES
-#    => qw/attachment charset cookie expires nph p3p status target type/;
-
 # Naming conventions
 #   $field : raw field name (e.g. Foo-Bar)
 #   $norm  : normalized field name (e.g. -foo_bar)
@@ -18,7 +14,6 @@ our $INSTANCE;
 
 sub instance {
     my $class = shift;
-    #return $INSTANCE if defined $INSTANCE;
     return $INSTANCE if ref $INSTANCE eq __PACKAGE__;
     tie my %header, "$class";
     $INSTANCE = bless \%header, $class;
@@ -29,31 +24,12 @@ sub get {
     my $value = $self->{ $field };
     return $value unless ref $value eq 'ARRAY';
     return @{ $value } if wantarray;
-    return $value->[0] if defined wantarray;
-    carp( 'Useless use of get() in void context' );
+    $value->[0];
 }
 
 sub set {
-    #my ( $self, @fields ) = @_;
     my ( $self, %fields ) = @_;
-
-    #return unless @fields;
-    return unless %fields;
-
-    #if ( @fields == 2 ) {
-    #    $self->{ $fields[0] } = $fields[1];
-    #}
-    #elsif ( @fields % 2 == 0 ) {
-    #    while ( my ( $field, $value ) = splice @fields, 0, 2 ) {
-    #        $self->{ $field } = $value;
-    #    }
-    #}
-    #else {
-    #    croak( 'Odd number of elements are passed to set()' );
-    #}
-
     @{ $self }{ keys %fields } = values %fields;
-
     return;
 }
 
@@ -89,39 +65,25 @@ sub _push {
 # Make accessors
 
 for my $method ( qw/attachment charset expires nph status target type/ ) {
-    my $attr = "-$method";
+    my $field = "-$method";
     no strict 'refs';
     *$method = sub {
         my $self = shift;
-        return $self->{ $attr } = shift if @_;
-        $self->{ $attr };
+        return $self->{ $field } = shift if @_;
+        $self->{ $field };
     };
 }
 
 for my $method ( qw/cookie p3p/ ) {
-    my $attr = "-$method";
+    my $field = "-$method";
     no strict 'refs';
     *$method = sub {
         my $self = shift;
-        return $self->{ $attr } = [ @_ ] if @_ > 1;
-        return $self->{ $attr } = shift if @_;
-        $self->{ $attr };
+        return $self->{ $field } = [ @_ ] if @_ > 1;
+        return $self->{ $field } = shift if @_;
+        $self->{ $field };
     };
 }
-
-#sub cookie {
-#    my $self = shift;
-#    return $self->{-cookie} = [ @_ ] if @_ > 1;
-#    return $self->{-cookie} = shift if @_;
-#    $self->{-cookie};
-#}
-
-#sub p3p {
-#    my $self = shift;
-#    return $self->{-p3p} = [ @_ ] if @_ > 1;
-#    return $self->{-p3p} = shift if @_;
-#    $self->{-p3p};
-#}
 
 # tie() interface
 
@@ -137,14 +99,12 @@ sub TIEHASH {
 
 sub FETCH {
     my ( $self, $field ) = @_;
-    #my $norm = _normalize_field_name( $field );
     my $norm = $self->_normalize_field_name( $field );
     $self->{header}->{$norm};
 }
 
 sub STORE {
     my ( $self, $field, $value ) = @_;
-    #my $norm = _normalize_field_name( $field );
     my $norm = $self->_normalize_field_name( $field );
     $self->{header}->{$norm} = $value;
     return;
@@ -152,7 +112,6 @@ sub STORE {
 
 sub DELETE {
     my ( $self, $field ) = @_;
-    #my $norm = _normalize_field_name( $field );
     my $norm = $self->_normalize_field_name( $field );
     delete $self->{header}->{$norm};
 }
@@ -164,7 +123,6 @@ sub CLEAR {
 
 sub EXISTS {
     my ( $self, $field ) = @_;
-    #my $norm = _normalize_field_name( $field );
     my $norm = $self->_normalize_field_name( $field );
     exists $self->{header}->{$norm};
 }

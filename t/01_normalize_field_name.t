@@ -6,7 +6,6 @@ plan tests => 1 * blocks;
 
 run {
     my $block = shift;
-    #my $got = Blosxom::Header::_normalize_field_name( $block->input );
     my $got = Blosxom::Header->_normalize_field_name( $block->input );
     is $got, $block->expected;
 };
