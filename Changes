@@ -1,5 +1,9 @@
 Revision history for Perl extension Blosxom::Header.
 
+  - A tied hash became read-only by default. When you need to modify it,
+    you must pass an additional argument 'rw' to TIEHASH() explicitly:
+      tie %header => 'Blosxom::Header', 'rw';
+
 0.04002 May 21th, 2012
   - _normalize_field_name() became a class method internal
   - cookie() and p3p() receive LIST
