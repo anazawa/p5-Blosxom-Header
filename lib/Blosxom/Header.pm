@@ -2,7 +2,7 @@ package Blosxom::Header;
 use 5.008_009;
 use strict;
 use warnings;
-use constant MODIFY => 'Modification of a read-only value attempted';
+use constant READONLY => 'Modification of a read-only value attempted';
 use Carp qw/carp croak/;
 
 our $VERSION = '0.04002';
@@ -17,9 +17,8 @@ sub instance {
     my $class = shift;
     return $class if ref $class;
     return $INSTANCE if defined $INSTANCE;
-    #tie my %header, "$class";
-    tie my %header, "$class", 'rw';
-    $INSTANCE = bless \%header, $class;
+    tie my %header => $class, 'rw';
+    $INSTANCE = bless \%header => $class;
 }
 
 sub get {
@@ -92,8 +91,7 @@ sub _push {
 
 sub TIEHASH {
     my $class = shift;
-    #my $is = shift || 'rw';
-    my $is = shift || 'ro';
+    my $is = $_[0] && lc $_[0] eq 'rw' ? 'rw' : 'ro';
     bless { is => $is }, $class;
 }
 
@@ -105,7 +103,7 @@ sub FETCH {
 
 sub STORE {
     my ( $self, $field, $value ) = @_;
-    croak( &MODIFY ) unless $self->{is} =~ /w/;
+    croak( READONLY ) unless $self->{is} =~ /w/;
     my $norm = $self->_normalize_field_name( $field );
     $blosxom::header->{ $norm } = $value;
     return;
@@ -113,14 +111,14 @@ sub STORE {
 
 sub DELETE {
     my ( $self, $field ) = @_;
-    croak( &MODIFY ) unless $self->{is} =~ /w/;
+    croak( READONLY ) unless $self->{is} =~ /w/;
     my $norm = $self->_normalize_field_name( $field );
     delete $blosxom::header->{ $norm };
 }
 
 sub CLEAR {
     my $self = shift;
-    croak( &MODIFY ) unless $self->{is} =~ /w/;
+    croak( READONLY ) unless $self->{is} =~ /w/;
     %{ $blosxom::header } = ();
 }
 
@@ -136,6 +134,8 @@ sub FIRSTKEY {
 }
 
 sub NEXTKEY { each %{ $blosxom::header } }
+
+sub UNTIE { shift->{is} !~ /w/ && croak( READONLY ) }
 
 {
     my %ALIAS_OF = (

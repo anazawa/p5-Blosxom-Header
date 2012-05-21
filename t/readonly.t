@@ -14,5 +14,8 @@ is $header{type}, 'text/html';
 eval { $header{type} = 'text/plain' };
 like $@, qr{^Modification of a read-only value attempted};
 
+eval { untie %header };
+like $@, qr{^Modification of a read-only value attempted};
+
 done_testing;
 
