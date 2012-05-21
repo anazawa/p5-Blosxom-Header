@@ -12,7 +12,8 @@ use Test::More;
 
 # Initialize
 $blosxom::header = { -foo => 'bar' };
-tie my %header, 'Blosxom::Header';
+#tie my %header, 'Blosxom::Header';
+tie my %header, 'Blosxom::Header', 'rw';
 
 ok exists $header{-foo},  'EXISTS() returns true';
 ok !exists $header{-bar}, 'EXISTS() returns false';

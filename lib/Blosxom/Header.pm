@@ -17,7 +17,8 @@ sub instance {
     my $class = shift;
     return $class if ref $class;
     return $INSTANCE if defined $INSTANCE;
-    tie my %header, "$class";
+    #tie my %header, "$class";
+    tie my %header, "$class", 'rw';
     $INSTANCE = bless \%header, $class;
 }
 
@@ -64,7 +65,6 @@ sub _push {
 }
 
 # Make accessors
-
 {
     no strict 'refs';
 
@@ -92,7 +92,8 @@ sub _push {
 
 sub TIEHASH {
     my $class = shift;
-    my $is = shift || 'rw';
+    #my $is = shift || 'rw';
+    my $is = shift || 'ro';
     bless { is => $is }, $class;
 }
 
