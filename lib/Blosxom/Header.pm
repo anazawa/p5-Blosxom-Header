@@ -2,6 +2,8 @@ package Blosxom::Header;
 use 5.008_009;
 use strict;
 use warnings;
+use constant MODIFY => 'Modification of a read-only value attempted';
+use Carp qw/carp croak/;
 
 our $VERSION = '0.04002';
 
@@ -47,8 +49,7 @@ sub _push {
     my ( $self, $field, @values ) = @_;
 
     unless ( @values ) {
-        require Carp;
-        Carp::carp( 'Useless use of _push() with no values' );
+        carp( 'Useless use of _push() with no values' );
         return;
     }
 
@@ -64,30 +65,36 @@ sub _push {
 
 # Make accessors
 
-for my $method ( qw/attachment charset expires nph status target type/ ) {
-    my $field = "-$method";
+{
     no strict 'refs';
-    *$method = sub {
-        my $self = shift;
-        return $self->{ $field } = shift if @_;
-        $self->{ $field };
-    };
-}
 
-for my $method ( qw/cookie p3p/ ) {
-    my $field = "-$method";
-    no strict 'refs';
-    *$method = sub {
-        my $self = shift;
-        return $self->{ $field } = [ @_ ] if @_ > 1;
-        return $self->{ $field } = shift if @_;
-        $self->{ $field };
-    };
+    for my $method (qw/attachment charset expires nph status target type/) {
+        my $field = "-$method";
+        *$method = sub {
+            my $self = shift;
+            return $self->{ $field } = shift if @_;
+            $self->{ $field };
+        };
+    }
+
+    for my $method (qw/cookie p3p/) {
+        my $field = "-$method";
+        *$method = sub {
+            my $self = shift;
+            return $self->{ $field } = [ @_ ] if @_ > 1;
+            return $self->{ $field } = shift if @_;
+            $self->{ $field };
+        };
+    }
 }
 
 # tie() interface
 
-sub TIEHASH { bless \do { my $anon_scalar }, shift }
+sub TIEHASH {
+    my $class = shift;
+    my $is = shift || 'rw';
+    bless { is => $is }, $class;
+}
 
 sub FETCH {
     my ( $self, $field ) = @_;
@@ -97,6 +104,7 @@ sub FETCH {
 
 sub STORE {
     my ( $self, $field, $value ) = @_;
+    croak( &MODIFY ) unless $self->{is} =~ /w/;
     my $norm = $self->_normalize_field_name( $field );
     $blosxom::header->{ $norm } = $value;
     return;
@@ -104,11 +112,16 @@ sub STORE {
 
 sub DELETE {
     my ( $self, $field ) = @_;
+    croak( &MODIFY ) unless $self->{is} =~ /w/;
     my $norm = $self->_normalize_field_name( $field );
     delete $blosxom::header->{ $norm };
 }
 
-sub CLEAR { %{ $blosxom::header } = () }
+sub CLEAR {
+    my $self = shift;
+    croak( &MODIFY ) unless $self->{is} =~ /w/;
+    %{ $blosxom::header } = ();
+}
 
 sub EXISTS {
     my ( $self, $field ) = @_;
