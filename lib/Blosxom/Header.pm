@@ -2,7 +2,6 @@ package Blosxom::Header;
 use 5.008_009;
 use strict;
 use warnings;
-use Carp qw/carp croak/;
 
 our $VERSION = '0.04002';
 
@@ -14,7 +13,8 @@ our $INSTANCE;
 
 sub instance {
     my $class = shift;
-    return $INSTANCE if ref $INSTANCE eq __PACKAGE__;
+    return $class if ref $class;
+    return $INSTANCE if defined $INSTANCE;
     tie my %header, "$class";
     $INSTANCE = bless \%header, $class;
 }
@@ -23,8 +23,7 @@ sub get {
     my ( $self, $field ) = @_;
     my $value = $self->{ $field };
     return $value unless ref $value eq 'ARRAY';
-    return @{ $value } if wantarray;
-    $value->[0];
+    wantarray ? @{ $value } : $value->[0];
 }
 
 sub set {
@@ -48,7 +47,8 @@ sub _push {
     my ( $self, $field, @values ) = @_;
 
     unless ( @values ) {
-        carp( 'Useless use of _push() with no values' );
+        require Carp;
+        Carp::carp( 'Useless use of _push() with no values' );
         return;
     }
 
@@ -87,56 +87,41 @@ for my $method ( qw/cookie p3p/ ) {
 
 # tie() interface
 
-sub TIEHASH {
-    my $class = shift;
-
-    unless ( ref $blosxom::header eq 'HASH' ) {
-        croak( "\$blosxom::header hasn't been initialized yet" );
-    }
-
-    bless { header => $blosxom::header }, $class;
-}
+sub TIEHASH { bless \do { my $anon_scalar }, shift }
 
 sub FETCH {
     my ( $self, $field ) = @_;
     my $norm = $self->_normalize_field_name( $field );
-    $self->{header}->{$norm};
+    $blosxom::header->{ $norm };
 }
 
 sub STORE {
     my ( $self, $field, $value ) = @_;
     my $norm = $self->_normalize_field_name( $field );
-    $self->{header}->{$norm} = $value;
+    $blosxom::header->{ $norm } = $value;
     return;
 }
 
 sub DELETE {
     my ( $self, $field ) = @_;
     my $norm = $self->_normalize_field_name( $field );
-    delete $self->{header}->{$norm};
+    delete $blosxom::header->{ $norm };
 }
 
-sub CLEAR {
-    my $self = shift;
-    %{ $self->{header} } = ();
-}
+sub CLEAR { %{ $blosxom::header } = () }
 
 sub EXISTS {
     my ( $self, $field ) = @_;
     my $norm = $self->_normalize_field_name( $field );
-    exists $self->{header}->{$norm};
+    exists $blosxom::header->{ $norm };
 }
 
 sub FIRSTKEY {
-    my $self = shift;
-    keys %{ $self->{header} };
-    each %{ $self->{header} };
+    keys %{ $blosxom::header };
+    each %{ $blosxom::header };
 }
 
-sub NEXTKEY {
-    my $self = shift;
-    each %{ $self->{header} };
-}
+sub NEXTKEY { each %{ $blosxom::header } }
 
 {
     my %ALIAS_OF = (
