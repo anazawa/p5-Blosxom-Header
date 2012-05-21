@@ -15,17 +15,16 @@ use Test::Warn;
 my $header = Blosxom::Header->instance;
 isa_ok $header, 'Blosxom::Header';
 can_ok $header, qw(
-    exists     clear       delete  get      set
-    attachment charset     expires nph      status target type
-    cookie     push_cookie p3p     push_p3p
+    clear delete exists get push_cookie push_p3p set
+    attachment charset cookie expires nph p3p status target type
 );
 
 ok $header->exists( 'type' ),    'exists() returns true';
 ok !$header->exists( 'status' ), 'exists() returns false';
 
-is $header->get( 'type' ), 'text/html', 'get()';
-is $header->get( 'cookie' ), 'foo', 'get() in scalar context';
-is_deeply [ $header->get('cookie') ], [qw/foo bar/], 'get() in list context';
+is $header->get( 'type' ),   'text/html', 'get()';
+is $header->get( 'cookie' ), 'foo',       'get() in scalar context';
+is_deeply [$header->get('cookie')], [qw/foo bar/], 'get() in list context';
 
 $header->clear;
 is_deeply $blosxom::header, {}, 'clear()';
