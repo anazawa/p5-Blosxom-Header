@@ -2,8 +2,6 @@ package Blosxom::Header;
 use 5.008_009;
 use strict;
 use warnings;
-use constant READONLY => 'Modification of a read-only value attempted';
-use constant USELESS  => 'Useless use of %s with no values';
 use Carp qw/carp croak/;
 
 our $VERSION = '0.04002';
@@ -11,6 +9,11 @@ our $VERSION = '0.04002';
 # Naming conventions
 #   $field : raw field name (e.g. Foo-Bar)
 #   $norm  : normalized field name (e.g. -foo_bar)
+
+use constant {
+    READONLY => 'Modification of a read-only value attempted',
+    USELESS  => 'Useless use of %s with no values',
+};
 
 our $INSTANCE;
 
@@ -94,21 +97,23 @@ sub _push {
 
 sub TIEHASH {
     my $class = shift;
-    my $is = $_[0] && lc $_[0] eq 'rw' ? 'rw' : 'ro';
-    bless { is => $is }, $class;
+    my $is = $_[0] && lc $_[0] eq 'rw' ? lc shift : 'ro';
+    my $default = shift || $blosxom::header;
+    croak( 'Not a HASH reference' ) unless ref $default eq 'HASH';
+    bless { is => $is, default => $default }, $class;
 }
 
 sub FETCH {
     my ( $self, $field ) = @_;
     my $norm = $self->_normalize_field_name( $field );
-    $blosxom::header->{ $norm };
+    $self->{default}->{$norm};
 }
 
 sub STORE {
     my ( $self, $field, $value ) = @_;
     croak( READONLY ) unless $self->{is} =~ /w/;
     my $norm = $self->_normalize_field_name( $field );
-    $blosxom::header->{ $norm } = $value;
+    $self->{default}->{$norm} = $value;
     return;
 }
 
@@ -116,27 +121,28 @@ sub DELETE {
     my ( $self, $field ) = @_;
     croak( READONLY ) unless $self->{is} =~ /w/;
     my $norm = $self->_normalize_field_name( $field );
-    delete $blosxom::header->{ $norm };
+    delete $self->{default}->{$norm};
 }
 
 sub CLEAR {
     my $self = shift;
     croak( READONLY ) unless $self->{is} =~ /w/;
-    %{ $blosxom::header } = ();
+    %{ $self->{default} } = ();
 }
 
 sub EXISTS {
     my ( $self, $field ) = @_;
     my $norm = $self->_normalize_field_name( $field );
-    exists $blosxom::header->{ $norm };
+    exists $self->{default}->{$norm};
 }
 
 sub FIRSTKEY {
-    keys %{ $blosxom::header };
-    each %{ $blosxom::header };
+    my $self = shift;
+    keys %{ $self->{default} };
+    each %{ $self->{default} };
 }
 
-sub NEXTKEY { each %{ $blosxom::header } }
+sub NEXTKEY { each %{ shift->{default} } }
 
 sub UNTIE { shift->{is} !~ /w/ && croak( READONLY ) }
 
@@ -171,8 +177,10 @@ sub UNTIE { shift->{is} !~ /w/ && croak( READONLY ) }
         # add an initial dash if not exists
         $norm = "-$norm" unless $norm =~ /^-/;
 
-        # transliterates dashes into underscores in a field name
+        # transliterate dashes into underscores in a field name
         substr( $norm, 1 ) =~ tr{-}{_};
+
+        $norm = $norm_of{ $norm } if exists $norm_of{ $norm }; 
 
         # preserve a cache of a normalized field name
         $norm_of{ $field } = $norm;
