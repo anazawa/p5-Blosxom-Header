@@ -3,6 +3,7 @@ use 5.008_009;
 use strict;
 use warnings;
 use constant READONLY => 'Modification of a read-only value attempted';
+use constant USELESS  => 'Useless use of %s with no values';
 use Carp qw/carp croak/;
 
 our $VERSION = '0.04002';
@@ -30,12 +31,14 @@ sub get {
 
 sub set {
     my ( $self, %fields ) = @_;
+    return _carp( USELESS, 'set()' ) unless %fields;
     @{ $self }{ keys %fields } = values %fields;
     return;
 }
 
 sub delete {
     my ( $self, @fields ) = @_;
+    return _carp( USELESS, 'delete()' ) unless @fields;
     delete @{ $self }{ @fields };
 }
 
@@ -48,10 +51,7 @@ sub push_p3p    { shift->_push( -p3p    => @_ ) }
 sub _push {
     my ( $self, $field, @values ) = @_;
 
-    unless ( @values ) {
-        carp( 'Useless use of _push() with no values' );
-        return;
-    }
+    return _carp( USELESS, '_push()' ) unless @values;
 
     if ( my $value = $self->{ $field } ) {
         return push @{ $value }, @values if ref $value eq 'ARRAY';
@@ -63,11 +63,13 @@ sub _push {
     scalar @values;
 }
 
+
 # Make accessors
+
 {
     no strict 'refs';
 
-    for my $method (qw/attachment charset expires nph status target type/) {
+    for my $method ( qw/attachment charset expires nph status target type/ ) {
         my $field = "-$method";
         *$method = sub {
             my $self = shift;
@@ -76,7 +78,7 @@ sub _push {
         };
     }
 
-    for my $method (qw/cookie p3p/) {
+    for my $method ( qw/cookie p3p/ ) {
         my $field = "-$method";
         *$method = sub {
             my $self = shift;
@@ -86,6 +88,7 @@ sub _push {
         };
     }
 }
+
 
 # tie() interface
 
@@ -137,25 +140,51 @@ sub NEXTKEY { each %{ $blosxom::header } }
 
 sub UNTIE { shift->{is} !~ /w/ && croak( READONLY ) }
 
+
+# Internal methods
+
 {
-    my %ALIAS_OF = (
-        -content_type => '-type',
-        -set_cookie   => '-cookie',
+    my %norm_of = (
+        -attachment   => '-attachment',
+        -charset      => '-charset',
+        -cookie       => '-cookie',
         -cookies      => '-cookie',
+        -content_type => '-type',
+        -expires      => '-expires',
+        -nph          => '-nph',
+        -p3p          => '-p3p',
+        -set_cookie   => '-cookie',
+        -status       => '-status',
+        -target       => '-target',
+        -type         => '-type',
     );
 
     sub _normalize_field_name {
-        my $self = shift;
-        my $norm = lc shift;
+        my ( $self, $field ) = @_;
+
+        # return cache if exists
+        return $norm_of{ $field } if exists $norm_of{ $field };
+
+        # lowercase a field name
+        my $norm = lc $field;
 
         # add an initial dash if not exists
         $norm = "-$norm" unless $norm =~ /^-/;
 
-        # use underscores instead of dashes 
+        # transliterates dashes into underscores in a field name
         substr( $norm, 1 ) =~ tr{-}{_};
 
-        $ALIAS_OF{ $norm } || $norm;
+        # preserve a cache of a normalized field name
+        $norm_of{ $field } = $norm;
     }
+}
+
+
+# Internal functions
+
+sub _carp {
+    my ( $format, @args ) = @_;
+    carp( sprintf $format, @args );
 }
 
 1;
