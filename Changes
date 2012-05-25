@@ -1,5 +1,6 @@
 Revision history for Perl extension Blosxom::Header.
 
+0.04003 May 25th, 2012
   - status() receives the status code:
       $header->status(304)
     Don't pass a string which contains reason phrases:

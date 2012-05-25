@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Carp qw/carp croak/;
 
-our $VERSION = '0.04002';
+our $VERSION = '0.04003';
 
 # Naming conventions
 #   $field : raw field name (e.g. Foo-Bar)
