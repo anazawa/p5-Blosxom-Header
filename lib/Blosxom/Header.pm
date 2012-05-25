@@ -72,7 +72,7 @@ sub _push {
 {
     no strict 'refs';
 
-    for my $method ( qw/attachment charset expires nph status target type/ ) {
+    for my $method ( qw/attachment charset expires nph target type/ ) {
         my $field = "-$method";
         *$method = sub {
             my $self = shift;
@@ -90,6 +90,23 @@ sub _push {
             $self->{ $field };
         };
     }
+}
+
+sub status {
+    my $self = shift;
+
+    if ( @_ ) {
+        require HTTP::Status;
+        my $code = shift;
+        my $message = HTTP::Status::status_message( $code );
+        $self->{-status} = "$code $message";
+        return $code;
+    }
+    elsif ( my $status = $self->{-status} ) {
+        return substr( $status, 0, 3 );
+    }
+
+    return;
 }
 
 
@@ -150,29 +167,15 @@ sub UNTIE { shift->{is} !~ /w/ && croak( READONLY ) }
 # Internal methods
 
 {
-    my %norm_of = (
-        -attachment   => '-attachment',
-        -charset      => '-charset',
-        -cookie       => '-cookie',
-        -cookies      => '-cookie',
+    my %ALIAS_OF = (
         -content_type => '-type',
-        -expires      => '-expires',
-        -nph          => '-nph',
-        -p3p          => '-p3p',
+        -cookies      => '-cookie',
         -set_cookie   => '-cookie',
-        -status       => '-status',
-        -target       => '-target',
-        -type         => '-type',
     );
 
     sub _normalize_field_name {
-        my ( $self, $field ) = @_;
-
-        # return cache if exists
-        return $norm_of{ $field } if exists $norm_of{ $field };
-
-        # lowercase a field name
-        my $norm = lc $field;
+        my $self = shift;
+        my $norm = lc shift;
 
         # add an initial dash if not exists
         $norm = "-$norm" unless $norm =~ /^-/;
@@ -180,10 +183,7 @@ sub UNTIE { shift->{is} !~ /w/ && croak( READONLY ) }
         # transliterate dashes into underscores in a field name
         substr( $norm, 1 ) =~ tr{-}{_};
 
-        $norm = $norm_of{ $norm } if exists $norm_of{ $norm }; 
-
-        # preserve a cache of a normalized field name
-        $norm_of{ $field } = $norm;
+        $ALIAS_OF{ $norm } || $norm;
     }
 }
 
@@ -327,11 +327,11 @@ This will remove all header fields.
 
 =back
 
-=head2 ATTRIBUTES
+=head2 CONVENIENCE METHODS
 
-These methods can both be used to get() and set() the value of an attribute.
-The attribute value is set if you pass an argument to the method.
-If the given attribute didn't exists then undef is returned.
+These methods can both be used to get() and set() the value of a header.
+The header value is set if you pass an argument to the method.
+If the given header didn't exists then undef is returned.
 
 =over 4
 
@@ -358,9 +358,9 @@ NOTE: If $header->type() contains 'charset', this attribute will be ignored.
 =item $header->cookie
 
 Represents the Set-Cookie headers.
-The parameter can be an arrayref or a string.
+The parameter can be an array or a string.
 
-  $header->cookie( [ 'foo', 'bar' ] );
+  $header->cookie( 'foo', 'bar' );
   $header->cookie( 'baz' );
 
 =item $header->expires
@@ -392,9 +392,9 @@ a NPH (no-parse-header) script:
 =item $header->p3p
 
 Will add a P3P tag to the outgoing header.
-The parameter can be an arrayref or a space-delimited string.
+The parameter can be an array or a space-delimited string.
 
-  $header->p3p( [ qw/CAO DSP LAW CURa/ ] );
+  $header->p3p( qw/CAO DSP LAW CURa/ );
   $header->p3p( 'CAO DSP LAW CURa' );
 
 In either case, the outgoing header will be formatted as:
@@ -403,9 +403,13 @@ In either case, the outgoing header will be formatted as:
 
 =item $header->status
 
-Represents the Status header.
+Represents HTTP status code.
 
-  $header->status( '304 Not Modified' );
+  $header->status(304);
+
+Don't pass a string which contains reason phrases:
+
+  $header->status( '304 Not Modified' ); # Obsolete
 
 =item $header->target
 
@@ -420,8 +424,9 @@ If not defined, defaults to 'text/html'.
 
   $header->type( 'text/plain' );
 
-NOTE: If you don't want to output the Content-Type header, 
-you have to set to an empty string:
+NOTE: If $header->type isn't defined, L<CGI>::header() will add the default
+value. If you don't want to output the Content-Type header itself, you have to
+set to an empty string:
 
   $header->type( q{} );
 
@@ -436,6 +441,12 @@ L<Blosxom 2.0.0|http://blosxom.sourceforge.net/> or higher.
 L<CGI>,
 L<Class::Singleton>,
 L<perltie>
+
+=head1 ACKNOWLEDGEMENT
+
+Blosxom was written by Rael Dornfest.
+L<The Blosxom Development Team|http://sourceforge.net/projects/blosxom/>
+succeeded the maintenance.
 
 =head1 AUTHOR
 

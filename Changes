@@ -1,5 +1,12 @@
 Revision history for Perl extension Blosxom::Header.
 
+  - status() receives the status code:
+      $header->status(304)
+    Don't pass a string which contains reason phrases:
+      $header->status('304 Not Modified') # OBSOLETE
+    status() returns the status code:
+      $status = $header->status # 304
+  - Requires HTTP::Status
   - A tied hash became read-only by default. When you need to modify it,
     you must pass an additional argument 'rw' to TIEHASH() explicitly:
       tie %header => 'Blosxom::Header', 'rw';

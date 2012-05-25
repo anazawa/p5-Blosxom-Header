@@ -105,4 +105,11 @@ my @p3p = qw(foo bar baz);
 $header->p3p( @p3p );
 is_deeply $blosxom::header->{-p3p}, \@p3p, 'p3p() receives LIST';
 
+# Status
+
+is $header->status, undef;
+is $header->status(304), '304';
+is $blosxom::header->{-status}, '304 Not Modified';
+is $header->status, '304';
+
 done_testing;
