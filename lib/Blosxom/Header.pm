@@ -2,6 +2,8 @@ package Blosxom::Header;
 use 5.008_009;
 use strict;
 use warnings;
+use constant USELESS => 'Useless use of %s with no values';
+use Blosxom::Header::Proxy;
 use Carp qw/carp croak/;
 
 our $VERSION = '0.04003';
@@ -9,11 +11,6 @@ our $VERSION = '0.04003';
 # Naming conventions
 #   $field : raw field name (e.g. Foo-Bar)
 #   $norm  : normalized field name (e.g. -foo_bar)
-
-use constant USELESS => 'Useless use of %s with no values';
-
-
-# Class methods
 
 our $INSTANCE;
 
@@ -33,7 +30,7 @@ sub instance {
         -set_cookie   => '-cookie',
     );
 
-    my $filter = sub {
+    my $normalizer = sub {
         # lowercase a given string
         my $norm  = lc shift;
 
@@ -46,16 +43,13 @@ sub instance {
         $alias_of{ $norm } || $norm;
     };
 
-    tie my %header => $class, (
-        refers_to => $blosxom::header,
-        filter    => $filter,
+    tie my %header => 'Blosxom::Header::Proxy', (
+        hashref    => $blosxom::header,
+        normalizer => $normalizer,
     );
 
     $INSTANCE = bless \%header => $class;
 }
-
-
-# Instance methods
 
 sub get {
     my ( $self, $field ) = @_;
@@ -98,9 +92,6 @@ sub _push {
     scalar @values;
 }
 
-
-# Convenience methods
-
 {
     no strict 'refs';
 
@@ -142,69 +133,10 @@ sub status {
     return;
 }
 
-
-# tie() interface
-
-sub TIEHASH {
-    my ( $class, %args ) = @_;
-
-    # defaults to an ordinary hash
-    my %self = (
-        filter    => sub { shift },
-        refers_to => {},
-    );
-
-    if ( ref $args{refers_to} eq 'HASH' ) {
-        $self{refers_to} = delete $args{refers_to};
-    }
-
-    if ( ref $args{filter} eq 'CODE' ) {
-        $self{filter} = delete $args{filter};
-    }
-
-    bless \%self, $class;
+sub _normalize_field_name {
+    my ( $class, $field ) = @_;
+    tied( %{ $class->instance } )->{normalizer}->( $field );
 }
-
-sub FETCH {
-    my ( $self, $field ) = @_;
-    my $norm = $self->{filter}->( $field );
-    $self->{refers_to}->{$norm};
-}
-
-sub STORE {
-    my ( $self, $field, $value ) = @_;
-    my $norm = $self->{filter}->( $field );
-    $self->{refers_to}->{$norm} = $value;
-    return;
-}
-
-sub DELETE {
-    my ( $self, $field ) = @_;
-    my $norm = $self->{filter}->( $field );
-    delete $self->{refers_to}->{$norm};
-}
-
-sub CLEAR {
-    my $self = shift;
-    %{ $self->{refers_to} } = ();
-}
-
-sub EXISTS {
-    my ( $self, $field ) = @_;
-    my $norm = $self->{filter}->( $field );
-    exists $self->{refers_to}->{$norm};
-}
-
-sub FIRSTKEY {
-    my $refers_to = shift->{refers_to};
-    keys %{ $refers_to };
-    each %{ $refers_to };
-}
-
-sub NEXTKEY { each %{ shift->{refers_to} } }
-
-
-# Internal functions
 
 sub _carp {
     my ( $format, @args ) = @_;
