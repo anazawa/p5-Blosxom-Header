@@ -6,8 +6,8 @@ subtest 'basic' => sub {
     my %foo = ( foo => 'bar' );
 
     tie my %proxy => 'Blosxom::Header::Proxy', (
-        hashref    => \%foo,
-        normalizer => sub { lc shift },
+        hashref  => \%foo,
+        callback => sub { lc shift },
     );
 
     is $proxy{Foo}, 'bar', 'FETCH()';

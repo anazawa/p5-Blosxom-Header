@@ -8,10 +8,6 @@ use Carp qw/carp croak/;
 
 our $VERSION = '0.04003';
 
-# Naming conventions
-#   $field : raw field name (e.g. Foo-Bar)
-#   $norm  : normalized field name (e.g. -foo_bar)
-
 our $INSTANCE;
 
 sub instance {
@@ -30,7 +26,7 @@ sub instance {
         -set_cookie   => '-cookie',
     );
 
-    my $normalizer = sub {
+    my $callback = sub {
         # lowercase a given string
         my $norm  = lc shift;
 
@@ -43,12 +39,12 @@ sub instance {
         $alias_of{ $norm } || $norm;
     };
 
-    tie my %header => 'Blosxom::Header::Proxy', (
-        hashref    => $blosxom::header,
-        normalizer => $normalizer,
+    tie my %proxy => 'Blosxom::Header::Proxy', (
+        hashref  => $blosxom::header,
+        callback => $callback,
     );
 
-    $INSTANCE = bless \%header => $class;
+    $INSTANCE = bless \%proxy => $class;
 }
 
 sub get {
@@ -133,9 +129,11 @@ sub status {
     return;
 }
 
+sub tied { tied %{ shift() } }
+
 sub _normalize_field_name {
     my ( $class, $field ) = @_;
-    tied( %{ $class->instance } )->{normalizer}->( $field );
+    $class->instance->tied->{callback}->( $field );
 }
 
 sub _carp {
