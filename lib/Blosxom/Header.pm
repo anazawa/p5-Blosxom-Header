@@ -10,20 +10,52 @@ our $VERSION = '0.04003';
 #   $field : raw field name (e.g. Foo-Bar)
 #   $norm  : normalized field name (e.g. -foo_bar)
 
-use constant {
-    READONLY => 'Modification of a read-only value attempted',
-    USELESS  => 'Useless use of %s with no values',
-};
+use constant USELESS => 'Useless use of %s with no values';
+
+
+# Class methods
 
 our $INSTANCE;
 
 sub instance {
     my $class = shift;
+
     return $class if ref $class;
     return $INSTANCE if defined $INSTANCE;
-    tie my %header => $class, 'rw';
+
+    unless ( ref $blosxom::header eq 'HASH' ) {
+        croak( q{$blosxom::header hasn't been initialized yet.} );
+    }
+
+    my %alias_of = (
+        -content_type => '-type',
+        -cookies      => '-cookie',
+        -set_cookie   => '-cookie',
+    );
+
+    my $filter = sub {
+        # lowercase a given string
+        my $norm  = lc shift;
+
+        # add an initial dash if not exist
+        $norm = "-$norm" unless $norm =~ /^-/;
+
+        # transliterate dashes into underscores in field names
+        substr( $norm, 1 ) =~ tr{-}{_};
+
+        $alias_of{ $norm } || $norm;
+    };
+
+    tie my %header => $class, (
+        refers_to => $blosxom::header,
+        filter    => $filter,
+    );
+
     $INSTANCE = bless \%header => $class;
 }
+
+
+# Instance methods
 
 sub get {
     my ( $self, $field ) = @_;
@@ -67,7 +99,7 @@ sub _push {
 }
 
 
-# Make accessors
+# Convenience methods
 
 {
     no strict 'refs';
@@ -99,6 +131,7 @@ sub status {
         require HTTP::Status;
         my $code = shift;
         my $message = HTTP::Status::status_message( $code );
+        return carp( "Unknown status code: $code" ) unless $message;
         $self->{-status} = "$code $message";
         return $code;
     }
@@ -113,79 +146,62 @@ sub status {
 # tie() interface
 
 sub TIEHASH {
-    my $class = shift;
-    my $is = $_[0] && lc $_[0] eq 'rw' ? lc shift : 'ro';
-    my $default = shift || $blosxom::header;
-    croak( 'Not a HASH reference' ) unless ref $default eq 'HASH';
-    bless { is => $is, default => $default }, $class;
+    my ( $class, %args ) = @_;
+
+    # defaults to an ordinary hash
+    my %self = (
+        filter    => sub { shift },
+        refers_to => {},
+    );
+
+    if ( ref $args{refers_to} eq 'HASH' ) {
+        $self{refers_to} = delete $args{refers_to};
+    }
+
+    if ( ref $args{filter} eq 'CODE' ) {
+        $self{filter} = delete $args{filter};
+    }
+
+    bless \%self, $class;
 }
 
 sub FETCH {
     my ( $self, $field ) = @_;
-    my $norm = $self->_normalize_field_name( $field );
-    $self->{default}->{$norm};
+    my $norm = $self->{filter}->( $field );
+    $self->{refers_to}->{$norm};
 }
 
 sub STORE {
     my ( $self, $field, $value ) = @_;
-    croak( READONLY ) unless $self->{is} =~ /w/;
-    my $norm = $self->_normalize_field_name( $field );
-    $self->{default}->{$norm} = $value;
+    my $norm = $self->{filter}->( $field );
+    $self->{refers_to}->{$norm} = $value;
     return;
 }
 
 sub DELETE {
     my ( $self, $field ) = @_;
-    croak( READONLY ) unless $self->{is} =~ /w/;
-    my $norm = $self->_normalize_field_name( $field );
-    delete $self->{default}->{$norm};
+    my $norm = $self->{filter}->( $field );
+    delete $self->{refers_to}->{$norm};
 }
 
 sub CLEAR {
     my $self = shift;
-    croak( READONLY ) unless $self->{is} =~ /w/;
-    %{ $self->{default} } = ();
+    %{ $self->{refers_to} } = ();
 }
 
 sub EXISTS {
     my ( $self, $field ) = @_;
-    my $norm = $self->_normalize_field_name( $field );
-    exists $self->{default}->{$norm};
+    my $norm = $self->{filter}->( $field );
+    exists $self->{refers_to}->{$norm};
 }
 
 sub FIRSTKEY {
-    my $self = shift;
-    keys %{ $self->{default} };
-    each %{ $self->{default} };
+    my $refers_to = shift->{refers_to};
+    keys %{ $refers_to };
+    each %{ $refers_to };
 }
 
-sub NEXTKEY { each %{ shift->{default} } }
-
-sub UNTIE { shift->{is} !~ /w/ && croak( READONLY ) }
-
-
-# Internal methods
-
-{
-    my %ALIAS_OF = (
-        -content_type => '-type',
-        -cookies      => '-cookie',
-        -set_cookie   => '-cookie',
-    );
-
-    sub _normalize_field_name {
-        my $self = shift;
-        my $norm = lc shift;
-
-        # add an initial dash if not exists
-        $norm = "-$norm" unless $norm =~ /^-/;
-
-        # transliterate dashes into underscores in a field name
-        substr( $norm, 1 ) =~ tr{-}{_};
-
-        $ALIAS_OF{ $norm } || $norm;
-    }
-}
+sub NEXTKEY { each %{ shift->{refers_to} } }
 
 
 # Internal functions
