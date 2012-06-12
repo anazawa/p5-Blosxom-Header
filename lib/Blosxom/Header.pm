@@ -4,9 +4,12 @@ use strict;
 use warnings;
 use constant USELESS => 'Useless use of %s with no values';
 use Blosxom::Header::Proxy;
-use Carp qw/carp croak/;
+use Carp qw/carp/;
 
 our $VERSION = '0.04003';
+
+
+# Class methods
 
 our $INSTANCE;
 
@@ -15,10 +18,6 @@ sub instance {
 
     return $class if ref $class;
     return $INSTANCE if defined $INSTANCE;
-
-    unless ( ref $blosxom::header eq 'HASH' ) {
-        croak( q{$blosxom::header hasn't been initialized yet.} );
-    }
 
     my %alias_of = (
         -content_type => '-type',
@@ -39,13 +38,13 @@ sub instance {
         $alias_of{ $norm } || $norm;
     };
 
-    tie my %proxy => 'Blosxom::Header::Proxy', (
-        hashref  => $blosxom::header,
-        callback => $callback,
-    );
+    tie my %proxy => 'Blosxom::Header::Proxy', $callback;
 
     $INSTANCE = bless \%proxy => $class;
 }
+
+
+# Instance methods
 
 sub get {
     my ( $self, $field ) = @_;
@@ -129,12 +128,15 @@ sub status {
     return;
 }
 
-sub tied { tied %{ shift() } }
+sub tied { tied %{ $_[0] } }
 
 sub _normalize_field_name {
-    my ( $class, $field ) = @_;
-    $class->instance->tied->{callback}->( $field );
+    my ( $self, $field ) = @_;
+    $self->tied->( $field );
 }
+
+
+# Internal functions
 
 sub _carp {
     my ( $format, @args ) = @_;

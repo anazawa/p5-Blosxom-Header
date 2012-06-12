@@ -6,12 +6,14 @@ plan tests => 1 * blocks;
 
 {
     package blosxom;
-    our $header = {};
+    our $header;
 }
+
+my $header = Blosxom::Header->instance;
 
 run {
     my $block = shift;
-    my $got = Blosxom::Header->_normalize_field_name( $block->input );
+    my $got = $header->tied->( $block->input );
     is $got, $block->expected;
 };
 
