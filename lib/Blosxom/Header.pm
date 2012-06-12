@@ -128,12 +128,7 @@ sub status {
     return;
 }
 
-sub tied { tied %{ $_[0] } }
-
-sub _normalize_field_name {
-    my ( $self, $field ) = @_;
-    $self->tied->( $field );
-}
+sub _tied { tied %{ $_[0] } }
 
 
 # Internal functions
@@ -386,9 +381,9 @@ L<Blosxom 2.0.0|http://blosxom.sourceforge.net/> or higher.
 
 =head1 SEE ALSO
 
+L<Blosxom::Header::Proxy>,
 L<CGI>,
-L<Class::Singleton>,
-L<perltie>
+L<Class::Singleton>
 
 =head1 ACKNOWLEDGEMENT
 

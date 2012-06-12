@@ -11,11 +11,12 @@ use Test::Warn;
 my $header = Blosxom::Header->instance;
 isa_ok $header, 'Blosxom::Header';
 can_ok $header, qw(
-    clear delete exists get push_cookie push_p3p set tied
+    clear delete exists get set
+    push_cookie push_p3p
     attachment charset cookie expires nph p3p status target type
 );
 
-isa_ok $header->tied, 'Blosxom::Header::Proxy', 'tied()';
+isa_ok $header->_tied, 'Blosxom::Header::Proxy', '_tied()';
 
 subtest 'exists()' => sub {
     local $blosxom::header = { -foo => 'bar' };
@@ -25,7 +26,6 @@ subtest 'exists()' => sub {
 
 subtest 'get()' => sub {
     local $blosxom::header = { -foo => [ 'bar', 'baz' ] };
-
     is $header->get( 'Foo' ), 'bar', 'in scalar context';
 
     my @got = $header->get( 'Foo' );

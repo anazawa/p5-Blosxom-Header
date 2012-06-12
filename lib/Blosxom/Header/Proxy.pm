@@ -61,3 +61,74 @@ sub header {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+
+Blosxom::Header::Proxy
+
+=head1 SYNOPSIS
+
+  use Blosxom::Header::Proxy;
+
+  # Ordinary hash
+  my $proxy = tie my %proxy => 'Blosxom::Header::Proxy';
+  my $value = $proxy{Foo}; # same value as $blosxom::header->{Foo}
+
+  # Insensitive hash
+  my $callback = sub { lc shift };
+  my $proxy = tie my %proxy => 'Blosxom::Header::Proxy', $callback;
+  my $value = $proxy{Foo}; # same value as $blosxom::header->{foo}
+
+  undef $blosxom::header;
+  my $bool = %proxy; # false
+  $proxy->header; # throws an exception
+
+  $blosxom::header = {};
+  my $bool = %proxy; # true
+  my $hashref = $proxy->header; # same reference as $blosxom::header
+
+=head1 DESCRIPTION
+
+=over 4
+
+=item $proxy = tie %proxy => 'Blosxom::Header::Proxy', $callback
+
+Associates a new hash instance with Blosxom::Header::Proxy.
+$callback normalizes hash keys passed to %proxy (defaults to C<sub { shift }>).
+
+=item $bool = %proxy
+
+A shortcut for
+
+  $bool = ref $blosxom::header eq 'HASH';
+
+=item $hashref = $proxy->header
+
+Returns the same reference as C<$blosxom::header>.
+If C<scalar %proxy> is false, throws an exception.
+
+=back
+
+=head1 SEE ALSO
+
+L<Blosxom::Header>,
+L<perltie>
+
+=head1 AUTHOR
+
+Ryo Anazawa (anazawa@cpan.org)
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (c) 2011-2012 Ryo Anazawa. All rights reserved.
+
+This module is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself. See L<perlartistic>.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+=cut

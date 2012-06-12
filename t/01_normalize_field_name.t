@@ -13,7 +13,7 @@ my $header = Blosxom::Header->instance;
 
 run {
     my $block = shift;
-    my $got = $header->tied->( $block->input );
+    my $got = $header->_tied->( $block->input );
     is $got, $block->expected;
 };
 
