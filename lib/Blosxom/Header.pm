@@ -6,7 +6,7 @@ use constant USELESS => 'Useless use of %s with no values';
 use Blosxom::Header::Proxy;
 use Carp qw/carp/;
 
-our $VERSION = '0.04003';
+our $VERSION = '0.05001';
 
 
 # Class methods
