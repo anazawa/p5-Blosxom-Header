@@ -133,9 +133,12 @@ subtest 'cookie()' => sub {
 
 subtest 'status()' => sub {
     local $blosxom::header = {};
+
     is $header->status, undef;
     is $header->status( 304 ), '304';
     is $blosxom::header->{-status}, '304 Not Modified';
     is $header->status, '304';
-    warning_is { $header->status( 999 ) } 'Unknown status code: 999';
+
+    my $expected = 'Unknown status code "999" passed to status()';
+    warning_is { $header->status( 999 ) } $expected;
 };

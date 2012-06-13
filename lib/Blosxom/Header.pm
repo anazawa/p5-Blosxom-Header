@@ -5,6 +5,7 @@ use warnings;
 use constant USELESS => 'Useless use of %s with no values';
 use Blosxom::Header::Proxy;
 use Carp qw/carp/;
+use HTTP::Status qw/status_message/;
 
 our $VERSION = '0.05001';
 
@@ -116,14 +117,19 @@ sub status {
     my $self = shift;
 
     if ( @_ ) {
-        require HTTP::Status;
         my $code = shift;
-        my $message = HTTP::Status::status_message( $code );
-        return carp( "Unknown status code: $code" ) unless $message;
-        $self->{-status} = "$code $message";
-        return $code;
+
+        if ( my $message = status_message( $code ) ) {
+            $self->{-status} = "$code $message";
+            return $code;
+        }
+
+        carp( qq{Unknown status code "$code" passed to status()} );
+
+        return;
     }
-    elsif ( my $status = $self->{-status} ) {
+
+    if ( my $status = $self->{-status} ) {
         return substr( $status, 0, 3 );
     }
 
@@ -185,7 +191,7 @@ headers.
   # Loads plugins
   print CGI::header( $header );
 
-C<header()> doesn't care whether keys of C<$header> are lowecased
+C<header()> doesn't care whether keys of C<$header> are lowercased
 nor starting with a dash, and also transliterates underscores into dashes
 in field names.
 
@@ -323,7 +329,6 @@ Represents the Set-Cookie headers.
 The parameter can be an array.
 
   $header->cookie( 'foo', 'bar' );
-  $header->cookie( 'baz' );
 
 =item $header->expires
 
@@ -394,6 +399,27 @@ set to an empty string:
 
 =back
 
+=head1 DIAGNOSTICS
+
+=over 4
+
+=item $blosxom::header hasn't been initialized yet
+
+You attempted to modify C<$blosxom::header>
+before the variable was initialized.
+
+=item Useless use of %s with no values
+
+You used the C<push_cookie()> or C<push_p3p()> method with no argument
+apart from the array,
+like C<< $header->push_cookie() >> or C<< $header->push_p3p() >>.
+
+=item Unknown status code "%d%d%d" passed to status()
+
+The given status code is unknown to L<HTTP::Status>.
+
+=back
+
 =head1 DEPENDENCIES
 
 L<Blosxom 2.0.0|http://blosxom.sourceforge.net/> or higher.
@@ -409,6 +435,12 @@ L<Class::Singleton>
 Blosxom was written by Rael Dornfest.
 L<The Blosxom Development Team|http://sourceforge.net/projects/blosxom/>
 succeeded the maintenance.
+
+=head1 BUGS AND LIMITATIONS
+
+There are no known bugs in this module.
+Please report problems to Ryo Anazawa (anazawa@cpan.org).
+Patches are welcome.
 
 =head1 AUTHOR
 
