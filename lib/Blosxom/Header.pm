@@ -46,6 +46,8 @@ sub instance {
 
 # Instance methods
 
+sub is_initialized { scalar %{ $_[0] } }
+
 sub get {
     my ( $self, $field ) = @_;
     my $value = $self->{ $field };
@@ -127,8 +129,6 @@ sub status {
 
     return;
 }
-
-sub is_initialized { scalar %{ $_[0] } }
 
 sub _tied { tied %{ $_[0] } }
 

@@ -181,7 +181,7 @@ L<Blosxom 2.0.0|http://blosxom.sourceforge.net/> or higher.
 
 =head1 SEE ALSO
 
-L<CGI>, L<Class::Singleton>, L<perltie>
+L<Blosxom::Header::Proxy>, L<CGI>, L<Class::Singleton>
 
 =head1 AUTHOR
 
