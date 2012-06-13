@@ -7,7 +7,7 @@ use Blosxom::Header::Proxy;
 use Carp qw/carp/;
 use HTTP::Status qw/status_message/;
 
-our $VERSION = '0.05001';
+our $VERSION = '0.05002';
 
 
 # Class methods
@@ -134,13 +134,6 @@ sub status {
     }
 
     return;
-}
-
-sub _tied { tied %{ $_[0] } }
-
-sub _as_string {
-    require CGI;
-    CGI::header( shift->_tied->header );
 }
 
 
@@ -407,6 +400,7 @@ set to an empty string:
 
 You attempted to modify C<$blosxom::header>
 before the variable was initialized.
+See C<< $header->is_initialized >>.
 
 =item Useless use of %s with no values
 

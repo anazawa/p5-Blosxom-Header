@@ -24,21 +24,12 @@ subtest 'basic' => sub {
     ok %proxy, 'already initialized';
     is $proxy->header, $blosxom::header,
         'header() returns the same reference as $blosxom::header';
-
-    ok $proxy->_is_normalized( 'foo' );
-
-    is $proxy->_normalize_field_name( 'foo' ), 'foo';
 };
 
 subtest 'insensitive hash' => sub {
     local $blosxom::header = { foo => 'bar' };
     my $callback = sub { lc shift };
     my $proxy = tie my %proxy => 'Blosxom::Header::Proxy', $callback;
-
-    ok $proxy->_is_normalized( 'foo' );
-    ok !$proxy->_is_normalized( 'Foo' );
-
-    is $proxy->_normalize_field_name( 'Foo' ), 'foo';
 
     ok exists $proxy{Foo}, 'EXISTS() should return true';
     ok !exists $proxy{Bar}, 'EXISTS() should return false';

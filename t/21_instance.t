@@ -1,6 +1,6 @@
 use strict;
 use Blosxom::Header;
-use Test::More tests => 14;
+use Test::More tests => 12;
 use Test::Warn;
 
 {
@@ -17,20 +17,10 @@ can_ok $header, qw(
     is_initialized
 );
 
-isa_ok $header->_tied, 'Blosxom::Header::Proxy', '_tied()';
-
 subtest 'is_initialized()' => sub {
     ok !$header->is_initialized, 'should return false';
     local $blosxom::header = {};
     ok $header->is_initialized, 'should return true';
-};
-
-subtest '_as_string()' => sub {
-    local $blosxom::header = { -type => 'text/plain' };
-    my $got = $header->_as_string;
-    my $expected = 'Content-Type: text/plain; charset=ISO-8859-1'
-                 . $CGI::CRLF x 2;
-    is $got, $expected;
 };
 
 subtest 'exists()' => sub {
@@ -42,7 +32,6 @@ subtest 'exists()' => sub {
 subtest 'get()' => sub {
     local $blosxom::header = { -foo => [ 'bar', 'baz' ] };
     is $header->get( 'Foo' ), 'bar', 'in scalar context';
-
     my @got = $header->get( 'Foo' );
     my @expected = qw( bar baz );
     is_deeply \@got, \@expected, 'in list context';
@@ -95,7 +84,6 @@ subtest 'delete()' => sub {
 
 subtest 'expires()' => sub {
     local $blosxom::header = {};
-
     is $header->expires, undef;
     is $header->expires( 'now' ), 'now', 'set expires()';
     is $header->expires, 'now', 'get expires()';

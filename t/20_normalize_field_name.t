@@ -8,7 +8,7 @@ my $header = Blosxom::Header->instance;
 
 run {
     my $block = shift;
-    my $got = $header->_tied->( $block->input );
+    my $got = tied( %{ $header } )->( $block->input );
     is $got, $block->expected;
 };
 
