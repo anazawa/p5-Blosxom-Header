@@ -60,6 +60,13 @@ sub header {
     croak( q{$blosxom::header hasn't been initialized yet.} );
 }
 
+sub _is_normalized {
+    my ( $self, $field ) = @_;
+    $field eq $self->( $field );
+}
+
+sub _normalize_field_name { $_[0]->( $_[1] ) }
+
 1;
 
 __END__

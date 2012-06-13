@@ -4,11 +4,6 @@ use Test::Base;
 
 plan tests => 1 * blocks;
 
-{
-    package blosxom;
-    our $header;
-}
-
 my $header = Blosxom::Header->instance;
 
 run {

@@ -1,6 +1,6 @@
 use strict;
 use Blosxom::Header;
-use Test::More tests => 12;
+use Test::More tests => 14;
 use Test::Warn;
 
 {
@@ -14,9 +14,24 @@ can_ok $header, qw(
     clear delete exists get set
     push_cookie push_p3p
     attachment charset cookie expires nph p3p status target type
+    is_initialized
 );
 
 isa_ok $header->_tied, 'Blosxom::Header::Proxy', '_tied()';
+
+subtest 'is_initialized()' => sub {
+    ok !$header->is_initialized, 'should return false';
+    local $blosxom::header = {};
+    ok $header->is_initialized, 'should return true';
+};
+
+subtest '_as_string()' => sub {
+    local $blosxom::header = { -type => 'text/plain' };
+    my $got = $header->_as_string;
+    my $expected = 'Content-Type: text/plain; charset=ISO-8859-1'
+                 . $CGI::CRLF x 2;
+    is $got, $expected;
+};
 
 subtest 'exists()' => sub {
     local $blosxom::header = { -foo => 'bar' };
