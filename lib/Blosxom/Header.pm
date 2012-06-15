@@ -2,23 +2,38 @@ package Blosxom::Header;
 use 5.008_009;
 use strict;
 use warnings;
+use base 'Exporter';
 use constant USELESS => 'Useless use of %s with no values';
 use Blosxom::Header::Proxy;
 use Carp qw/carp/;
 use HTTP::Status qw/status_message/;
 
 our $VERSION = '0.05002';
+our @EXPORT_OK = qw( $Header header_get header_set header_exists header_delete );
+
+our $Header;
+
+sub import {
+    my ( $class, @exports ) = @_;
+    my $exports_instance = grep { $_ eq '$Header' } @exports;
+    $Header = $class->_new if !defined( $Header ) and $exports_instance;
+    $class->export_to_level( 1, @_ );
+}
 
 
 # Class methods
 
-our $INSTANCE;
-
 sub instance {
     my $class = shift;
-
     return $class if ref $class;
-    return $INSTANCE if defined $INSTANCE;
+    return $Header if defined $Header;
+    $Header = $class->_new;
+}
+
+sub has_instance { $Header }
+
+sub _new {
+    my $class = shift;
 
     my %alias_of = (
         -content_type => '-type',
@@ -41,7 +56,7 @@ sub instance {
 
     tie my %proxy => 'Blosxom::Header::Proxy', $callback;
 
-    $INSTANCE = bless \%proxy => $class;
+    bless \%proxy => $class;
 }
 
 
@@ -135,6 +150,14 @@ sub status {
 
     return;
 }
+
+
+# Functions
+
+sub header_get    { __PACKAGE__->instance->get( @_ )    }
+sub header_set    { __PACKAGE__->instance->set( @_ )    }
+sub header_exists { __PACKAGE__->instance->exists( @_ ) }
+sub header_delete { __PACKAGE__->instance->delete( @_ ) }
 
 
 # Internal functions
