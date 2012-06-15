@@ -1,6 +1,7 @@
 package Blosxom::Header::Proxy;
 use strict;
 use warnings;
+use constant NOT_INITIALIZED => q{$blosxom::header hasn't been initialized yet.};
 use Carp qw/croak/;
 
 # Naming conventions
@@ -20,45 +21,52 @@ sub TIEHASH {
 
 sub FETCH {
     my ( $self, $field ) = @_;
+    croak( NOT_INITIALIZED ) unless is_initialized();
     my $norm = $self->( $field );
-    $self->header->{ $norm };
+    $blosxom::header->{ $norm };
 }
 
 sub STORE {
     my ( $self, $field, $value ) = @_;
+    croak( NOT_INITIALIZED ) unless is_initialized();
     my $norm = $self->( $field );
-    $self->header->{ $norm } = $value;
+    $blosxom::header->{ $norm } = $value;
     return;
 }
 
 sub DELETE {
     my ( $self, $field ) = @_;
+    croak( NOT_INITIALIZED ) unless is_initialized();
     my $norm = $self->( $field );
-    delete $self->header->{ $norm };
+    delete $blosxom::header->{ $norm };
 }
 
 sub EXISTS {
     my ( $self, $field ) = @_;
+    croak( NOT_INITIALIZED ) unless is_initialized();
     my $norm = $self->( $field );
-    exists $self->header->{ $norm };
+    exists $blosxom::header->{ $norm };
 }
 
-sub CLEAR { %{ shift->header } = () }
+sub CLEAR {
+    croak( NOT_INITIALIZED ) unless is_initialized();
+    %{ $blosxom::header } = ();
+}
 
 sub FIRSTKEY {
-    my $header = shift->header;
-    keys %{ $header };
-    each %{ $header };
+    croak( NOT_INITIALIZED ) unless is_initialized();
+    keys %{ $blosxom::header };
+    each %{ $blosxom::header };
 }
 
-sub NEXTKEY { each %{ shift->header } }
-
-sub SCALAR { ref $blosxom::header eq 'HASH' }
-
-sub header {
-    return $blosxom::header if SCALAR();
-    croak( q{$blosxom::header hasn't been initialized yet.} );
+sub NEXTKEY {
+    croak( NOT_INITIALIZED ) unless is_initialized();
+    each %{ $blosxom::header }
 }
+
+sub SCALAR { is_initialized() and %{ $blosxom::header } }
+
+sub is_initialized { ref $blosxom::header eq 'HASH' }
 
 1;
 

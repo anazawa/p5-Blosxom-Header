@@ -13,17 +13,24 @@ subtest 'basic' => sub {
     isa_ok $proxy, 'Blosxom::Header::Proxy';
     can_ok $proxy, qw(
         FETCH STORE DELETE EXISTS CLEAR FIRSTKEY NEXTKEY SCALAR
-        header
     );
 
-    ok !%proxy, 'not initialized yet';
-    my $expected = qr/^\$blosxom::header hasn't been initialized yet/;
-    throws_ok { $proxy->header } $expected, 'header() throws an exception';
+    #ok !%proxy, 'not initialized yet';
+    ok !%proxy, 'not defined';
+    ok !$proxy->is_initialized;
+    #my $expected = qr/^\$blosxom::header hasn't been initialized yet/;
+    #throws_ok { $proxy->header } $expected, 'header() throws an exception';
 
     local $blosxom::header = {};
-    ok %proxy, 'already initialized';
-    is $proxy->header, $blosxom::header,
-        'header() returns the same reference as $blosxom::header';
+    # ok %proxy, 'already initialized';
+    ok !%proxy, 'not defined';
+    #is $proxy->header, $blosxom::header,
+    #    'header() returns the same reference as $blosxom::header';
+    ok $proxy->is_initialized;
+
+    $blosxom::header = { foo => 'bar' };
+    ok %proxy, 'defined';
+    ok $proxy->is_initialized;
 };
 
 subtest 'insensitive hash' => sub {
@@ -38,14 +45,17 @@ subtest 'insensitive hash' => sub {
     is $proxy{Bar}, undef, 'FETCH() undef';
 
     $proxy{Bar} = 'baz';
-    is $proxy->header->{bar}, 'baz', 'STORE()';
+    #is $proxy->header->{bar}, 'baz', 'STORE()';
+    is $blosxom::header->{bar}, 'baz', 'STORE()';
 
     is_deeply [ sort keys %proxy   ], [ 'bar', 'foo' ], 'keys()';
     is_deeply [ sort values %proxy ], [ 'bar', 'baz' ], 'values()';
 
     is delete $proxy{Foo}, 'bar';
-    is_deeply $proxy->header, { bar => 'baz' }, 'DELETE()';
+    #is_deeply $proxy->header, { bar => 'baz' }, 'DELETE()';
+    is_deeply $blosxom::header, { bar => 'baz' }, 'DELETE()';
 
     %proxy = ();
-    is_deeply $proxy->header, {}, 'CLEAR()';
+    #is_deeply $proxy->header, {}, 'CLEAR()';
+    is_deeply $blosxom::header, {}, 'CLEAR()';
 };
