@@ -116,6 +116,11 @@ A shortcut for
 
   $bool = ref $blosxom::header eq 'HASH';
 
+=item $hashref = $proxy->header
+
+Returns the same reference as $blosxom::header. If
+C<< $proxy->is_initialized >> is false, throws an exception.
+
 =back
 
 =head1 SEE ALSO
