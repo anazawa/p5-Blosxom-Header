@@ -1,3 +1,7 @@
+package blosxom;
+BEGIN { our $header; }
+
+package main;
 use strict;
 use Test::More tests => 2;
 

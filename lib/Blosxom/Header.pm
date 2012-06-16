@@ -62,7 +62,10 @@ sub _new {
 
 # Instance methods
 
-sub is_initialized { tied( %{ $_[0] } )->is_initialized }
+#sub is_initialized { tied( %{ $_[0] } )->is_initialized }
+sub is_initialized { shift->_proxy->is_initialized }
+
+sub _proxy { tied %{ $_[0] } }
 
 sub get {
     my ( $self, $field ) = @_;
@@ -108,7 +111,7 @@ sub _push {
 {
     no strict 'refs';
 
-    for my $method ( qw/attachment charset expires nph target type/ ) {
+    for my $method ( qw/attachment expires nph target type/ ) {
         my $field = "-$method";
         *$method = sub {
             my $self = shift;
@@ -128,6 +131,38 @@ sub _push {
     }
 }
 
+sub charset {
+    my $self = shift;
+    my $type = $self->{-type};
+
+    if ( @_ ) {
+        my $charset = shift;
+
+        if ( $type and $type =~ s/charset=\S+/charset=$charset/ ) {
+            delete $self->{-charset};
+            $self->{-type} = $type;
+        }
+        else {
+            $self->{-charset} = $charset;
+        }
+
+        return $charset;
+    }
+
+    my $charset = $self->{-charset};
+
+    if ( $charset and $type and $type =~ /charset=/ ) {
+        return carp(
+            'Both of "type" and "charset" attributes specify character sets'
+        );
+    }
+    elsif ( $type and $type =~ /charset=(\S+)/ ) {
+        return $1;
+    }
+
+    $charset;
+}
+
 sub status {
     my $self = shift;
 
@@ -136,15 +171,14 @@ sub status {
 
         if ( my $message = status_message( $code ) ) {
             $self->{-status} = "$code $message";
-            return $code;
+        }
+        else {
+            return carp( qq{Unknown status code "$code" passed to status()} );
         }
 
-        carp( qq{Unknown status code "$code" passed to status()} );
-
-        return;
+        return $code;
     }
-
-    if ( my $status = $self->{-status} ) {
+    elsif ( my $status = $self->{-status} ) {
         return substr( $status, 0, 3 );
     }
 
@@ -152,12 +186,13 @@ sub status {
 }
 
 
-# Functions
+# Functions to export
 
 sub header_get    { __PACKAGE__->instance->get( @_ )    }
 sub header_set    { __PACKAGE__->instance->set( @_ )    }
 sub header_exists { __PACKAGE__->instance->exists( @_ ) }
 sub header_delete { __PACKAGE__->instance->delete( @_ ) }
+sub header_push   { __PACKAGE__->instance->_push( @_ )  }
 
 
 # Internal functions
@@ -177,23 +212,48 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
 =head1 SYNOPSIS
 
+  # Object-oriented interface
+
   use Blosxom::Header;
 
-  my $header = Blosxom::Header->instance;
+  my $Header = Blosxom::Header->instance;
 
-  $header->set(
+  # or
+
+  use Blosxom::Header qw/$Header/;
+
+  $Header->set(
       Status        => '304 Not Modified',
       Last_Modified => 'Wed, 23 Sep 2009 13:36:33 GMT',
   );
 
-  my $status  = $header->get( 'Status' );
-  my $bool    = $header->exists( 'ETag' );
-  my @deleted = $header->delete( qw/Content-Disposition Content-Length/ );
+  my $status = $Header->get( 'Status' );
+  my $bool = $Header->exists( 'ETag' );
+  my @deleted = $Header->delete( qw/Content-Disposition Content-Length/ );
 
-  $header->push_cookie( @cookies );
-  $header->push_p3p( @p3p );
+  $Header->push_cookie( @cookies );
+  $Header->push_p3p( @p3p );
 
-  $header->clear;
+  $Header->clear;
+
+
+  # Procedural interface
+
+  use Blosxom::Header qw(
+      header_get header_set header_exists header_delete header_push
+  );
+
+  header_set(
+      Status        => '304 Not Modified',
+      Last_Modified => 'Wed, 23 Sep 2009 13:36:33 GMT',
+  );
+
+  my $status = header_get( 'Status' );
+  my $bool = header_exists( 'ETag' );
+  my @deleted = header_delete( qw/Content-Disposition Content-Length/ );
+
+  header_push( Set_Cookie => @cookies );
+  header_push( P3P => @p3p );
 
 =head1 DESCRIPTION
 
@@ -239,6 +299,7 @@ into underscores in field names:
 If you follow the above normalization rule, you can modify C<$header> directly.
 In other words, this module is compatible with the way modifying C<$header>
 directly when you follow the above rule.
+L<Blosxom::Header::Fast> explains the details.
 
 =head2 METHODS
 

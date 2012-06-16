@@ -1,7 +1,6 @@
 package Blosxom::Header::Proxy;
 use strict;
 use warnings;
-use constant NOT_INITIALIZED => q{$blosxom::header hasn't been initialized yet.};
 use Carp qw/croak/;
 
 # Naming conventions
@@ -21,52 +20,47 @@ sub TIEHASH {
 
 sub FETCH {
     my ( $self, $field ) = @_;
-    croak( NOT_INITIALIZED ) unless is_initialized();
     my $norm = $self->( $field );
-    $blosxom::header->{ $norm };
+    $self->header->{ $norm };
 }
 
 sub STORE {
     my ( $self, $field, $value ) = @_;
-    croak( NOT_INITIALIZED ) unless is_initialized();
     my $norm = $self->( $field );
-    $blosxom::header->{ $norm } = $value;
+    $self->header->{ $norm } = $value;
     return;
 }
 
 sub DELETE {
     my ( $self, $field ) = @_;
-    croak( NOT_INITIALIZED ) unless is_initialized();
     my $norm = $self->( $field );
-    delete $blosxom::header->{ $norm };
+    delete $self->header->{ $norm };
 }
 
 sub EXISTS {
     my ( $self, $field ) = @_;
-    croak( NOT_INITIALIZED ) unless is_initialized();
     my $norm = $self->( $field );
-    exists $blosxom::header->{ $norm };
+    exists $self->header->{ $norm };
 }
 
-sub CLEAR {
-    croak( NOT_INITIALIZED ) unless is_initialized();
-    %{ $blosxom::header } = ();
-}
+sub CLEAR { %{ shift->header } = () }
 
 sub FIRSTKEY {
-    croak( NOT_INITIALIZED ) unless is_initialized();
-    keys %{ $blosxom::header };
-    each %{ $blosxom::header };
+    my $header = shift->header;
+    keys %{ $header };
+    each %{ $header };
 }
 
-sub NEXTKEY {
-    croak( NOT_INITIALIZED ) unless is_initialized();
-    each %{ $blosxom::header }
-}
+sub NEXTKEY { each %{ shift->header } }
 
 sub SCALAR { is_initialized() and %{ $blosxom::header } }
 
 sub is_initialized { ref $blosxom::header eq 'HASH' }
+
+sub header {
+    return $blosxom::header if is_initialized();
+    croak( q{$blosxom::header hasn't been initialized yet.} );
+}
 
 1;
 
@@ -90,12 +84,16 @@ Blosxom::Header::Proxy
   my $value = $proxy{Foo}; # same value as $blosxom::header->{foo}
 
   undef $blosxom::header;
-  my $bool = %proxy; # false
-  $proxy->header; # throws an exception
+  scalar %proxy;          # false
+  $proxy->is_initialized; # false
 
   $blosxom::header = {};
-  my $bool = %proxy; # true
-  my $hashref = $proxy->header; # same reference as $blosxom::header
+  scalar %proxy;          # false
+  $proxy->is_initialized; # true
+
+  $blosxom::header = { -type => 'text/html' };
+  scalar %proxy;          # true
+  $proxy->is_initialized; # true
 
 =head1 DESCRIPTION
 
@@ -110,12 +108,13 @@ $callback normalizes hash keys passed to %proxy (defaults to C<sub { shift }>).
 
 A shortcut for
 
+  $bool = ref $blosxom::header eq 'HASH' and %{ $blosxom::header };
+
+=item $bool = $proxy->is_initialized
+
+A shortcut for
+
   $bool = ref $blosxom::header eq 'HASH';
-
-=item $hashref = $proxy->header
-
-Returns the same reference as C<$blosxom::header>.
-If C<scalar %proxy> is false, throws an exception.
 
 =back
 
