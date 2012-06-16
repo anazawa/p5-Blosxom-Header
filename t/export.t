@@ -2,10 +2,10 @@ use strict;
 use Test::More tests => 6;
 
 BEGIN {
-    use_ok 'Blosxom::Header', qw( $Header header_get );
+    my @methods = qw( header_get header_set header_exists header_delete );
+    use_ok 'Blosxom::Header', ( '$Header', @methods );
+    can_ok __PACKAGE__, @methods;
 }
-
-can_ok __PACKAGE__, 'header_get';
 
 ok( Blosxom::Header->has_instance );
 ok $Header;

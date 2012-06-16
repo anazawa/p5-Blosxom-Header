@@ -11,12 +11,13 @@ use HTTP::Status qw/status_message/;
 our $VERSION = '0.05002';
 our @EXPORT_OK = qw( $Header header_get header_set header_exists header_delete );
 
-our $Header;
+our ( $INSTANCE, $Header );
+*Header = \$INSTANCE;
 
 sub import {
-    my ( $class, @exports ) = @_;
-    my $exports_instance = grep { $_ eq '$Header' } @exports;
-    $Header = $class->_new if !defined( $Header ) and $exports_instance;
+    my ( $class, $export ) = @_;
+    my $exports_instance = $export && ( $export eq '$Header' );
+    $INSTANCE = $class->_new_instance if $exports_instance and !$INSTANCE;
     $class->export_to_level( 1, @_ );
 }
 
@@ -26,13 +27,13 @@ sub import {
 sub instance {
     my $class = shift;
     return $class if ref $class;
-    return $Header if defined $Header;
-    $Header = $class->_new;
+    return $INSTANCE if defined $INSTANCE;
+    $INSTANCE = $class->_new_instance;
 }
 
-sub has_instance { $Header }
+sub has_instance { $INSTANCE }
 
-sub _new {
+sub _new_instance {
     my $class = shift;
 
     my %alias_of = (
@@ -62,7 +63,6 @@ sub _new {
 
 # Instance methods
 
-#sub is_initialized { tied( %{ $_[0] } )->is_initialized }
 sub is_initialized { shift->_proxy->is_initialized }
 
 sub _proxy { tied %{ $_[0] } }
@@ -111,7 +111,7 @@ sub _push {
 {
     no strict 'refs';
 
-    for my $method ( qw/attachment expires nph target type/ ) {
+    for my $method ( qw/attachment expires nph target/ ) {
         my $field = "-$method";
         *$method = sub {
             my $self = shift;
@@ -131,6 +131,26 @@ sub _push {
     }
 }
 
+sub type {
+    my $self    = shift;
+    my $charset = $self->{-charset};
+
+    if ( @_ ) {
+        my $type = shift;
+        delete $self->{-charset} if $charset and $type =~ /\bcharset\b/;
+        $self->{-type} = $type;
+    }
+
+    if ( my $type = $self->{-type} ) {
+        my ( $media_type, $rest ) = split /;\s*/, $type, 2;
+        $media_type =~ s/\s+//g if $media_type;
+        $media_type = lc $media_type if $media_type;
+        return wantarray ? ( $media_type, $rest ) : $media_type;
+    }
+
+    q{};
+}
+
 sub charset {
     my $self = shift;
     my $type = $self->{-type};
@@ -138,29 +158,32 @@ sub charset {
     if ( @_ ) {
         my $charset = shift;
 
-        if ( $type and $type =~ s/charset=\S+/charset=$charset/ ) {
-            delete $self->{-charset};
+        if ( $type and $type =~ s/charset=[^;]+/charset=$charset/ ) {
+            delete $self->{-charset}; # be consistent with type()
             $self->{-type} = $type;
         }
         else {
             $self->{-charset} = $charset;
         }
 
-        return $charset;
+        return uc $charset;
     }
 
     my $charset = $self->{-charset};
 
-    if ( $charset and $type and $type =~ /charset=/ ) {
+    if ( $charset and $type and $type =~ /\bcharset\b/ ) {
         return carp(
             'Both of "type" and "charset" attributes specify character sets'
         );
     }
-    elsif ( $type and $type =~ /charset=(\S+)/ ) {
-        return $1;
+    elsif ( $type and $type =~ /charset="?([^;"]+)"?/ ) {
+        return uc $1;
+    }
+    elsif ( $charset ) {
+        return uc $charset;
     }
 
-    $charset;
+    return;
 }
 
 sub status {
@@ -173,7 +196,8 @@ sub status {
             $self->{-status} = "$code $message";
         }
         else {
-            return carp( qq{Unknown status code "$code" passed to status()} );
+            carp( qq{Unknown status code "$code" passed to status()} );
+            return;
         }
 
         return $code;
@@ -192,7 +216,6 @@ sub header_get    { __PACKAGE__->instance->get( @_ )    }
 sub header_set    { __PACKAGE__->instance->set( @_ )    }
 sub header_exists { __PACKAGE__->instance->exists( @_ ) }
 sub header_delete { __PACKAGE__->instance->delete( @_ ) }
-sub header_push   { __PACKAGE__->instance->_push( @_ )  }
 
 
 # Internal functions
@@ -239,9 +262,7 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
   # Procedural interface
 
-  use Blosxom::Header qw(
-      header_get header_set header_exists header_delete header_push
-  );
+  use Blosxom::Header qw/header_get header_set header_exists header_delete/;
 
   header_set(
       Status        => '304 Not Modified',
@@ -251,9 +272,6 @@ Blosxom::Header - Missing interface to modify HTTP headers
   my $status = header_get( 'Status' );
   my $bool = header_exists( 'ETag' );
   my @deleted = header_delete( qw/Content-Disposition Content-Length/ );
-
-  header_push( Set_Cookie => @cookies );
-  header_push( P3P => @p3p );
 
 =head1 DESCRIPTION
 
@@ -301,13 +319,64 @@ In other words, this module is compatible with the way modifying C<$header>
 directly when you follow the above rule.
 L<Blosxom::Header::Fast> explains the details.
 
-=head2 METHODS
+=head2 VARIABLE
+
+The following variable is exported on demand.
+
+=over 4
+
+=item $Header
+
+The same reference as C<< Blosxom::Header->instance >> returns.
+
+  use Blosxom::Header qw/$Header/;
+
+In this case, this module creates the instance when loaded.
+Otherwise doesn't.
+
+=back
+
+=head2 FUNCTIONS
+
+The following functions are exported on demand.
+
+=over 4
+
+=item header_get()
+
+A synonym for C<< Blosxom::Header->instance->get() >>.
+
+=item header_set()
+
+A synonym for C<< Blosxom::Header->instance->set() >>.
+
+=item header_exists()
+
+A synonym for C<< Blosxom::Header->instance->exists() >>.
+
+=item header_delete()
+
+A synonym for C<< Blosxom::Header->instance->delete() >>.
+
+=back
+
+=head2 CLASS METHODS
 
 =over 4
 
 =item $header = Blosxom::Header->instance
 
 Returns a current Blosxom::Header object instance or create a new one.
+
+=item $header = Blosxom::Header->has_instance
+
+Returns a reference to any existing instance or C<undef> if none is defined.
+
+=back
+
+=head2 INSTANCE METHODS
+
+=over 4
 
 =item $bool = $header->is_initialized
 
@@ -393,12 +462,10 @@ In this case, the outgoing header will be formatted as:
 
 =item $header->charset
 
-Represents the character set sent to the browser.
+Returns the upper-cased character set specified in the Content-Type header.
 If not provided, defaults to C<ISO-8859-1>.
 
   $header->charset( 'utf-8' );
-
-NOTE: If C<< $header->type >> contains C<charset>, this attribute will be ignored.
 
 =item $header->cookie
 
@@ -468,6 +535,15 @@ If not defined, defaults to C<text/html>.
 
   $header->type( 'text/plain' );
 
+The value returned will be converted to lower case, and potential parameters
+will be chopped off and returned as a separate value if in an array context.
+If there is no such header field, then the empty string is returned.
+This makes it safe to do the following:
+
+  if ( $header->type eq 'text/html' ) {
+      ...
+  }
+
 NOTE: If this attribute isn't defined, C<CGI::header()> will add the default
 value. If you don't want to output the Content-Type header itself, you have to
 set to an empty string:
@@ -517,7 +593,7 @@ succeeded the maintenance.
 =head1 BUGS AND LIMITATIONS
 
 There are no known bugs in this module.
-Please report problems to Ryo Anazawa (anazawa@cpan.org).
+Please report problems to ANAZAWA (anazawa@cpan.org).
 Patches are welcome.
 
 =head1 AUTHOR
