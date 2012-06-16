@@ -13,6 +13,7 @@ subtest 'basic' => sub {
     isa_ok $proxy, 'Blosxom::Header::Proxy';
     can_ok $proxy, qw(
         FETCH STORE DELETE EXISTS CLEAR FIRSTKEY NEXTKEY SCALAR
+        header is_initialized
     );
 
     ok !%proxy, 'not defined';

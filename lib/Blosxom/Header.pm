@@ -11,53 +11,50 @@ use HTTP::Status qw/status_message/;
 our $VERSION = '0.05003';
 our @EXPORT_OK = qw( $Header header_get header_set header_exists header_delete );
 
-our ( $INSTANCE, $Header );
-*Header = \$INSTANCE;
+our $Header;
 
 sub import {
     my ( $class, $export ) = @_;
-    my $exports_instance = $export && ( $export eq '$Header' );
-    $INSTANCE = $class->_new_instance if $exports_instance and !$INSTANCE;
+    $Header = $class->instance if $export and $export eq '$Header';
     $class->export_to_level( 1, @_ );
 }
 
 
 # Class methods
+{
+    my $instance;
 
-sub instance {
-    my $class = shift;
-    return $class if ref $class;
-    return $INSTANCE if defined $INSTANCE;
-    $INSTANCE = $class->_new_instance;
-}
+    sub instance {
+        my $class = shift;
 
-sub has_instance { $INSTANCE }
+        return $class if ref $class;
+        return $instance if defined $instance;
 
-sub _new_instance {
-    my $class = shift;
+        my %alias_of = (
+            -content_type => '-type',
+            -cookies      => '-cookie',
+            -set_cookie   => '-cookie',
+        );
 
-    my %alias_of = (
-        -content_type => '-type',
-        -cookies      => '-cookie',
-        -set_cookie   => '-cookie',
-    );
+        my $callback = sub {
+            # lowercase a given string
+            my $norm  = lc shift;
 
-    my $callback = sub {
-        # lowercase a given string
-        my $norm  = lc shift;
+            # add an initial dash if not exist
+            $norm = "-$norm" unless $norm =~ /^-/;
 
-        # add an initial dash if not exist
-        $norm = "-$norm" unless $norm =~ /^-/;
+            # transliterate dashes into underscores in field names
+            substr( $norm, 1 ) =~ tr{-}{_};
 
-        # transliterate dashes into underscores in field names
-        substr( $norm, 1 ) =~ tr{-}{_};
+            $alias_of{ $norm } || $norm;
+        };
 
-        $alias_of{ $norm } || $norm;
-    };
+        tie my %proxy => 'Blosxom::Header::Proxy', $callback;
 
-    tie my %proxy => 'Blosxom::Header::Proxy', $callback;
+        $instance = bless \%proxy => $class;
+    }
 
-    bless \%proxy => $class;
+    sub has_instance { $instance }
 }
 
 
@@ -145,6 +142,7 @@ sub type {
         my ( $media_type, $rest ) = split /;\s*/, $type, 2;
         $media_type =~ s/\s+//g if $media_type;
         $media_type = lc $media_type if $media_type;
+        $media_type = q{} unless defined $media_type;
         return wantarray ? ( $media_type, $rest ) : $media_type;
     }
 

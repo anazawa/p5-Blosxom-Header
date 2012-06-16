@@ -157,10 +157,8 @@ subtest 'charset()' => sub {
     $blosxom::header = { -type => 'text/html' };
     is $header->charset, undef;
     is $header->charset( 'utf-8' ), 'UTF-8';
-    is_deeply $blosxom::header, {
-        -type    => 'text/html',
-        -charset => 'utf-8',
-    };
+    $expected = { -type => 'text/html', -charset => 'utf-8' };
+    is_deeply $blosxom::header, $expected;
     is $header->charset, 'UTF-8';
 
     $blosxom::header = {
