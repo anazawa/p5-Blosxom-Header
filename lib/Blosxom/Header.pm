@@ -26,35 +26,39 @@ sub import {
 
     sub instance {
         my $class = shift;
-
         return $class if ref $class;
         return $instance if defined $instance;
-
-        my %alias_of = (
-            -content_type => '-type',
-            -cookies      => '-cookie',
-            -set_cookie   => '-cookie',
-        );
-
-        my $callback = sub {
-            # lowercase a given string
-            my $norm  = lc shift;
-
-            # add an initial dash if not exist
-            $norm = "-$norm" unless $norm =~ /^-/;
-
-            # transliterate dashes into underscores in field names
-            substr( $norm, 1 ) =~ tr{-}{_};
-
-            $alias_of{ $norm } || $norm;
-        };
-
-        tie my %proxy => 'Blosxom::Header::Proxy', $callback;
-
-        $instance = bless \%proxy => $class;
+        $instance = $class->_new_instance;
     }
 
     sub has_instance { $instance }
+}
+
+sub _new_instance {
+    my $class = shift;
+
+    my %alias_of = (
+        -content_type => '-type',
+        -cookies      => '-cookie',
+        -set_cookie   => '-cookie',
+    );
+
+    my $callback = sub {
+        # lowercase a given string
+        my $norm  = lc shift;
+
+        # add an initial dash if not exist
+        $norm = "-$norm" unless $norm =~ /^-/;
+
+        # transliterate dashes into underscores in field names
+        substr( $norm, 1 ) =~ tr{-}{_};
+
+        $alias_of{ $norm } || $norm;
+    };
+
+    tie my %proxy => 'Blosxom::Header::Proxy', $callback;
+
+    bless \%proxy => $class;
 }
 
 
@@ -138,47 +142,40 @@ sub type {
         $self->{-type} = $type;
     }
 
-    if ( my $type = $self->{-type} ) {
+    my $type = $self->{-type};
+
+    if ( $type ) {
         my ( $media_type, $rest ) = split /;\s*/, $type, 2;
         $media_type =~ s/\s+//g if $media_type;
         $media_type = lc $media_type if $media_type;
         $media_type = q{} unless defined $media_type;
+
+        $rest = q{} unless defined $rest;
+        if ( $rest !~ /\bcharset\b/ and $charset ) {
+            $rest = $rest ? "$rest; charset=$charset" : "charset=$charset";
+        }
+
         return wantarray ? ( $media_type, $rest ) : $media_type;
     }
 
-    q{};
+    wantarray ? ( 'text/html', 'charset=ISO-8859-1' ) : 'text/html';
 }
 
 sub charset {
     my $self = shift;
     my $type = $self->{-type};
-
-    if ( @_ ) {
-        my $charset = shift;
-
-        if ( $type and $type =~ s/charset=[^;]+/charset=$charset/ ) {
-            delete $self->{-charset}; # be consistent with type()
-            $self->{-type} = $type;
-        }
-        else {
-            $self->{-charset} = $charset;
-        }
-
-        return uc $charset;
-    }
-
     my $charset = $self->{-charset};
 
-    if ( $charset and $type and $type =~ /\bcharset\b/ ) {
-        return carp(
-            'Both of "type" and "charset" attributes specify character sets'
-        );
-    }
-    elsif ( $type and $type =~ /charset="?([^;"]+)"?/ ) {
+    if ( $type and $type =~ /charset="?([^;"]+)"?/ ) {
         return uc $1;
     }
     elsif ( $charset ) {
+        return if $charset eq q{};
+        return if defined $type and $type eq q{};
         return uc $charset;
+    }
+    elsif ( !defined $type and !defined $charset ) {
+        return 'ISO-8859-1';
     }
 
     return;

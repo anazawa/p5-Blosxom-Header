@@ -132,56 +132,50 @@ subtest 'status()' => sub {
 
 subtest 'charset()' => sub {
     local $blosxom::header = {};
+    is $header->charset, 'ISO-8859-1';
+
+    $blosxom::header = { -charset => q{} };
     is $header->charset, undef;
-    is $header->charset( 'utf-8' ), 'UTF-8';
-    is $blosxom::header->{-charset}, 'utf-8';
+
+    $blosxom::header = { -charset => 'utf-8' };
     is $header->charset, 'UTF-8';
+
+    $blosxom::header = { -type => q{}, -charset => 'utf-8' };
+    is $header->charset, undef;
 
     $blosxom::header = { -type => 'text/html; charset=euc-jp' };
     is $header->charset, 'EUC-JP';
-    is $header->charset( 'utf-8' ), 'UTF-8';
-    is_deeply $blosxom::header, { -type => 'text/html; charset=utf-8' };
+
+    $blosxom::header = { -type => 'text/html; charset=euc-jp', -charset => q{}  };
+    is $header->charset, 'EUC-JP';
 
     $blosxom::header = { -type => 'text/html; charset=iso-8859-1; Foo=1' };
     is $header->charset, 'ISO-8859-1';
-    is $header->charset( 'utf-8' ), 'UTF-8';
-    my $expected = { -type => 'text/html; charset=utf-8; Foo=1' };
-    is_deeply $blosxom::header, $expected;
 
     $blosxom::header = { -type => 'text/html; charset="iso-8859-1"; Foo=1' };
     is $header->charset, 'ISO-8859-1';
-    is $header->charset( 'utf-8' ), 'UTF-8';
-    $expected = { -type => 'text/html; charset=utf-8; Foo=1' };
-    is_deeply $blosxom::header, $expected;
-
-    $blosxom::header = { -type => 'text/html' };
-    is $header->charset, undef;
-    is $header->charset( 'utf-8' ), 'UTF-8';
-    $expected = { -type => 'text/html', -charset => 'utf-8' };
-    is_deeply $blosxom::header, $expected;
-    is $header->charset, 'UTF-8';
 
     $blosxom::header = {
-        -type    => 'text/html; charset=EUC-JP',
+        -type    => 'text/html; charset=euc-jp',
         -charset => 'utf-8',
     };
-    warning_is { $header->charset }
-        'Both of "type" and "charset" attributes specify character sets';
-    is $header->charset( 'Shift_JIS' ), 'SHIFT_JIS';
-    is_deeply $blosxom::header, { -type => 'text/html; charset=Shift_JIS' };
+    is $header->charset, 'EUC-JP';
 };
 
 subtest 'type()' => sub {
     local $blosxom::header = {};
-    is $header->type, q{};
-    is $header->type( 'text/plain' ), 'text/plain';
-    is $blosxom::header->{-type}, 'text/plain';
-    is $header->type, 'text/plain';
+    is $header->type, 'text/html';
+    my @got = $header->type;
+    my @expected = ( 'text/html', 'charset=ISO-8859-1' );
+    is_deeply \@got, \@expected;
+    #is $header->type( 'text/plain' ), 'text/plain';
+    #is $blosxom::header->{-type}, 'text/plain';
+    #is $header->type, 'text/plain';
 
     $blosxom::header = { -type => 'text/plain; charset=EUC-JP' };
     is $header->type, 'text/plain';
-    my @got = $header->type;
-    my @expected = ( 'text/plain', 'charset=EUC-JP' );
+    @got = $header->type;
+    @expected = ( 'text/plain', 'charset=EUC-JP' );
     is_deeply \@got, \@expected;
 
     $blosxom::header = { -type => 'text/plain; charset=EUC-JP; Foo=1' };
@@ -198,4 +192,22 @@ subtest 'type()' => sub {
     is $header->type( '   TEXT  / HTML   ' ), 'text/html';
     is_deeply $blosxom::header, { -type => '   TEXT  / HTML   ' };
     is $header->type, 'text/html';
+
+    $blosxom::header = { -type => 'text/plain', -charset => 'utf-8' };
+    @got = $header->type;
+    @expected = ( 'text/plain', 'charset=utf-8' );
+    is_deeply \@got, \@expected;
+
+    $blosxom::header = { -type => 'text/plain; Foo=1', -charset => 'utf-8' };
+    @got = $header->type;
+    @expected = ( 'text/plain', 'Foo=1; charset=utf-8' );
+    is_deeply \@got, \@expected;
+
+    $blosxom::header = {
+        -type    => 'text/plain; charset=euc-jp',
+        -charset => 'utf-8',
+    };
+    @got = $header->type;
+    @expected = ( 'text/plain', 'charset=euc-jp' );
+    is_deeply \@got, \@expected;
 };
