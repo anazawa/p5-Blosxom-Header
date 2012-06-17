@@ -41,17 +41,17 @@ subtest 'get()' => sub {
     my @expected = qw( bar baz );
     is_deeply \@got, \@expected, 'in list context';
 
-    $blosxom::header = {};
-    is $header->get( 'Content-Type' ), 'text/html; charset=ISO-8859-1';
+    #$blosxom::header = {};
+    #is $header->get( 'Content-Type' ), 'text/html; charset=ISO-8859-1';
 
-    $blosxom::header = { -type => 'text/plain' };
-    is $header->get( 'Content-Type' ), 'text/plain; charset=ISO-8859-1';
+    #$blosxom::header = { -type => 'text/plain' };
+    #is $header->get( 'Content-Type' ), 'text/plain; charset=ISO-8859-1';
 
-    $blosxom::header = { -charset => 'utf-8' };
-    is $header->get( 'Content-Type' ), 'text/html; charset=utf-8';
+    #$blosxom::header = { -charset => 'utf-8' };
+    #is $header->get( 'Content-Type' ), 'text/html; charset=utf-8';
 
-    $blosxom::header = { -type => 'text/plain', -charset => 'utf-8' };
-    is $header->get( 'Content-Type' ), 'text/plain; charset=utf-8';
+    #$blosxom::header = { -type => 'text/plain', -charset => 'utf-8' };
+    #is $header->get( 'Content-Type' ), 'text/plain; charset=utf-8';
 };
 
 subtest 'clear()' => sub {
@@ -190,9 +190,6 @@ subtest 'type()' => sub {
     my @got = $header->type;
     my @expected = ( 'text/html', 'charset=ISO-8859-1' );
     is_deeply \@got, \@expected;
-    #is $header->type( 'text/plain' ), 'text/plain';
-    #is $blosxom::header->{-type}, 'text/plain';
-    #is $header->type, 'text/plain';
 
     $blosxom::header = { -type => 'text/plain; charset=EUC-JP' };
     is $header->type, 'text/plain';
@@ -209,6 +206,7 @@ subtest 'type()' => sub {
     $blosxom::header = { -charset => 'utf-8' };
     is $header->type( 'text/plain; charset=EUC-JP' ), 'text/plain';
     is_deeply $blosxom::header, { -type => 'text/plain; charset=EUC-JP' };
+    #is $blosxom::header->{-type}, 'text/plain; charset=EUC-JP';
 
     $blosxom::header = {};
     is $header->type( '   TEXT  / HTML   ' ), 'text/html';

@@ -8,19 +8,63 @@ use Carp qw/croak/;
 #   $norm  : normalized field name (e.g. -foo_bar)
 
 sub TIEHASH {
-    my ( $class, $callback ) = @_;
+    my $class = shift;
 
-    # defaults to an ordinary hash
-    unless ( ref $callback eq 'CODE' ) {
-        $callback = sub { shift };
-    }
+    my %alias_of = (
+        -content_type => '-type',
+        -cookies      => '-cookie',
+        -set_cookie   => '-cookie',
+    );
 
-    bless $callback, $class;
+    my $self = sub {
+        # lowercase a given string
+        my $norm  = lc shift;
+
+        # add an initial dash if not exist
+        $norm = "-$norm" unless $norm =~ /^-/;
+
+        # transliterate dashes into underscores in field names
+        substr( $norm, 1 ) =~ tr{-}{_};
+
+        $alias_of{ $norm } || $norm;
+    };
+
+    bless $self, $class;
 }
 
 sub FETCH {
     my ( $self, $field ) = @_;
     my $norm = $self->( $field );
+
+    if ( $norm eq '-type' ) {
+        my $type = $self->header->{-type};
+        my $charset = $self->header->{-charset};
+
+        if ( defined $type and $type eq q{} ) {
+            return;
+        }
+
+        if ( !defined $type and !defined $charset ) {
+            return 'text/html; charset=ISO-8859-1';
+        }
+
+        if ( !$charset and $type ) {
+            return $type if $type =~ /\bcharset\b/;
+            return "$type; charset=ISO-8859-1";
+        }
+
+        if ( !defined $type ) {
+            return 'text/html' if $charset eq q{};
+            return "text/html; charset=$charset";
+        }
+
+        if ( $type and $type =~ /\bcharset\b/ ) {
+            return $type;
+        }
+
+        return "$type; charset=$charset";
+    }
+
     $self->header->{ $norm };
 }
 
@@ -67,7 +111,15 @@ sub FIRSTKEY {
 
 sub NEXTKEY { each %{ shift->header } }
 
-sub SCALAR { is_initialized() and %{ $blosxom::header } }
+#sub SCALAR { is_initialized() and %{ $blosxom::header } }
+sub SCALAR {
+    if ( is_initialized() ) {
+        my @keys = keys %{ $blosxom::header };
+        my $type = $blosxom::header->{-type};
+        return 0 if @keys == 1 and defined $type and $type eq q{};
+    }
+    1;
+}
 
 sub is_initialized { ref $blosxom::header eq 'HASH' }
 
