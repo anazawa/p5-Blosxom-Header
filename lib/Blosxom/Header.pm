@@ -70,6 +70,10 @@ sub _proxy { tied %{ $_[0] } }
 
 sub get {
     my ( $self, $field ) = @_;
+
+    my $norm = $self->_proxy->( $field );
+    return join( '; ', $self->type ) if $norm eq '-type';
+
     my $value = $self->{ $field };
     return $value unless ref $value eq 'ARRAY';
     wantarray ? @{ $value } : $value->[0];
@@ -155,7 +159,15 @@ sub type {
             $rest = $rest ? "$rest; charset=$charset" : "charset=$charset";
         }
 
+        if ( $rest !~ /\bcharset\b/ and !$charset ) {
+            $rest = $rest ? "$rest; charset=ISO-8859-1" : "charset=ISO-8859-1";
+        }
+
         return wantarray ? ( $media_type, $rest ) : $media_type;
+    }
+
+    if ( $charset ) {
+        return wantarray ? ( 'text/html', "charset=$charset" ) : 'text/html';
     }
 
     wantarray ? ( 'text/html', 'charset=ISO-8859-1' ) : 'text/html';

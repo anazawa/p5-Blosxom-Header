@@ -26,6 +26,12 @@ subtest 'exists()' => sub {
     local $blosxom::header = { -foo => 'bar' };
     ok $header->exists( 'Foo' ), 'should return true';
     ok !$header->exists( 'Bar' ), 'should return false';
+
+    $blosxom::header = { -type => q{} };
+    ok !$header->exists( 'Content-Type' );
+
+    $blosxom::header = {};
+    ok $header->exists( 'Content-Type' );
 };
 
 subtest 'get()' => sub {
@@ -34,12 +40,24 @@ subtest 'get()' => sub {
     my @got = $header->get( 'Foo' );
     my @expected = qw( bar baz );
     is_deeply \@got, \@expected, 'in list context';
+
+    $blosxom::header = {};
+    is $header->get( 'Content-Type' ), 'text/html; charset=ISO-8859-1';
+
+    $blosxom::header = { -type => 'text/plain' };
+    is $header->get( 'Content-Type' ), 'text/plain; charset=ISO-8859-1';
+
+    $blosxom::header = { -charset => 'utf-8' };
+    is $header->get( 'Content-Type' ), 'text/html; charset=utf-8';
+
+    $blosxom::header = { -type => 'text/plain', -charset => 'utf-8' };
+    is $header->get( 'Content-Type' ), 'text/plain; charset=utf-8';
 };
 
 subtest 'clear()' => sub {
     local $blosxom::header = { -foo => 'bar' };
     $header->clear;
-    is_deeply $blosxom::header, {}, 'should be empty';
+    is_deeply $blosxom::header, { -type => q{} }, 'should be empty';
 };
 
 subtest 'set()' => sub {
@@ -79,6 +97,10 @@ subtest 'delete()' => sub {
     my @deleted = $header->delete( qw/foo bar/ );
     is_deeply \@deleted, ['bar', 'baz'], 'delete() multiple elements';
     is_deeply $blosxom::header, { -baz => 'qux' };
+
+    $blosxom::header = { -type => 'text/plain', -charset => 'utf-8' };
+    $header->delete( 'Content-Type' );
+    is_deeply $blosxom::header, { -type => q{} };
 };
 
 subtest 'expires()' => sub {

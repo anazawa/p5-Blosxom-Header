@@ -52,5 +52,5 @@ subtest 'insensitive hash' => sub {
     is_deeply $proxy->header, { bar => 'baz' }, 'DELETE()';
 
     %proxy = ();
-    is_deeply $proxy->header, {}, 'CLEAR()';
+    is_deeply $proxy->header, { -type => q{} }, 'CLEAR()';
 };

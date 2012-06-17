@@ -34,16 +34,30 @@ sub STORE {
 sub DELETE {
     my ( $self, $field ) = @_;
     my $norm = $self->( $field );
+
+    if ( $norm eq '-type' ) {
+        delete $self->header->{-charset};
+        $self->header->{-type} = q{};
+        return;
+    }
+
     delete $self->header->{ $norm };
 }
 
 sub EXISTS {
     my ( $self, $field ) = @_;
     my $norm = $self->( $field );
+
+    if ( $norm eq '-type' ) {
+        return 1 unless exists $self->header->{-type};
+        return $self->header->{-type} ne q{};
+    }
+
     exists $self->header->{ $norm };
 }
 
-sub CLEAR { %{ shift->header } = () }
+#sub CLEAR { %{ shift->header } = () }
+sub CLEAR { %{ shift->header } = ( -type => q{} ) }
 
 sub FIRSTKEY {
     my $header = shift->header;
