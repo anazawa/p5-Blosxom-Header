@@ -121,81 +121,26 @@ subtest 'FETCH()' => sub {
 };
 
 subtest 'STORE()' => sub {
-    local $blosxom::header = { -attachment => 'foo' };
+    local $blosxom::header = {};
+    $proxy{Foo} = 'bar';
+    is_deeply $blosxom::header, { -foo => 'bar' };
+    
+    $blosxom::header = { -attachment => 'foo' };
     $proxy{Content_Disposition} = 'inline';
     is_deeply $blosxom::header, { -content_disposition => 'inline' };
     
     $blosxom::header = { -content_disposition => 'inline' };
     $proxy{attachment} = 'genome.jpg';
     is_deeply $blosxom::header, { -attachment => 'genome.jpg' };
+
+    $blosxom::header = { -charset => 'ISO-8859-1' };
+    $proxy{Content_Type} = 'text/plain; charset=utf-8';
+    is_deeply $blosxom::header, { -type => 'text/plain; charset=utf-8' };
+
+    $blosxom::header = { -charset => 'ISO-8859-1' };
+    $proxy{Content_Type} = 'text/plain';
+    is_deeply $blosxom::header, { -type => 'text/plain', -charset => q{} };
 };
-
-#subtest 'each()' => sub {
-#    local $blosxom::header = {};
-#    is each %proxy, 'Content-Type';
-#    is each %proxy, undef;
-
-#    $blosxom::header = { -type => 'foo' };
-#    is each %proxy, 'Content-Type';
-#    is each %proxy, undef;
-
-#    $blosxom::header = { -type => q{} };
-#    is each %proxy, undef;
-
-#    $blosxom::header = { -type => q{}, -foo => 'bar' };
-#    is each %proxy, 'Foo';
-#    is each %proxy, undef;
-
-#    $blosxom::header = { -status => 'foo' };
-#    is each %proxy, 'Status';
-#    is each %proxy, 'Content-Type';
-#    is each %proxy, undef;
-
-#    $blosxom::header = { -foo => 'bar' };
-#    is each %proxy, 'Foo';
-#    is each %proxy, 'Content-Type';
-#    is each %proxy, undef;
-
-#    $blosxom::header = { -charset => 'foo' };
-#    is each %proxy, 'Content-Type';
-#    is each %proxy, undef;
-
-#    $blosxom::header = { -charset => 'foo', -foo => 'bar' };
-#    is each %proxy, 'Foo';
-#    is each %proxy, 'Content-Type';
-#    is each %proxy, undef;
-
-#    $blosxom::header = {
-#        -status     => 'foo',
-#        -target     => 'foo',
-#        -p3p        => 'foo',
-#        -cookie     => 'foo',
-#        -expires    => 'foo',
-#        -attachment => 'foo',
-#        -foo_bar    => 'foo',
-#    };
-#    my @got = sort keys %proxy;
-#    my @expected = qw(
-#        Content-Disposition
-#        Content-Type
-#        Expires
-#        Foo-bar
-#        P3P
-#        Set-Cookie
-#        Status
-#        Window-Target
-#    );
-#    is_deeply \@got, \@expected;
-
-#    $blosxom::header = { -nph => 1 };
-#    is each %proxy, 'Content-Type';
-#    is each %proxy, undef;
-
-#    $blosxom::header = { -nph => 1, -foo => 'bar' };
-#    is each %proxy, 'Foo';
-#    is each %proxy, 'Content-Type';
-#    is each %proxy, undef;
-#};
 
 subtest 'field_names()' => sub {
     local $blosxom::header = {

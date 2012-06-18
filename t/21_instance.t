@@ -208,9 +208,7 @@ subtest 'type()' => sub {
     is_deeply $blosxom::header, { -type => 'text/plain; charset=EUC-JP' };
     #is $blosxom::header->{-type}, 'text/plain; charset=EUC-JP';
 
-    $blosxom::header = {};
-    is $header->type( '   TEXT  / HTML   ' ), 'text/html';
-    is_deeply $blosxom::header, { -type => '   TEXT  / HTML   ' };
+    $blosxom::header = { -type => '   TEXT  / HTML   ', -charset => q{} };
     is $header->type, 'text/html';
 
     $blosxom::header = { -type => 'text/plain', -charset => 'utf-8' };

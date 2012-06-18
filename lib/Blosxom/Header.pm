@@ -2,7 +2,7 @@ package Blosxom::Header;
 use 5.008_009;
 use strict;
 use warnings;
-use base 'Exporter';
+use base qw/Exporter/;
 use constant USELESS => 'Useless use of %s with no values';
 use Blosxom::Header::Proxy;
 use Carp qw/carp/;
@@ -44,11 +44,9 @@ sub _new_instance {
 # Instance methods
 
 sub is_initialized { shift->_proxy->is_initialized }
+sub field_names    { shift->_proxy->field_names    }
 
 sub _proxy { tied %{ $_[0] } }
-
-#sub field_names { keys %{ $_[0] } }
-sub field_names { shift->_proxy->field_names }
 
 sub get {
     my ( $self, $field ) = @_;
@@ -117,20 +115,14 @@ sub _push {
 sub type {
     my $self = shift;
 
-    if ( @_ ) {
-        my $type = shift;
-        delete $self->{-charset}
-            if exists $self->{-charset} and $type =~ /\bcharset\b/;
-        $self->{-type} = $type;
-    }
+    $self->{Content_Type} = shift if @_;
 
-    #if ( my $type = $self->{-type} ) {
-    if ( my $type = $self->{Content_Type} ) {
-        my ( $media_type, $rest ) = split /;\s*/, $type, 2;
-        $media_type =~ s/\s+//g if $media_type;
-        $media_type = lc $media_type if $media_type;
-        $media_type = q{} unless defined $media_type;
-        return wantarray ? ( $media_type, $rest ) : $media_type;
+    if ( my $content_type = $self->{Content_Type} ) {
+        my ( $type, $rest ) = split /;\s*/, $content_type, 2;
+        return q{} unless defined $type;
+        $type =~ s/\s+//g;
+        $type = lc $type;
+        return wantarray ? ( $type, $rest ) : $type;
     }
 
     return;
@@ -138,10 +130,10 @@ sub type {
 
 sub charset {
     my $self = shift;
-    my $ct = $self->{Content_Type};
 
-    if ( $ct and $ct =~ /charset="?([^;"]+)"?/ ) {
-        return uc $1;
+    if ( my $content_type = $self->{Content_Type} ) {
+        my ( $charset ) = ( $content_type =~ /charset="?([^;"]+)"?/ );
+        return uc $charset if $charset;
     }
 
     return;
