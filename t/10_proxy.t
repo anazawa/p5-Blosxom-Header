@@ -1,7 +1,7 @@
 use strict;
 use Blosxom::Header::Proxy;
 use Test::Exception;
-use Test::More tests => 8;
+use Test::More tests => 11;
 
 {
     package blosxom;
@@ -9,14 +9,11 @@ use Test::More tests => 8;
 }
 
 my $proxy = tie my %proxy => 'Blosxom::Header::Proxy';
-
-subtest 'basic' => sub {
-    isa_ok $proxy, 'Blosxom::Header::Proxy';
-    can_ok $proxy, qw(
-        FETCH STORE DELETE EXISTS CLEAR FIRSTKEY NEXTKEY SCALAR
-        header is_initialized
-    );
-};
+isa_ok $proxy, 'Blosxom::Header::Proxy';
+can_ok $proxy, qw(
+    FETCH STORE DELETE EXISTS CLEAR FIRSTKEY NEXTKEY SCALAR
+    header is_initialized
+);
 
 subtest 'is_initialized()' => sub {
     local $blosxom::header;
@@ -35,30 +32,6 @@ subtest 'header()' => sub {
     is $proxy->header, $blosxom::header,
         'header() returns the same reference as $blosxom::header';
 };
-
-#subtest 'insensitive hash' => sub {
-#    local $blosxom::header = { foo => 'bar' };
-#    my $callback = sub { lc shift };
-#    my $proxy = tie my %proxy => 'Blosxom::Header::Proxy', $callback;
-
-#    ok exists $proxy{Foo}, 'EXISTS() should return true';
-#    ok !exists $proxy{Bar}, 'EXISTS() should return false';
-
-#    is $proxy{Foo}, 'bar', 'FETCH()';
-#    is $proxy{Bar}, undef, 'FETCH() undef';
-
-#    $proxy{Bar} = 'baz';
-#    is $proxy->header->{bar}, 'baz', 'STORE()';
-
-#    is_deeply [ sort keys %proxy   ], [ 'bar', 'foo' ], 'keys()';
-#    is_deeply [ sort values %proxy ], [ 'bar', 'baz' ], 'values()';
-
-#    is delete $proxy{Foo}, 'bar';
-#    is_deeply $proxy->header, { bar => 'baz' }, 'DELETE()';
-
-#    %proxy = ();
-#    is_deeply $proxy->header, { -type => q{} }, 'CLEAR()';
-#};
 
 subtest 'SCALAR()' => sub {
     local $blosxom::header = {};
@@ -87,6 +60,9 @@ subtest 'EXISTS()' => sub {
 
     $blosxom::header = {};
     ok exists $proxy{Content_Type};
+
+    $blosxom::header = { -attachment => 'foo' };
+    ok exists $proxy{Content_Disposition};
 };
 
 subtest 'DELETE()' => sub {
@@ -97,6 +73,10 @@ subtest 'DELETE()' => sub {
     $blosxom::header = { -type => 'text/plain', -charset => 'utf-8' };
     delete $proxy{Content_Type}; # text/plain; charset=utf-8
     is_deeply $blosxom::header, { -type => q{} };
+
+    $blosxom::header = { -attachment => 'foo' };
+    delete $proxy{Content_Disposition};
+    is_deeply $blosxom::header, {};
 };
 
 subtest 'FETCH()' => sub {
@@ -129,4 +109,84 @@ subtest 'FETCH()' => sub {
 
     $blosxom::header = { -charset => q{} };
     is $proxy{Content_Type}, 'text/html';
+
+    $blosxom::header = { -attachment => 'foo' };
+    is $proxy{Content_Disposition}, 'attachment; filename="foo"';
+};
+
+subtest 'STORE()' => sub {
+    local $blosxom::header = { -attachment => 'foo' };
+    $proxy{Content_Disposition} = 'inline';
+    is_deeply $blosxom::header, { -content_disposition => 'inline' };
+    
+    $blosxom::header = { -content_disposition => 'inline' };
+    $proxy{attachment} = 'genome.jpg';
+    is_deeply $blosxom::header, { -attachment => 'genome.jpg' };
+};
+
+subtest 'each()' => sub {
+    local $blosxom::header = {};
+    is each %proxy, 'Content-Type';
+    is each %proxy, undef;
+
+    $blosxom::header = { -type => 'foo' };
+    is each %proxy, 'Content-Type';
+    is each %proxy, undef;
+
+    $blosxom::header = { -type => q{} };
+    is each %proxy, undef;
+
+    $blosxom::header = { -type => q{}, -foo => 'bar' };
+    is each %proxy, 'Foo';
+    is each %proxy, undef;
+
+    $blosxom::header = { -status => 'foo' };
+    is each %proxy, 'Status';
+    is each %proxy, 'Content-Type';
+    is each %proxy, undef;
+
+    $blosxom::header = { -foo => 'bar' };
+    is each %proxy, 'Foo';
+    is each %proxy, 'Content-Type';
+    is each %proxy, undef;
+
+    $blosxom::header = { -charset => 'foo' };
+    is each %proxy, 'Content-Type';
+    is each %proxy, undef;
+
+    $blosxom::header = { -charset => 'foo', -foo => 'bar' };
+    is each %proxy, 'Foo';
+    is each %proxy, 'Content-Type';
+    is each %proxy, undef;
+
+    $blosxom::header = {
+        -status     => 'foo',
+        -target     => 'foo',
+        -p3p        => 'foo',
+        -cookie     => 'foo',
+        -expires    => 'foo',
+        -attachment => 'foo',
+        -foo_bar    => 'foo',
+    };
+    my @got = sort keys %proxy;
+    my @expected = qw(
+        Content-Disposition
+        Content-Type
+        Expires
+        Foo-bar
+        P3P
+        Set-Cookie
+        Status
+        Window-Target
+    );
+    is_deeply \@got, \@expected;
+
+    $blosxom::header = { -nph => 1 };
+    is each %proxy, 'Content-Type';
+    is each %proxy, undef;
+
+    $blosxom::header = { -nph => 1, -foo => 'bar' };
+    is each %proxy, 'Foo';
+    is each %proxy, 'Content-Type';
+    is each %proxy, undef;
 };

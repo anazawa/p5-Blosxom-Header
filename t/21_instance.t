@@ -1,6 +1,6 @@
 use strict;
 use Blosxom::Header;
-use Test::More tests => 14;
+use Test::More tests => 15;
 use Test::Warn;
 
 {
@@ -11,7 +11,7 @@ use Test::Warn;
 my $header = Blosxom::Header->instance;
 isa_ok $header, 'Blosxom::Header';
 can_ok $header, qw(
-    is_initialized clear delete exists get set
+    is_initialized clear delete exists field_names get set
     push_cookie push_p3p
     attachment charset cookie expires nph p3p status target type
 );
@@ -229,5 +229,12 @@ subtest 'type()' => sub {
     };
     @got = $header->type;
     @expected = ( 'text/plain', 'charset=euc-jp' );
+    is_deeply \@got, \@expected;
+};
+
+subtest 'field_names()' => sub {
+    local $blosxom::header = { -foo => 'bar' };
+    my @got = sort $header->field_names;
+    my @expected = qw( Content-Type Foo );
     is_deeply \@got, \@expected;
 };

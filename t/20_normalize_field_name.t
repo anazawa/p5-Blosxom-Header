@@ -76,3 +76,9 @@ __DATA__
 ===
 --- input:    -set_cookie
 --- expected: -cookie
+===
+--- input:    -window_target
+--- expected: -target
+===
+--- input:    -target
+--- expected: -target

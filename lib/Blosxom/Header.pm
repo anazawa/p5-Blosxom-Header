@@ -42,6 +42,8 @@ sub is_initialized { shift->_proxy->is_initialized }
 
 sub _proxy { tied %{ $_[0] } }
 
+sub field_names { keys %{ $_[0] } }
+
 sub get {
     my ( $self, $field ) = @_;
     my $value = $self->{ $field };
