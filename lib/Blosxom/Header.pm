@@ -28,11 +28,16 @@ sub import {
         my $class = shift;
         return $class if ref $class;
         return $instance if defined $instance;
-        tie my %proxy => 'Blosxom::Header::Proxy';
-        $instance = bless \%proxy => $class;
+        $instance = $class->_new_instance;
     }
 
     sub has_instance { $instance }
+}
+
+sub _new_instance {
+    my $class = shift;
+    tie my %proxy => 'Blosxom::Header::Proxy';
+    bless \%proxy => $class;
 }
 
 
@@ -42,7 +47,8 @@ sub is_initialized { shift->_proxy->is_initialized }
 
 sub _proxy { tied %{ $_[0] } }
 
-sub field_names { keys %{ $_[0] } }
+#sub field_names { keys %{ $_[0] } }
+sub field_names { shift->_proxy->field_names }
 
 sub get {
     my ( $self, $field ) = @_;
@@ -118,7 +124,8 @@ sub type {
         $self->{-type} = $type;
     }
 
-    if ( my $type = $self->{-type} ) {
+    #if ( my $type = $self->{-type} ) {
+    if ( my $type = $self->{Content_Type} ) {
         my ( $media_type, $rest ) = split /;\s*/, $type, 2;
         $media_type =~ s/\s+//g if $media_type;
         $media_type = lc $media_type if $media_type;
@@ -131,9 +138,9 @@ sub type {
 
 sub charset {
     my $self = shift;
-    my $type = $self->{-type};
+    my $ct = $self->{Content_Type};
 
-    if ( $type and $type =~ /charset="?([^;"]+)"?/ ) {
+    if ( $ct and $ct =~ /charset="?([^;"]+)"?/ ) {
         return uc $1;
     }
 

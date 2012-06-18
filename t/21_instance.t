@@ -1,6 +1,6 @@
 use strict;
 use Blosxom::Header;
-use Test::More tests => 15;
+use Test::More tests => 14;
 use Test::Warn;
 
 {
@@ -232,9 +232,9 @@ subtest 'type()' => sub {
     is_deeply \@got, \@expected;
 };
 
-subtest 'field_names()' => sub {
-    local $blosxom::header = { -foo => 'bar' };
-    my @got = sort $header->field_names;
-    my @expected = qw( Content-Type Foo );
-    is_deeply \@got, \@expected;
-};
+#subtest 'field_names()' => sub {
+#    local $blosxom::header = { -foo => 'bar' };
+#    my @got = sort $header->field_names;
+#    my @expected = qw( Content-Type Foo );
+#    is_deeply \@got, \@expected;
+#};

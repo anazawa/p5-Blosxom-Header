@@ -11,9 +11,9 @@ sub TIEHASH {
     my $class = shift;
 
     my %alias_of = (
-        -content_type => '-type',
-        -cookies      => '-cookie',
-        -set_cookie   => '-cookie',
+        -content_type  => '-type',
+        -cookies       => '-cookie',
+        -set_cookie    => '-cookie',
         -window_target => '-target',
     );
 
@@ -35,38 +35,33 @@ sub TIEHASH {
 
 sub FETCH {
     my ( $self, $field ) = @_;
-    my $norm = $self->( $field );
+    my $norm  = $self->( $field );
 
-    if ( $norm eq '-type' ) {
-        my $type = $self->header->{-type};
-        my $charset = $self->header->{-charset};
+    if ( $norm eq '-type' and $field =~ /content/i ) {
+        my ( $type, $charset ) = @{ $self->header }{ '-type', '-charset' };
 
         if ( defined $type and $type eq q{} ) {
             return;
         }
-
-        if ( !defined $type and !defined $charset ) {
+        elsif ( !defined $type and !defined $charset ) {
             return 'text/html; charset=ISO-8859-1';
         }
-
-        if ( !$charset and $type ) {
+        elsif ( !$charset and $type ) {
             return $type if $type =~ /\bcharset\b/;
             return "$type; charset=ISO-8859-1";
         }
-
-        if ( !defined $type ) {
+        elsif ( !defined $type ) {
             return 'text/html' if $charset eq q{};
             return "text/html; charset=$charset";
         }
-
-        if ( $type and $type =~ /\bcharset\b/ ) {
+        elsif ( $type and $type =~ /\bcharset\b/ ) {
             return $type;
         }
-
-        return "$type; charset=$charset";
+        else {
+            return "$type; charset=$charset";
+        }
     }
-
-    if ( $norm eq '-content_disposition' ) {
+    elsif ( $norm eq '-content_disposition' ) {
         my $attachment = $self->header->{-attachment};
         return qq{attachment; filename="$attachment"} if $attachment;
     }
@@ -81,12 +76,12 @@ sub STORE {
     if ( $norm eq '-content_disposition' ) {
         delete $self->header->{-attachment};
     }
-
-    if ( $norm eq '-attachment' ) {
+    elsif ( $norm eq '-attachment' ) {
         delete $self->header->{-content_disposition};
     }
 
     $self->header->{ $norm } = $value;
+
     return;
 }
 
@@ -94,14 +89,16 @@ sub DELETE {
     my ( $self, $field ) = @_;
     my $norm = $self->( $field );
 
-    if ( $norm eq '-type' ) {
+    if ( $norm eq '-type' and $field =~ /content/i ) {
+        my $deleted = $self->FETCH( 'Content-Type' );
         delete $self->header->{-charset};
         $self->header->{-type} = q{};
-        return;
+        return $deleted;
     }
-
-    if ( $norm eq '-content_disposition' ) {
+    elsif ( $norm eq '-content_disposition' ) {
+        my $deleted = $self->FETCH( 'Content-Disposition' );
         delete $self->header->{-attachment};
+        return $deleted;
     }
 
     delete $self->header->{ $norm };
@@ -111,19 +108,19 @@ sub EXISTS {
     my ( $self, $field ) = @_;
     my $norm = $self->( $field );
 
-    if ( $norm eq '-type' ) {
+    if ( $norm eq '-type' and $field =~ /content/i ) {
         return 1 unless exists $self->header->{-type};
+        return 1 if $self->header->{-type};
+        return 1 unless defined $self->header->{-type};
         return $self->header->{-type} ne q{};
     }
-
-    if ( $norm eq '-content_disposition' ) {
+    elsif ( $norm eq '-content_disposition' ) {
         return 1 if $self->header->{-attachment};
     }
 
     exists $self->header->{ $norm };
 }
 
-#sub CLEAR { %{ shift->header } = () }
 sub CLEAR { %{ shift->header } = ( -type => q{} ) }
 
 my %field_name_of = (
@@ -133,6 +130,7 @@ my %field_name_of = (
     -cookie     => 'Set-Cookie',
     -target     => 'Window-Target',
     -p3p        => 'P3P',
+    -expires    => 'Expires',
 );
 
 my $others = sub {
@@ -142,51 +140,96 @@ my $others = sub {
     ucfirst $field_name;
 };
 
+#sub FIRSTKEY {
+#    my $header = shift->header;
+#    my @keys = keys %{ $header };
+
+#    return $field_name_of{-type} unless @keys;
+
+#    my $norm = each %{ $header };
+#    $norm = each %{ $header } if @keys > 1 and $norm and $norm eq '-type';
+
+#    return unless $norm;
+
+#    if ( $norm =~ /^-nph|-charset$/ ) {
+#        $norm = each %{ $header };
+        #return 'Content-Type' unless $norm;
+#        return $field_name_of{-type} unless $norm;
+#    }
+
+#    return if $norm eq '-type' and $header->{-type} eq q{};
+
+#    $field_name_of{ $norm } || $others->( $norm );
+#}
+
+#sub NEXTKEY {
+#    my ( $self, $lastkey ) = @_;
+
+#    return if $lastkey and $lastkey eq 'Content-Type';
+
+#    my $norm = each %{ $self->header };
+
+#    if ( $norm and $norm =~ /^-type|-charset|-nph$/ ) {
+#        $norm = each %{ $self->header };
+#    }
+
+#    unless ( defined $norm ) {
+#        my $type = $self->header->{-type};
+#        return if defined $type and $type eq q{};
+#        return 'Content-Type';
+#    }
+
+#    $field_name_of{ $norm } || $others->( $norm );
+#}
+
 sub FIRSTKEY {
     my $header = shift->header;
-    my @keys = keys %{ $header };
-    #keys %{ $header };
-
-    return $field_name_of{-type} unless @keys;
-
-    my $norm = each %{ $header };
-    $norm = each %{ $header } if @keys > 1 and $norm and $norm eq '-type';
-    #$norm = each %{ $header } if $norm and $norm eq '-charset';
-
-    if ( $norm and $norm eq '-charset' ) {
-        $norm = each %{ $header };
-        return 'Content-Type' unless $norm;
-    }
-
-    if ( $norm and $norm eq '-nph' ) {
-        $norm = each %{ $header };
-        return 'Content-Type' unless $norm;
-    }
-
-    return if $norm and $norm eq '-type' and $header->{-type} eq q{};
-    return unless $norm;
-    $field_name_of{ $norm } || $others->( $norm );
+    keys %{ $header };
+    each %{ $header };
 }
 
-#sub NEXTKEY { each %{ shift->header } }
+sub NEXTKEY { each %{ shift->header } }
 
-sub NEXTKEY {
-    my ( $self, $lastkey ) = @_;
-    return if $lastkey and $lastkey eq 'Content-Type';
-    my $norm = each %{ $self->header };
+my @order = qw(
+    Status
+    Window-Target
+    P3P
+    Set-Cookie
+    Expires
+    Content-Disposition
+);
 
-    $norm = each %{ $self->header } if $norm and $norm eq '-type';
-    $norm = each %{ $self->header } if $norm and $norm eq '-charset';
-    $norm = each %{ $self->header } if $norm and $norm eq '-nph';
+my %order;
+#for ( my $i = 0; $i < @order; $i++ ) {
+#    $order{ $order[$i] } = $i;
+#}
+@order{ @order } = ( 1 .. @order );
 
-    my $type = $self->header->{-type};
-    return if !defined $norm and defined $type and $type eq q{};
-    return 'Content-Type' unless defined $norm;
+sub field_names {
+    my $self = shift;
+    
+    #my @norms = keys %{ $self->header };
+    #@norms = grep { $_ !~ /^-charset|-nph|-type$/ } @norms;
+    #my @field_names = map { $field_name_of{ $_ } || $others->( $_ ) } @norms;
 
-    $field_name_of{ $norm } || $others->( $norm );
+    my ( @others, @fields );
+    for my $norm ( keys %{ $self->header } ) {
+        next if $norm eq '-charset';
+        next if $norm eq '-type';
+        next if $norm eq '-nph';
+        my $field_name = $field_name_of{ $norm };
+        push @fields, $field_name if $field_name;
+        push @others, $others->( $norm ) unless $field_name;
+    }
+
+    @fields = sort { $order{ $a } <=> $order{ $b } } @fields;
+
+    my @field_names = ( @fields, @others );
+    push @field_names, 'Content-Type' if $self->EXISTS( 'Content-Type' );
+
+    @field_names;
 }
 
-#sub SCALAR { is_initialized() and %{ $blosxom::header } }
 sub SCALAR {
     if ( is_initialized() ) {
         my @keys = keys %{ $blosxom::header };
