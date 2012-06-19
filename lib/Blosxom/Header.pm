@@ -9,7 +9,11 @@ use Carp qw/carp/;
 use HTTP::Status qw/status_message/;
 
 our $VERSION = '0.05003';
-our @EXPORT_OK = qw( $Header header_get header_set header_exists header_delete );
+
+our @EXPORT_OK = qw(
+    $Header       header_get    header_set
+    header_exists header_delete header_push
+);
 
 our $Header;
 
@@ -169,6 +173,7 @@ sub header_get    { __PACKAGE__->instance->get( @_ )    }
 sub header_set    { __PACKAGE__->instance->set( @_ )    }
 sub header_exists { __PACKAGE__->instance->exists( @_ ) }
 sub header_delete { __PACKAGE__->instance->delete( @_ ) }
+sub header_push   { __PACKAGE__->instance->_push( @_ )  }
 
 
 # Internal functions

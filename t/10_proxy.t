@@ -1,7 +1,7 @@
 use strict;
 use Blosxom::Header::Proxy;
 use Test::Exception;
-use Test::More tests => 11;
+use Test::More tests => 10;
 
 {
     package blosxom;
@@ -12,32 +12,25 @@ my $proxy = tie my %proxy => 'Blosxom::Header::Proxy';
 isa_ok $proxy, 'Blosxom::Header::Proxy';
 can_ok $proxy, qw(
     FETCH STORE DELETE EXISTS CLEAR FIRSTKEY NEXTKEY SCALAR
-    header is_initialized field_names
+    is_initialized field_names
 );
 
 subtest 'is_initialized()' => sub {
-    local $blosxom::header;
+    undef $blosxom::header;
     ok !$proxy->is_initialized, 'should return false';
 
     $blosxom::header = {};
     ok $proxy->is_initialized, 'should return true';
 };
 
-subtest 'header()' => sub {
-    local $blosxom::header;
-    my $expected = qr/^\$blosxom::header hasn't been initialized yet/;
-    throws_ok { $proxy->header } $expected, 'header() throws an exception';
-
-    $blosxom::header = {};
-    is $proxy->header, $blosxom::header,
-        'header() returns the same reference as $blosxom::header';
-};
-
 subtest 'SCALAR()' => sub {
-    local $blosxom::header = { -type => q{} };
+    $blosxom::header = { -type => q{} };
     ok !%proxy;
 
     $blosxom::header = { -type => q{}, -charset => 'utf-8' };
+    ok !%proxy;
+
+    $blosxom::header = { -type => q{}, -foo => q{} };
     ok !%proxy;
 
     $blosxom::header = { -type => q{}, -foo => 'bar' };
@@ -51,13 +44,13 @@ subtest 'SCALAR()' => sub {
 };
 
 subtest 'CLEAR()' => sub {
-    local $blosxom::header = { -foo => 'bar' };
+    $blosxom::header = { -foo => 'bar' };
     %proxy = ();
     is_deeply $blosxom::header, { -type => q{} };
 };
 
 subtest 'EXISTS()' => sub {
-    local $blosxom::header = { -foo => 'bar' };
+    $blosxom::header = { -foo => 'bar' };
     ok exists $proxy{Foo};
     ok !exists $proxy{Bar};
 
@@ -91,7 +84,7 @@ subtest 'EXISTS()' => sub {
 };
 
 subtest 'DELETE()' => sub {
-    local $blosxom::header = { -foo => 'bar', -bar => 'baz' };
+    $blosxom::header = { -foo => 'bar', -bar => 'baz' };
     is delete $proxy{Foo}, 'bar';
     is_deeply $blosxom::header, { -bar => 'baz' };
 
@@ -117,7 +110,7 @@ subtest 'DELETE()' => sub {
 };
 
 subtest 'FETCH()' => sub {
-    local $blosxom::header = {};
+    $blosxom::header = {};
     is $proxy{Content_Type}, 'text/html; charset=ISO-8859-1';
     is $proxy{-type}, undef;
     is $proxy{-charset}, undef;
@@ -171,7 +164,7 @@ subtest 'FETCH()' => sub {
 };
 
 subtest 'STORE()' => sub {
-    local $blosxom::header = {};
+    $blosxom::header = {};
     $proxy{Foo} = 'bar';
     is_deeply $blosxom::header, { -foo => 'bar' };
     
@@ -204,7 +197,7 @@ subtest 'STORE()' => sub {
 };
 
 subtest 'field_names()' => sub {
-    local $blosxom::header = {
+    $blosxom::header = {
         -nph        => 'foo',
         -charset    => 'foo',
         -status     => 'foo',

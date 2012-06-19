@@ -3,6 +3,9 @@ use strict;
 use warnings;
 use Carp qw/croak/;
 
+our $Header;
+*Header = \$blosxom::header;
+
 # Naming conventions
 #   $field : raw field name (e.g. Foo-Bar)
 #   $norm  : normalized field name (e.g. -foo_bar)
@@ -36,11 +39,10 @@ sub TIEHASH {
 sub FETCH {
     my ( $self, $field ) = @_;
 
-    my $header = $self->header;
     my $norm = $self->( $field );
 
     if ( $norm eq '-type' and $field =~ /content/i ) {
-        my ( $type, $charset ) = @{ $header }{qw/-type -charset/};
+        my ( $type, $charset ) = @{ $Header }{qw/-type -charset/};
 
         if ( defined $type and $type eq q{} ) {
             undef $charset;
@@ -60,35 +62,34 @@ sub FETCH {
         return $charset ? "$type; charset=$charset" : $type;
     }
     elsif ( $norm eq '-content_disposition' ) {
-        my $attachment = $header->{-attachment};
+        my $attachment = $Header->{-attachment};
         return qq{attachment; filename="$attachment"} if $attachment;
     }
 
-    $header->{ $norm };
+    $Header->{ $norm };
 }
 
 sub STORE {
     my ( $self, $field, $value ) = @_;
 
-    my $header = $self->header;
     my $norm = $self->( $field );
 
     if ( $norm eq '-type' and $field =~ /content/i ) {
         if ( $value =~ /\bcharset\b/ ) {
-            delete $header->{-charset};
+            delete $Header->{-charset};
         }
         else {
-            $header->{-charset} = q{};
+            $Header->{-charset} = q{};
         }
     }
     elsif ( $norm eq '-content_disposition' ) {
-        delete $header->{-attachment};
+        delete $Header->{-attachment};
     }
     elsif ( $norm eq '-attachment' ) {
-        delete $header->{-content_disposition};
+        delete $Header->{-content_disposition};
     }
 
-    $header->{ $norm } = $value;
+    $Header->{ $norm } = $value;
 
     return;
 }
@@ -96,60 +97,55 @@ sub STORE {
 sub DELETE {
     my ( $self, $field ) = @_;
     
-    my $header = $self->header;
     my $norm = $self->( $field );
 
     if ( $norm eq '-type' and $field =~ /content/i ) {
         my $deleted = $self->FETCH( 'Content-Type' );
-        delete $header->{-charset};
-        $header->{-type} = q{};
+        delete $Header->{-charset};
+        $Header->{-type} = q{};
         return $deleted;
     }
     elsif ( $norm eq '-content_disposition' ) {
         my $deleted = $self->FETCH( 'Content-Disposition' );
-        delete $header->{-attachment};
+        delete $Header->{-attachment};
         return $deleted;
     }
 
-    delete $header->{ $norm };
+    delete $Header->{ $norm };
 }
 
 sub EXISTS {
     my ( $self, $field ) = @_;
 
-    my $header = $self->header;
     my $norm = $self->( $field );
 
     if ( $norm eq '-type' and $field =~ /content/i ) {
-        my $type = $header->{-type};
+        my $type = $Header->{-type};
         return ( $type or !defined $type );
     }
     elsif ( $norm eq '-content_disposition' ) {
-        return 1 if $header->{-attachment};
+        return 1 if $Header->{-attachment};
     }
 
-    exists $header->{ $norm };
+    exists $Header->{ $norm };
 }
 
-sub CLEAR { %{ shift->header } = ( -type => q{} ) }
+sub CLEAR { %{ $Header } = ( -type => q{} ) }
 
 sub FIRSTKEY {
-    my $header = shift->header;
-    keys %{ $header };
-    each %{ $header };
+    keys %{ $Header };
+    each %{ $Header };
 }
 
-sub NEXTKEY { each %{ shift->header } }
+sub NEXTKEY { each %{ $Header } }
 
 sub SCALAR {
-    my $header = shift->header;
-    return 1 unless %{ $header };
+    return 1 unless %{ $Header };
 
-    my %header = %{ $header }; # copy
-    my $type = delete $header{-type};
+    my %header = %{ $Header }; # copy
+    my ( $type ) = delete @header{ '-type', '-charset' };
     return 1 if $type or !defined $type;
 
-    delete $header{-charset};
     for my $value ( values %header ) {
         return 1 if $value;
     }
@@ -160,7 +156,7 @@ sub SCALAR {
 sub field_names {
     my $self = shift;
 
-    my %header = %{ $self->header }; # copy
+    my %header = %{ $Header }; # copy
     delete @header{qw/-charset -type -nph/};
 
     my @fields = grep { $header{ $_ } } keys %header;
@@ -189,12 +185,12 @@ sub field_names {
     }
 }
 
-sub is_initialized { ref $blosxom::header eq 'HASH' }
+sub is_initialized { ref $Header eq 'HASH' }
 
-sub header {
-    return $blosxom::header if is_initialized();
-    croak( q{$blosxom::header hasn't been initialized yet.} );
-}
+#sub header {
+#    return $Header if is_initialized();
+#    croak( q{$blosxom::header hasn't been initialized yet.} );
+#}
 
 1;
 

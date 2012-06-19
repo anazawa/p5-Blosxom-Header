@@ -17,51 +17,35 @@ can_ok $header, qw(
 );
 
 subtest 'is_initialized()' => sub {
+    undef $blosxom::header;
     ok !$header->is_initialized, 'should return false';
-    local $blosxom::header = {};
+
+    $blosxom::header = {};
     ok $header->is_initialized, 'should return true';
 };
 
 subtest 'exists()' => sub {
-    local $blosxom::header = { -foo => 'bar' };
+    $blosxom::header = { -foo => 'bar' };
     ok $header->exists( 'Foo' ), 'should return true';
     ok !$header->exists( 'Bar' ), 'should return false';
-
-    $blosxom::header = { -type => q{} };
-    ok !$header->exists( 'Content-Type' );
-
-    $blosxom::header = {};
-    ok $header->exists( 'Content-Type' );
 };
 
 subtest 'get()' => sub {
-    local $blosxom::header = { -foo => [ 'bar', 'baz' ] };
+    $blosxom::header = { -foo => [ 'bar', 'baz' ] };
     is $header->get( 'Foo' ), 'bar', 'in scalar context';
     my @got = $header->get( 'Foo' );
     my @expected = qw( bar baz );
     is_deeply \@got, \@expected, 'in list context';
-
-    $blosxom::header = {};
-    is $header->get( 'Content-Type' ), 'text/html; charset=ISO-8859-1';
-
-    $blosxom::header = { -type => 'text/plain' };
-    is $header->get( 'Content-Type' ), 'text/plain; charset=ISO-8859-1';
-
-    $blosxom::header = { -charset => 'utf-8' };
-    is $header->get( 'Content-Type' ), 'text/html; charset=utf-8';
-
-    $blosxom::header = { -type => 'text/plain', -charset => 'utf-8' };
-    is $header->get( 'Content-Type' ), 'text/plain; charset=utf-8';
 };
 
 subtest 'clear()' => sub {
-    local $blosxom::header = { -foo => 'bar' };
+    $blosxom::header = { -foo => 'bar' };
     $header->clear;
     is_deeply $blosxom::header, { -type => q{} }, 'should be empty';
 };
 
 subtest 'set()' => sub {
-    local $blosxom::header = {};
+    $blosxom::header = {};
 
     warning_is { $header->set( 'Foo' ) }
         'Odd number of elements in hash assignment';
@@ -86,7 +70,7 @@ subtest 'set()' => sub {
 };
 
 subtest 'delete()' => sub {
-    local $blosxom::header = {
+    $blosxom::header = {
         -foo => 'bar',
         -bar => 'baz',
         -baz => 'qux',
@@ -97,14 +81,10 @@ subtest 'delete()' => sub {
     my @deleted = $header->delete( qw/foo bar/ );
     is_deeply \@deleted, ['bar', 'baz'], 'delete() multiple elements';
     is_deeply $blosxom::header, { -baz => 'qux' };
-
-    $blosxom::header = { -type => 'text/plain', -charset => 'utf-8' };
-    is $header->delete( 'Content-Type' ), 'text/plain; charset=utf-8';
-    is_deeply $blosxom::header, { -type => q{} };
 };
 
 subtest 'expires()' => sub {
-    local $blosxom::header = {};
+    $blosxom::header = {};
     is $header->expires, undef;
     is $header->expires( 'now' ), 'now', 'set expires()';
     is $header->expires, 'now', 'get expires()';
@@ -112,7 +92,7 @@ subtest 'expires()' => sub {
 };
 
 subtest 'push_cookie()' => sub {
-    local $blosxom::header = {};
+    $blosxom::header = {};
 
     warning_is { $header->push_cookie }
         'Useless use of _push() with no values';
@@ -128,7 +108,7 @@ subtest 'push_cookie()' => sub {
 };
 
 subtest 'cookie()' => sub {
-    local $blosxom::header = {};
+    $blosxom::header = {};
 
     is $header->cookie, undef;
     is $header->cookie( 'foo' ), 'foo', 'set cookie()';
@@ -141,7 +121,7 @@ subtest 'cookie()' => sub {
 };
 
 subtest 'status()' => sub {
-    local $blosxom::header = {};
+    $blosxom::header = {};
 
     is $header->status, undef;
     is $header->status( 304 ), '304';
@@ -153,7 +133,7 @@ subtest 'status()' => sub {
 };
 
 subtest 'charset()' => sub {
-    local $blosxom::header = {};
+    $blosxom::header = {};
     is $header->charset, 'ISO-8859-1';
 
     $blosxom::header = { -charset => q{} };
@@ -185,7 +165,7 @@ subtest 'charset()' => sub {
 };
 
 subtest 'type()' => sub {
-    local $blosxom::header = {};
+    $blosxom::header = {};
     is $header->type, 'text/html';
     my @got = $header->type;
     my @expected = ( 'text/html', 'charset=ISO-8859-1' );
@@ -230,7 +210,7 @@ subtest 'type()' => sub {
 };
 
 subtest 'field_names()' => sub {
-    local $blosxom::header = { -foo => 'bar' };
+    $blosxom::header = { -foo => 'bar' };
     my @got = sort $header->field_names;
     my @expected = qw( Content-Type Foo );
     is_deeply \@got, \@expected;

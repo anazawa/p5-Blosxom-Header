@@ -13,4 +13,3 @@ is $Header, Blosxom::Header->has_instance;
 
 my $h = Blosxom::Header->instance;
 is $h, $Header;
-
