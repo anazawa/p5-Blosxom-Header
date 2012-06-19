@@ -2,7 +2,10 @@ use strict;
 use Test::More tests => 6;
 
 BEGIN {
-    my @methods = qw( header_get header_set header_exists header_delete );
+    my @methods = qw(
+        header_get    header_set  header_exists
+        header_delete header_push
+    );
     use_ok 'Blosxom::Header', ( '$Header', @methods );
     can_ok __PACKAGE__, @methods;
 }

@@ -187,11 +187,6 @@ sub field_names {
 
 sub is_initialized { ref $Header eq 'HASH' }
 
-#sub header {
-#    return $Header if is_initialized();
-#    croak( q{$blosxom::header hasn't been initialized yet.} );
-#}
-
 1;
 
 __END__
@@ -204,52 +199,37 @@ Blosxom::Header::Proxy
 
   use Blosxom::Header::Proxy;
 
-  # Ordinary hash
   my $proxy = tie my %proxy => 'Blosxom::Header::Proxy';
-  my $value = $proxy{Foo}; # same value as $blosxom::header->{Foo}
-
-  # Insensitive hash
-  my $callback = sub { lc shift };
-  my $proxy = tie my %proxy => 'Blosxom::Header::Proxy', $callback;
-  my $value = $proxy{Foo}; # same value as $blosxom::header->{foo}
-
-  undef $blosxom::header;
-  scalar %proxy;          # false
-  $proxy->is_initialized; # false
-
-  $blosxom::header = {};
-  scalar %proxy;          # false
-  $proxy->is_initialized; # true
-
-  $blosxom::header = { -type => 'text/html' };
-  scalar %proxy;          # true
-  $proxy->is_initialized; # true
 
 =head1 DESCRIPTION
 
+=head2 METHODS
+
 =over 4
 
-=item $proxy = tie %proxy => 'Blosxom::Header::Proxy', $callback
+=item $proxy = tie %proxy => 'Blosxom::Header::Proxy'
 
 Associates a new hash instance with Blosxom::Header::Proxy.
-$callback normalizes hash keys passed to %proxy (defaults to C<sub { shift }>).
 
-=item $bool = %proxy
+=item %proxy = ()
 
 A shortcut for
 
-  $bool = ref $blosxom::header eq 'HASH' and %{ $blosxom::header };
+  %{ $blosxom::header } = ( -type => q{} );
+
+=item $bool = %proxy
+
+  $blosxom::header = { -type => q{} };
+  $bool = %proxy; # false
+
+  $blosxom::header = {};
+  $bool = %proxy; # true
 
 =item $bool = $proxy->is_initialized
 
 A shortcut for
 
   $bool = ref $blosxom::header eq 'HASH';
-
-=item $hashref = $proxy->header
-
-Returns the same reference as $blosxom::header. If
-C<< $proxy->is_initialized >> is false, throws an exception.
 
 =back
 

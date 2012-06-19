@@ -1,6 +1,6 @@
 use strict;
 use Blosxom::Header;
-use Test::More tests => 15;
+use Test::More tests => 17;
 use Test::Warn;
 
 {
@@ -31,11 +31,15 @@ subtest 'exists()' => sub {
 };
 
 subtest 'get()' => sub {
-    $blosxom::header = { -foo => [ 'bar', 'baz' ] };
-    is $header->get( 'Foo' ), 'bar', 'in scalar context';
-    my @got = $header->get( 'Foo' );
+    #$blosxom::header = { -foo => [ 'bar', 'baz' ] };
+    #is $header->get( 'Foo' ), 'bar', 'in scalar context';
+    #my @got = $header->get( 'Foo' );
+    #my @expected = qw( bar baz );
+    #is_deeply \@got, \@expected, 'in list context';
+    $blosxom::header = { -foo => 'bar', -bar => 'baz' };
+    my @got = $header->get( 'Foo', 'Bar' );
     my @expected = qw( bar baz );
-    is_deeply \@got, \@expected, 'in list context';
+    is_deeply \@got, \@expected;
 };
 
 subtest 'clear()' => sub {
@@ -213,5 +217,38 @@ subtest 'field_names()' => sub {
     $blosxom::header = { -foo => 'bar' };
     my @got = sort $header->field_names;
     my @expected = qw( Content-Type Foo );
+    is_deeply \@got, \@expected;
+};
+
+subtest 'p3p()' => sub {
+    $blosxom::header = {};
+    my @got = $header->p3p( 'CAO DSP LAW CURa' );
+    my @expected = qw( CAO DSP LAW CURa );
+    is_deeply $blosxom::header, { -p3p => [qw/CAO DSP LAW CURa/] };
+    is_deeply \@got, \@expected;
+
+    $blosxom::header = {};
+    @got = $header->p3p( qw/CAO DSP LAW CURa/ );
+    @expected = qw( CAO DSP LAW CURa );
+    is_deeply $blosxom::header, { -p3p => [qw/CAO DSP LAW CURa/] };
+    is_deeply \@got, \@expected;
+
+    $blosxom::header = { -p3p => [qw/CAO DSP LAW CURa/] };
+    is $header->p3p, 'CAO';
+    @got = $header->p3p;
+    @expected = qw( CAO DSP LAW CURa );
+    is_deeply \@got, \@expected;
+};
+
+subtest 'cookie()' => sub {
+    $blosxom::header = {};
+    my @got = $header->cookie( 'foo', 'bar' );
+    my @expected = qw( foo bar );
+    is_deeply $blosxom::header, { -cookie => [qw/foo bar/] };
+    is_deeply \@got, \@expected;
+
+    $blosxom::header = { -cookie => [qw/foo bar/] };
+    @got = $header->cookie;
+    @expected = qw( foo bar );
     is_deeply \@got, \@expected;
 };

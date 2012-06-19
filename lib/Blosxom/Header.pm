@@ -52,11 +52,16 @@ sub field_names    { shift->_proxy->field_names    }
 
 sub _proxy { tied %{ $_[0] } }
 
+#sub get {
+#    my ( $self, $field ) = @_;
+#    my $value = $self->{ $field };
+#    return $value unless ref $value eq 'ARRAY';
+#    wantarray ? @{ $value } : $value->[0];
+#}
 sub get {
-    my ( $self, $field ) = @_;
-    my $value = $self->{ $field };
-    return $value unless ref $value eq 'ARRAY';
-    wantarray ? @{ $value } : $value->[0];
+    my ( $self, @fields ) = @_;
+    return _carp( USELESS, 'get()' ) unless @fields;
+    @{ $self }{ @fields };
 }
 
 sub set {
@@ -104,16 +109,43 @@ sub _push {
             $self->{ $field };
         };
     }
+}
 
-    for my $method ( qw/cookie p3p/ ) {
-        my $field = "-$method";
-        *$method = sub {
-            my $self = shift;
-            return $self->{ $field } = [ @_ ] if @_ > 1;
-            return $self->{ $field } = shift if @_;
-            $self->{ $field };
-        };
+sub cookie {
+    my $self = shift;
+
+    if ( @_ > 1 ) {
+        $self->{-cookie} = [ @_ ];
     }
+    elsif ( @_ ) {
+        $self->{-cookie} = shift;
+    }
+
+    if ( my $cookies = $self->{-cookie} ) {
+        return $cookies unless ref $cookies eq 'ARRAY';
+        return wantarray ? @{ $cookies } : $cookies->[0];
+    }
+
+    return;
+}
+
+sub p3p {
+    my $self = shift;
+
+    if ( @_ > 1 ) {
+        $self->{-p3p} = [ @_ ];
+    }
+    elsif ( @_ ) {
+        my @tags = split / /, shift;
+        $self->{-p3p} = @tags > 1 ? \@tags : $tags[0];
+    }
+
+    if ( my $tags = $self->{-p3p} ) {
+        return $tags unless ref $tags eq 'ARRAY';
+        return wantarray ? @{ $tags } : $tags->[0];
+    }
+
+    return;
 }
 
 sub type {
@@ -213,14 +245,17 @@ Blosxom::Header - Missing interface to modify HTTP headers
   my @deleted = $Header->delete( qw/Content-Disposition Content-Length/ );
 
   $Header->push_cookie( @cookies );
-  $Header->push_p3p( @p3p );
+  $Header->push_p3p( @tags );
 
   $Header->clear;
 
 
   # Procedural interface
 
-  use Blosxom::Header qw/header_get header_set header_exists header_delete/;
+  use Blosxom::Header qw(
+      header_get    header_set  header_exists
+      header_delete header_push
+  );
 
   header_set(
       Status        => '304 Not Modified',
@@ -230,6 +265,9 @@ Blosxom::Header - Missing interface to modify HTTP headers
   my $status = header_get( 'Status' );
   my $bool = header_exists( 'ETag' );
   my @deleted = header_delete( qw/Content-Disposition Content-Length/ );
+
+  header_push( Set_Cookie => @cookies );
+  header_push( P3P => @tags );
 
 =head1 DESCRIPTION
 
@@ -316,6 +354,14 @@ A synonym for C<< Blosxom::Header->instance->exists() >>.
 
 A synonym for C<< Blosxom::Header->instance->delete() >>.
 
+=item header_push( Set_Cookie => @cookies )
+
+A synonym for C<< Blosxom::Header->instance->push_cookie( @cookies ) >>.
+
+=item header_push( P3P => @tags )
+
+A synonym for C<< Blosxom::Header->instance->push_p3p( @tags ) >>.
+
 =back
 
 =head2 CLASS METHODS
@@ -359,18 +405,26 @@ The $value argument must be a plain string, except for when the Set-Cookie
 or P3P header is specified.
 In exceptional cases, $value may be a reference to an array.
 
-  $header->set( Set_Cookie => [ $cookie1, $cookie2 ] );
-  $header->set( P3P => [ qw/CAO DSP LAW CURa/ ] );
+  $header->set(
+      Set_Cookie => [ $cookie1, $cookie2 ],
+      P3P        => [ qw/CAO DSP LAW CURa/ ],
+  );
 
 =item $value = $header->get( $field )
 
-=item @values = $header->get( $field )
+=item @values = $header->get( @fields )
 
-Returns a value of the specified HTTP header.
-In list context, a list of scalars is returned.
+Returns the value of one or more header fields.
 
-  my @cookie = $header->get( 'Set-Cookie' );
-  my @p3p    = $header->get( 'P3P' );
+The following forms are obsolete. Use cookie() or p3p() instead.
+
+  my @cookies = $header->get( 'Set-Cookie' );
+  my @tags    = $header->get( 'P3P' );
+
+  # become
+
+  my @cookies = $header->cookie;
+  my @tags    = $header->p3p;
 
 =item $bool = $header->exists( $field )
 
@@ -387,9 +441,17 @@ Pushes the Set-Cookie headers onto HTTP headers.
 Returns the number of the elements following the completed
 push_cookie().  
 
+  my @cookies = $header->get( 'Set-Cookie' ); # ( 'foo', 'bar' )
+  $header->push_cookie( 'baz' );
+  @cookies = $header->get( 'Set-Cookie' ); # ( 'foo', 'bar', 'baz' )
+
 =item $header->push_p3p( @p3p )
 
 Adds P3P tags to the P3P header.
+
+  my @tags = $header->get( 'P3P' ); # ( 'CAO', 'DSP' )
+  $header->push_p3p( 'LAW', 'CURa' );
+  @tags = $header->get( 'P3P'); # ( 'CAO', 'DSP', 'LAW', 'CURa' )
 
 =item $header->clear
 
@@ -412,18 +474,18 @@ If the given attribute wasn't defined then C<undef> is returned.
 Can be used to turn the page into an attachment.
 Represents suggested name for the saved file.
 
-  $header->attachment( 'foo.png' );
+  $header->attachment( 'genome.jpg' );
+  my $attachment = $header->attachment; # genome.jpg
 
-In this case, the outgoing header will be formatted as:
-
-  Content-Disposition: attachment; filename="foo.png"
+  my $cd = $header->get( 'Content-Disposition' );
+  # => 'attachment; filename="genome.jpg"'
 
 =item $header->charset
 
 Returns the upper-cased character set specified in the Content-Type header.
 If not provided, defaults to C<ISO-8859-1>.
 
-  $header->charset( 'utf-8' );
+  $charset = $header->charset; # UTF-8 (Readonly)
 
 =item $header->cookie
 
@@ -431,6 +493,7 @@ Represents the Set-Cookie headers.
 The parameter can be an array.
 
   $header->cookie( 'foo', 'bar' );
+  my @cookies = $header->cookie; # ( 'foo', 'bar' )
 
 =item $header->expires
 
@@ -466,6 +529,8 @@ The parameter can be an array or a space-delimited string.
   $header->p3p( qw/CAO DSP LAW CURa/ );
   $header->p3p( 'CAO DSP LAW CURa' );
 
+  my @tags = $header->p3p; # ( 'CAO', 'DSP', 'LAW', 'CURa' )
+
 In either case, the outgoing header will be formatted as:
 
   P3P: policyref="/w3c/p3p.xml" CP="CAO DSP LAW CURa"
@@ -475,38 +540,40 @@ In either case, the outgoing header will be formatted as:
 Represents HTTP status code.
 
   $header->status( 304 );
+  my $code = $header->status; # 304
 
-Don't pass a string which contains reason phrases:
-
-  $header->status( '304 Not Modified' ); # Obsolete
+  my $status = $header->get( 'Status' ); # 304 Not Modified
+  $header->set( Status => '200 OK' );
 
 =item $header->target
 
 Represents the Window-Target header.
 
   $header->target( 'ResultsWindow' );
+  my $target = $header->target; # ResultsWindow
+
+  $header->set( Window_Target => 'ResultsWindow' );
+  $target = $header->get( 'Window-Target' ); # ResultsWindow
 
 =item $header->type
 
 The Content-Type header indicates the media type of the message content.
-If not defined, defaults to C<text/html>.
 
-  $header->type( 'text/plain' );
+  $header->type( 'text/plain; charset=utf-8' );
 
 The value returned will be converted to lower case, and potential parameters
 will be chopped off and returned as a separate value if in an array context.
+
+  my $ct = $header->get( 'Content-Type' ); # 'text/html; charset=ISO-8859-1'
+  my $type = $header->type; # 'text/html'
+  my @ct = $heder->type;    # ( 'text/html', 'charset=ISO-8859-1' )
+
 If there is no such header field, then the empty string is returned.
 This makes it safe to do the following:
 
   if ( $header->type eq 'text/html' ) {
       ...
   }
-
-NOTE: If this attribute isn't defined, C<CGI::header()> will add the default
-value. If you don't want to output the Content-Type header itself, you have to
-set to an empty string:
-
-  $header->type( q{} );
 
 =back
 
