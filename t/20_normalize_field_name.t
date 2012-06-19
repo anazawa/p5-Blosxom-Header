@@ -1,14 +1,14 @@
 use strict;
-use Blosxom::Header;
+use Blosxom::Header::Proxy;
 use Test::Base;
 
 plan tests => 1 * blocks;
 
-my $header = Blosxom::Header->instance;
+my $proxy = tie my %proxy => 'Blosxom::Header::Proxy';
 
 run {
     my $block = shift;
-    my $got = $header->_proxy->( $block->input );
+    my $got = $proxy->( $block->input );
     is $got, $block->expected;
 };
 

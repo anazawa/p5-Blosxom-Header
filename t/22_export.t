@@ -8,7 +8,7 @@ BEGIN {
 }
 
 ok( Blosxom::Header->has_instance );
-ok $Header;
+ok( $Header );
 is $Header, Blosxom::Header->has_instance;
 
 my $h = Blosxom::Header->instance;

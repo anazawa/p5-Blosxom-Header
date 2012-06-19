@@ -1,6 +1,6 @@
 use strict;
 use Blosxom::Header;
-use Test::More tests => 14;
+use Test::More tests => 15;
 use Test::Warn;
 
 {
@@ -41,17 +41,17 @@ subtest 'get()' => sub {
     my @expected = qw( bar baz );
     is_deeply \@got, \@expected, 'in list context';
 
-    #$blosxom::header = {};
-    #is $header->get( 'Content-Type' ), 'text/html; charset=ISO-8859-1';
+    $blosxom::header = {};
+    is $header->get( 'Content-Type' ), 'text/html; charset=ISO-8859-1';
 
-    #$blosxom::header = { -type => 'text/plain' };
-    #is $header->get( 'Content-Type' ), 'text/plain; charset=ISO-8859-1';
+    $blosxom::header = { -type => 'text/plain' };
+    is $header->get( 'Content-Type' ), 'text/plain; charset=ISO-8859-1';
 
-    #$blosxom::header = { -charset => 'utf-8' };
-    #is $header->get( 'Content-Type' ), 'text/html; charset=utf-8';
+    $blosxom::header = { -charset => 'utf-8' };
+    is $header->get( 'Content-Type' ), 'text/html; charset=utf-8';
 
-    #$blosxom::header = { -type => 'text/plain', -charset => 'utf-8' };
-    #is $header->get( 'Content-Type' ), 'text/plain; charset=utf-8';
+    $blosxom::header = { -type => 'text/plain', -charset => 'utf-8' };
+    is $header->get( 'Content-Type' ), 'text/plain; charset=utf-8';
 };
 
 subtest 'clear()' => sub {
@@ -99,7 +99,7 @@ subtest 'delete()' => sub {
     is_deeply $blosxom::header, { -baz => 'qux' };
 
     $blosxom::header = { -type => 'text/plain', -charset => 'utf-8' };
-    $header->delete( 'Content-Type' );
+    is $header->delete( 'Content-Type' ), 'text/plain; charset=utf-8';
     is_deeply $blosxom::header, { -type => q{} };
 };
 
@@ -206,7 +206,6 @@ subtest 'type()' => sub {
     $blosxom::header = { -charset => 'utf-8' };
     is $header->type( 'text/plain; charset=EUC-JP' ), 'text/plain';
     is_deeply $blosxom::header, { -type => 'text/plain; charset=EUC-JP' };
-    #is $blosxom::header->{-type}, 'text/plain; charset=EUC-JP';
 
     $blosxom::header = { -type => '   TEXT  / HTML   ', -charset => q{} };
     is $header->type, 'text/html';
@@ -230,9 +229,9 @@ subtest 'type()' => sub {
     is_deeply \@got, \@expected;
 };
 
-#subtest 'field_names()' => sub {
-#    local $blosxom::header = { -foo => 'bar' };
-#    my @got = sort $header->field_names;
-#    my @expected = qw( Content-Type Foo );
-#    is_deeply \@got, \@expected;
-#};
+subtest 'field_names()' => sub {
+    local $blosxom::header = { -foo => 'bar' };
+    my @got = sort $header->field_names;
+    my @expected = qw( Content-Type Foo );
+    is_deeply \@got, \@expected;
+};

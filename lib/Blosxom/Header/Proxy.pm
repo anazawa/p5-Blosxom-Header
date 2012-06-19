@@ -40,7 +40,7 @@ sub FETCH {
     my $norm = $self->( $field );
 
     if ( $norm eq '-type' and $field =~ /content/i ) {
-        my ( $type, $charset ) = @{ $header }{ qw/-type -charset/ };
+        my ( $type, $charset ) = @{ $header }{qw/-type -charset/};
 
         if ( defined $type and $type eq q{} ) {
             undef $charset;
@@ -141,6 +141,35 @@ sub FIRSTKEY {
 
 sub NEXTKEY { each %{ shift->header } }
 
+sub SCALAR {
+    my $header = shift->header;
+    return 1 unless %{ $header };
+
+    my %header = %{ $header }; # copy
+    my $type = delete $header{-type};
+    return 1 if $type or !defined $type;
+
+    delete $header{-charset};
+    for my $value ( values %header ) {
+        return 1 if $value;
+    }
+
+    0;
+}
+
+sub field_names {
+    my $self = shift;
+
+    my %header = %{ $self->header }; # copy
+    delete @header{qw/-charset -type -nph/};
+
+    my @fields = grep { $header{ $_ } } keys %header;
+    @fields = map { _field_name_of( $_ ) } @fields;
+    push @fields, 'Content-Type' if $self->EXISTS( 'Content-Type' );
+
+    @fields;
+}
+
 {
     my %field_name_of = (
         -attachment => 'Content-Disposition',
@@ -151,54 +180,13 @@ sub NEXTKEY { each %{ shift->header } }
         -expires    => 'Expires',
     );
 
-    my @order = qw(
-        Status     Window-Target P3P
-        Set-Cookie Expires       Content-Disposition
-    );
-
-    my %order;
-    @order{ @order } = ( 1 .. @order );
-
-    my $others = sub {
-        my $field = shift;
-        $field =~ s/^-//;
-        $field =~ tr/_/-/;
-        ucfirst $field;
-    };
-
-    sub field_names {
-        my $self = shift;
-    
-        my ( @fields, @others );
-        for my $norm ( keys %{ $self->header } ) {
-            next if $norm eq '-charset';
-            next if $norm eq '-type';
-            next if $norm eq '-nph';
-
-            if ( my $field_name = $field_name_of{ $norm } ) {
-                push @fields, $field_name;
-            }
-            else {
-                push @others, $others->( $norm );
-            }
-        }
-
-        @fields = sort { $order{ $a } <=> $order{ $b } } @fields;
-        push @fields, @others;
-
-        if ( $self->EXISTS( 'Content-Type' ) ) {
-            push @fields, 'Content-Type';
-        }
-
-        @fields;
+    sub _field_name_of {
+        my $norm = shift;
+        return $field_name_of{ $norm } if exists $field_name_of{ $norm };
+        $norm =~ s/^-//;
+        $norm =~ tr/_/-/;
+        ucfirst $norm;
     }
-}
-
-sub SCALAR {
-    my $header = shift->header;
-    return 1 unless keys %{ $header } == 1;
-    my $type = $header->{-type};
-    return ( $type or !defined $type );
 }
 
 sub is_initialized { ref $blosxom::header eq 'HASH' }
