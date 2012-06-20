@@ -48,16 +48,11 @@ sub _new_instance {
 # Instance methods
 
 sub is_initialized { shift->_proxy->is_initialized }
-sub field_names    { shift->_proxy->field_names    }
 
 sub _proxy { tied %{ $_[0] } }
 
-#sub get {
-#    my ( $self, $field ) = @_;
-#    my $value = $self->{ $field };
-#    return $value unless ref $value eq 'ARRAY';
-#    wantarray ? @{ $value } : $value->[0];
-#}
+sub field_names { keys %{ $_[0] } }
+
 sub get {
     my ( $self, @fields ) = @_;
     return _carp( USELESS, 'get()' ) unless @fields;
@@ -141,8 +136,9 @@ sub p3p {
     }
 
     if ( my $tags = $self->{-p3p} ) {
-        return $tags unless ref $tags eq 'ARRAY';
-        return wantarray ? @{ $tags } : $tags->[0];
+        my @tags = ref $tags eq 'ARRAY' ? @{ $tags } : ( $tags );
+        @tags = map { split / / } @tags;
+        return wantarray ? @tags : $tags[0];
     }
 
     return;

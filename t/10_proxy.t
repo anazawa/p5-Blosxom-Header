@@ -12,140 +12,143 @@ my $proxy = tie my %proxy => 'Blosxom::Header::Proxy';
 isa_ok $proxy, 'Blosxom::Header::Proxy';
 can_ok $proxy, qw(
     FETCH STORE DELETE EXISTS CLEAR FIRSTKEY NEXTKEY SCALAR
-    is_initialized field_names
+    is_initialized
 );
 
+our $Header;
+*Header = \$blosxom::header;
+
 subtest 'is_initialized()' => sub {
-    undef $blosxom::header;
+    undef $Header;
     ok !$proxy->is_initialized, 'should return false';
 
-    $blosxom::header = {};
+    $Header = {};
     ok $proxy->is_initialized, 'should return true';
 };
 
 subtest 'SCALAR()' => sub {
-    $blosxom::header = { -type => q{} };
+    $Header = { -type => q{} };
     ok !%proxy;
 
-    $blosxom::header = { -type => q{}, -charset => 'utf-8' };
+    $Header = { -type => q{}, -charset => 'utf-8' };
     ok !%proxy;
 
-    $blosxom::header = { -type => q{}, -foo => q{} };
+    $Header = { -type => q{}, -foo => q{} };
     ok !%proxy;
 
-    $blosxom::header = { -type => q{}, -foo => 'bar' };
+    $Header = { -type => q{}, -foo => 'bar' };
     ok %proxy;
 
-    $blosxom::header = {};
+    $Header = {};
     ok %proxy;
 
-    $blosxom::header = { -foo => 'bar' };
+    $Header = { -foo => 'bar' };
     ok %proxy;
 };
 
 subtest 'CLEAR()' => sub {
-    $blosxom::header = { -foo => 'bar' };
+    $Header = { -foo => 'bar' };
     %proxy = ();
-    is_deeply $blosxom::header, { -type => q{} };
+    is_deeply $Header, { -type => q{} };
 };
 
 subtest 'EXISTS()' => sub {
-    $blosxom::header = { -foo => 'bar' };
+    $Header = { -foo => 'bar' };
     ok exists $proxy{Foo};
     ok !exists $proxy{Bar};
 
-    $blosxom::header = { -type => q{} };
+    $Header = { -type => q{} };
     ok !exists $proxy{Content_Type};
     ok exists $proxy{-type};
 
-    $blosxom::header = {};
+    $Header = {};
     ok exists $proxy{Content_Type};
     ok !exists $proxy{-type};
 
-    $blosxom::header = { -type => 'foo' };
+    $Header = { -type => 'foo' };
     ok exists $proxy{Content_Type};
     ok exists $proxy{-type};
 
-    $blosxom::header = { -type => undef };
+    $Header = { -type => undef };
     ok exists $proxy{Content_Type};
     ok exists $proxy{-type};
 
-    $blosxom::header = { -attachment => 'foo' };
+    $Header = { -attachment => 'foo' };
     ok exists $proxy{Content_Disposition};
     ok exists $proxy{-attachment};
 
-    $blosxom::header = { -attachment => q{} };
+    $Header = { -attachment => q{} };
     ok !exists $proxy{Content_Disposition};
     ok exists $proxy{-attachment};
 
-    $blosxom::header = { -attachment => undef };
+    $Header = { -attachment => undef };
     ok !exists $proxy{Content_Disposition};
     ok exists $proxy{-attachment};
 };
 
 subtest 'DELETE()' => sub {
-    $blosxom::header = { -foo => 'bar', -bar => 'baz' };
+    $Header = { -foo => 'bar', -bar => 'baz' };
     is delete $proxy{Foo}, 'bar';
-    is_deeply $blosxom::header, { -bar => 'baz' };
+    is_deeply $Header, { -bar => 'baz' };
 
-    $blosxom::header = {};
+    $Header = {};
     is delete $proxy{Content_Type}, 'text/html; charset=ISO-8859-1';
-    is_deeply $blosxom::header, { -type => q{} };
+    is_deeply $Header, { -type => q{} };
 
-    $blosxom::header = { -type => q{} };
+    $Header = { -type => q{} };
     is delete $proxy{Content_Type}, undef;
-    is_deeply $blosxom::header, { -type => q{} };
+    is_deeply $Header, { -type => q{} };
 
-    $blosxom::header = { -type => 'text/plain', -charset => 'utf-8' };
+    $Header = { -type => 'text/plain', -charset => 'utf-8' };
     is delete $proxy{Content_Type}, 'text/plain; charset=utf-8';
-    is_deeply $blosxom::header, { -type => q{} };
+    is_deeply $Header, { -type => q{} };
 
-    $blosxom::header = { -attachment => 'foo' };
+    $Header = { -attachment => 'foo' };
     is delete $proxy{Content_Disposition}, 'attachment; filename="foo"';
-    is_deeply $blosxom::header, {};
+    is_deeply $Header, {};
 
-    $blosxom::header = { -attachment => 'foo' };
+    $Header = { -attachment => 'foo' };
     is delete $proxy{-attachment}, 'foo';
-    is_deeply $blosxom::header, {};
+    is_deeply $Header, {};
 };
 
 subtest 'FETCH()' => sub {
-    $blosxom::header = {};
+    $Header = {};
     is $proxy{Content_Type}, 'text/html; charset=ISO-8859-1';
     is $proxy{-type}, undef;
     is $proxy{-charset}, undef;
 
-    $blosxom::header = { -type => 'text/plain' };
+    $Header = { -type => 'text/plain' };
     is $proxy{Content_Type}, 'text/plain; charset=ISO-8859-1';
     is $proxy{-type}, 'text/plain';
     is $proxy{-charset}, undef;
 
-    $blosxom::header = { -charset => 'utf-8' };
+    $Header = { -charset => 'utf-8' };
     is $proxy{Content_Type}, 'text/html; charset=utf-8';
     is $proxy{-type}, undef;
     is $proxy{-charset}, 'utf-8';
 
-    $blosxom::header = { -type => 'text/plain', -charset => 'utf-8' };
+    $Header = { -type => 'text/plain', -charset => 'utf-8' };
     is $proxy{Content_Type}, 'text/plain; charset=utf-8';
     is $proxy{-type}, 'text/plain';
     is $proxy{-charset}, 'utf-8';
 
-    $blosxom::header = { -type => q{} };
+    $Header = { -type => q{} };
     is $proxy{Content_Type}, undef;
     is $proxy{-type}, q{};
     is $proxy{-charset}, undef;
 
-    $blosxom::header = { -type => q{}, -charset => 'utf-8' };
+    $Header = { -type => q{}, -charset => 'utf-8' };
     is $proxy{Content_Type}, undef;
     is $proxy{-type}, q{};
     is $proxy{-charset}, 'utf-8';
 
-    $blosxom::header = { -type => 'text/plain; charset=EUC-JP' };
+    $Header = { -type => 'text/plain; charset=EUC-JP' };
     is $proxy{Content_Type}, 'text/plain; charset=EUC-JP';
     is $proxy{-type}, 'text/plain; charset=EUC-JP';
     is $proxy{-charset}, undef;
 
-    $blosxom::header = {
+    $Header = {
         -type    => 'text/plain; charset=euc-jp',
         -charset => 'utf-8',
     };
@@ -153,51 +156,70 @@ subtest 'FETCH()' => sub {
     is $proxy{-type}, 'text/plain; charset=euc-jp';
     is $proxy{-charset}, 'utf-8';
 
-    $blosxom::header = { -charset => q{} };
+    $Header = { -charset => q{} };
     is $proxy{Content_Type}, 'text/html';
     is $proxy{-type}, undef;
     is $proxy{-charset}, q{};
 
-    $blosxom::header = { -attachment => 'foo' };
+    $Header = { -attachment => 'foo' };
     is $proxy{Content_Disposition}, 'attachment; filename="foo"';
     is $proxy{-attachment}, 'foo';
 };
 
 subtest 'STORE()' => sub {
-    $blosxom::header = {};
+    $Header = {};
     $proxy{Foo} = 'bar';
-    is_deeply $blosxom::header, { -foo => 'bar' };
+    is_deeply $Header, { -foo => 'bar' };
     
-    $blosxom::header = { -attachment => 'foo' };
+    $Header = { -attachment => 'foo' };
     $proxy{Content_Disposition} = 'inline';
-    is_deeply $blosxom::header, { -content_disposition => 'inline' };
+    is_deeply $Header, { -content_disposition => 'inline' };
     
-    $blosxom::header = { -content_disposition => 'inline' };
+    $Header = { -content_disposition => 'inline' };
     $proxy{-attachment} = 'genome.jpg';
-    is_deeply $blosxom::header, { -attachment => 'genome.jpg' };
+    is_deeply $Header, { -attachment => 'genome.jpg' };
 
-    $blosxom::header = { -charset => 'euc-jp' };
+    $Header = { -charset => 'euc-jp' };
     $proxy{Content_Type} = 'text/plain; charset=utf-8';
-    is_deeply $blosxom::header, { -type => 'text/plain; charset=utf-8' };
+    is_deeply $Header, { -type => 'text/plain; charset=utf-8' };
 
-    $blosxom::header = { -charset => 'euc-jp' };
+    $Header = { -charset => 'euc-jp' };
     $proxy{Content_Type} = 'text/plain';
-    is_deeply $blosxom::header, { -type => 'text/plain', -charset => q{} };
+    is_deeply $Header, { -type => 'text/plain', -charset => q{} };
 
-    $blosxom::header = { -charset => 'euc-jp' };
+    $Header = { -charset => 'euc-jp' };
     $proxy{-type} = 'text/plain; charset=utf-8';
-    is_deeply $blosxom::header, {
+    is_deeply $Header, {
         -type    => 'text/plain; charset=utf-8',
         -charset => 'euc-jp',
     };
 
-    $blosxom::header = { -charset => 'euc-jp' };
+    $Header = { -charset => 'euc-jp' };
     $proxy{-type} = 'text/plain';
-    is_deeply $blosxom::header, { -type => 'text/plain', -charset => 'euc-jp' };
+    is_deeply $Header, { -type => 'text/plain', -charset => 'euc-jp' };
 };
 
-subtest 'field_names()' => sub {
-    $blosxom::header = {
+subtest 'each()' => sub {
+    $Header = {};
+    is each %proxy, 'Content-Type';
+    is each %proxy, undef;
+
+    $Header = { -type => q{} };
+    is each %proxy, undef;
+
+    $Header = { -charset => 'foo', -nph => 1 };
+    is each %proxy, 'Content-Type';
+    is each %proxy, undef;
+
+    $Header = { -type => q{}, -charset => 'foo', -nph => 1 };
+    is each %proxy, undef;
+
+    $Header = { -foo => 'bar' };
+    is each %proxy, 'Foo';
+    is each %proxy, 'Content-Type';
+    is each %proxy, undef;
+
+    $Header = {
         -nph        => 'foo',
         -charset    => 'foo',
         -status     => 'foo',
@@ -207,9 +229,13 @@ subtest 'field_names()' => sub {
         -expires    => 'foo',
         -attachment => 'foo',
         -foo_bar    => 'foo',
+        -foo        => q{},
+        -bar        => q{},
+        -baz        => q{},
+        -qux        => q{},
     };
 
-    my @got = sort $proxy->field_names;
+    my @got = sort keys %proxy;
 
     my @expected = qw(
         Content-Disposition
