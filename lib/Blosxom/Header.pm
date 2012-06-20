@@ -51,8 +51,6 @@ sub is_initialized { shift->_proxy->is_initialized }
 
 sub _proxy { tied %{ $_[0] } }
 
-sub field_names { keys %{ $_[0] } }
-
 sub get {
     my ( $self, @fields ) = @_;
     return _carp( USELESS, 'get()' ) unless @fields;
@@ -72,8 +70,10 @@ sub delete {
     delete @{ $self }{ @fields };
 }
 
-sub clear  { %{ $_[0] } = ()         }
+sub field_names { keys %{ $_[0] } }
+
 sub exists { exists $_[0]->{ $_[1] } }
+sub clear  { %{ $_[0] } = ()         }
 
 sub push_cookie { shift->_push( -cookie => @_ ) }
 sub push_p3p    { shift->_push( -p3p    => @_ ) }
@@ -334,19 +334,21 @@ The following functions are exported on demand.
 
 =over 4
 
-=item header_get()
+=item @values = header_get( @fields )
 
 A synonym for C<< Blosxom::Header->instance->get() >>.
 
-=item header_set()
+=item header_set( $field => $value )
+
+=item header_set( $f1 => $v2, $f2 => $v2, ... )
 
 A synonym for C<< Blosxom::Header->instance->set() >>.
 
-=item header_exists()
+=item $bool = header_exists( $field )
 
 A synonym for C<< Blosxom::Header->instance->exists() >>.
 
-=item header_delete()
+=item @deleted = header_delete( @fields )
 
 A synonym for C<< Blosxom::Header->instance->delete() >>.
 
@@ -453,6 +455,15 @@ Adds P3P tags to the P3P header.
 
 This will remove all header fields.
 
+Internally, this method is a shortcut for
+
+  $blosxom::header = { -type => q{} };
+
+=item @fields = $header->field_names
+
+Returns the list of distinct names for the fields present in the header.
+In scalar context return the number of distinct field names.
+
 =back
 
 =head2 CONVENIENCE METHODS
@@ -539,7 +550,7 @@ Represents HTTP status code.
   my $code = $header->status; # 304
 
   my $status = $header->get( 'Status' ); # 304 Not Modified
-  $header->set( Status => '200 OK' );
+  $header->set( Status => '304 Not Modified' );
 
 =item $header->target
 
@@ -557,12 +568,15 @@ The Content-Type header indicates the media type of the message content.
 
   $header->type( 'text/plain; charset=utf-8' );
 
+  $header->set( Content_Type => 'text/plain; charset=utf-8' );
+
 The value returned will be converted to lower case, and potential parameters
 will be chopped off and returned as a separate value if in an array context.
 
-  my $ct = $header->get( 'Content-Type' ); # 'text/html; charset=ISO-8859-1'
   my $type = $header->type; # 'text/html'
-  my @ct = $heder->type;    # ( 'text/html', 'charset=ISO-8859-1' )
+  my @ct   = $heder->type;  # ( 'text/html', 'charset=ISO-8859-1' )
+
+  my $ct = $header->get( 'Content-Type' ); # 'text/html; charset=ISO-8859-1'
 
 If there is no such header field, then the empty string is returned.
 This makes it safe to do the following:
