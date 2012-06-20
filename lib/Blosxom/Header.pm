@@ -111,9 +111,10 @@ sub cookie {
 
     if ( @_ > 1 ) {
         $self->{-cookie} = [ @_ ];
+        return wantarray ? @_ : $_[0];
     }
     elsif ( @_ ) {
-        $self->{-cookie} = shift;
+        return $self->{-cookie} = shift;
     }
 
     if ( my $cookies = $self->{-cookie} ) {
@@ -129,10 +130,12 @@ sub p3p {
 
     if ( @_ > 1 ) {
         $self->{-p3p} = [ @_ ];
+        return wantarray ? @_ : $_[0];
     }
     elsif ( @_ ) {
         my @tags = split / /, shift;
         $self->{-p3p} = @tags > 1 ? \@tags : $tags[0];
+        return wantarray ? @tags : $tags[0];
     }
 
     if ( my $tags = $self->{-p3p} ) {
