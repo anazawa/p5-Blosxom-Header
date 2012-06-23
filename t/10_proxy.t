@@ -1,7 +1,7 @@
 use strict;
 use Blosxom::Header::Proxy;
 use Test::Exception;
-use Test::More tests => 10;
+use Test::More tests => 11;
 
 {
     package blosxom;
@@ -110,6 +110,38 @@ subtest 'DELETE()' => sub {
     $Header = { -attachment => 'foo' };
     is delete $proxy{-attachment}, 'foo';
     is_deeply $Header, {};
+};
+
+subtest 'content_type()' => sub {
+    $Header = {};
+    is $proxy->content_type, 'text/html; charset=ISO-8859-1';
+
+    $Header = { -type => 'text/plain' };
+    is $proxy->content_type, 'text/plain; charset=ISO-8859-1';
+
+    $Header = { -charset => 'utf-8' };
+    is $proxy->content_type, 'text/html; charset=utf-8';
+
+    $Header = { -type => 'text/plain', -charset => 'utf-8' };
+    is $proxy->content_type, 'text/plain; charset=utf-8';
+
+    $Header = { -type => q{} };
+    is $proxy->content_type, undef;
+
+    $Header = { -type => q{}, -charset => 'utf-8' };
+    is $proxy->content_type, undef;
+
+    $Header = { -type => 'text/plain; charset=EUC-JP' };
+    is $proxy->content_type, 'text/plain; charset=EUC-JP';
+
+    $Header = {
+        -type    => 'text/plain; charset=euc-jp',
+        -charset => 'utf-8',
+    };
+    is $proxy->content_type, 'text/plain; charset=euc-jp';
+
+    $Header = { -charset => q{} };
+    is $proxy->content_type, 'text/html';
 };
 
 subtest 'FETCH()' => sub {

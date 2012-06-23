@@ -442,17 +442,17 @@ Pushes the Set-Cookie headers onto HTTP headers.
 Returns the number of the elements following the completed
 push_cookie().  
 
-  my @cookies = $header->get( 'Set-Cookie' ); # ( 'foo', 'bar' )
+  my @cookies = $header->cookie; # ( 'foo', 'bar' )
   $header->push_cookie( 'baz' );
-  @cookies = $header->get( 'Set-Cookie' ); # ( 'foo', 'bar', 'baz' )
+  @cookies = $header->cookie; # ( 'foo', 'bar', 'baz' )
 
 =item $header->push_p3p( @p3p )
 
 Adds P3P tags to the P3P header.
 
-  my @tags = $header->get( 'P3P' ); # ( 'CAO', 'DSP' )
+  my @tags = $header->p3p; # ( 'CAO', 'DSP' )
   $header->push_p3p( 'LAW', 'CURa' );
-  @tags = $header->get( 'P3P'); # ( 'CAO', 'DSP', 'LAW', 'CURa' )
+  @tags = $header->p3p; # ( 'CAO', 'DSP', 'LAW', 'CURa' )
 
 =item $header->clear
 
@@ -460,7 +460,7 @@ This will remove all header fields.
 
 Internally, this method is a shortcut for
 
-  $blosxom::header = { -type => q{} };
+  %{ $blosxom::header } = ( -type => q{} );
 
 =item @fields = $header->field_names
 
@@ -562,6 +562,8 @@ Represents the Window-Target header.
   $header->target( 'ResultsWindow' );
   my $target = $header->target; # ResultsWindow
 
+cf.
+
   $header->set( Window_Target => 'ResultsWindow' );
   $target = $header->get( 'Window-Target' ); # ResultsWindow
 
@@ -577,7 +579,7 @@ The value returned will be converted to lower case, and potential parameters
 will be chopped off and returned as a separate value if in an array context.
 
   my $type = $header->type; # 'text/html'
-  my @ct   = $heder->type;  # ( 'text/html', 'charset=ISO-8859-1' )
+  my @ct   = $header->type; # ( 'text/html', 'charset=ISO-8859-1' )
 
   my $ct = $header->get( 'Content-Type' ); # 'text/html; charset=ISO-8859-1'
 
