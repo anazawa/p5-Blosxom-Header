@@ -240,21 +240,11 @@ Blosxom::Header - Missing interface to modify HTTP headers
   );
 
   my $status = $Header->get( 'Status' );
-  my $bool = $Header->exists( 'ETag' );
   my @deleted = $Header->delete( qw/Content-Disposition Content-Length/ );
-
-  $Header->push_cookie( @cookies );
-  $Header->push_p3p( @tags );
-
-  $Header->clear;
-
 
   # Procedural interface
 
-  use Blosxom::Header qw(
-      header_get    header_set  header_exists
-      header_delete header_push
-  );
+  use Blosxom::Header qw( header_set header_get header_delete );
 
   header_set(
       Status        => '304 Not Modified',
@@ -262,11 +252,7 @@ Blosxom::Header - Missing interface to modify HTTP headers
   );
 
   my $status = header_get( 'Status' );
-  my $bool = header_exists( 'ETag' );
   my @deleted = header_delete( qw/Content-Disposition Content-Length/ );
-
-  header_push( Set_Cookie => @cookies );
-  header_push( P3P => @tags );
 
 =head1 DESCRIPTION
 
@@ -275,14 +261,20 @@ a hash. This application passes C<$header> to C<CGI::header()> to generate HTTP
 headers.
 
   package blosxom;
-  use CGI;
-  our $header = { -type => 'text/html' };
-  # Loads plugins
-  print CGI::header( $header );
+  use strict;
+  use warnings;
+  use CGI qw/header/;
 
-C<header()> doesn't care whether keys of C<$header> are lowercased
-nor starting with a dash, and also transliterates underscores into dashes
-in field names.
+  our $header = { -type => 'text/html' };
+
+  # Loads plugins
+
+  print header( $header );
+
+Plugins may modify C<$header> directly because the variable is global.
+On the other hand, C<header()> doesn't care whether keys of C<$header> are
+lowercased nor start with a dash.
+There is no agreement with how to normalize keys of C<$header>.
 
 =head2 HOW THIS MODULE NORMALIZES FIELD NAMES
 
@@ -357,11 +349,11 @@ A synonym for C<< Blosxom::Header->instance->delete() >>.
 
 =item header_push( Set_Cookie => @cookies )
 
-A synonym for C<< Blosxom::Header->instance->push_cookie( @cookies ) >>.
+A synonym for C<< Blosxom::Header->instance->push_cookie() >>.
 
 =item header_push( P3P => @tags )
 
-A synonym for C<< Blosxom::Header->instance->push_p3p( @tags ) >>.
+A synonym for C<< Blosxom::Header->instance->push_p3p() >>.
 
 =back
 
@@ -372,6 +364,7 @@ A synonym for C<< Blosxom::Header->instance->push_p3p( @tags ) >>.
 =item $header = Blosxom::Header->instance
 
 Returns a current Blosxom::Header object instance or create a new one.
+This class can have only one instance in any system.
 
 =item $header = Blosxom::Header->has_instance
 
@@ -387,11 +380,25 @@ Returns a reference to any existing instance or C<undef> if none is defined.
 
 Returns a Boolean value telling whether C<$blosxom::header> is initialized or
 not. Blosxom initializes the variable just before C<blosxom::generate()> is
-called. If C<$bool> was false, the following methods throw exceptions.
+called. If C<$bool> was false, the following methods would throw exceptions.
 
 Internally, this method is a shortcut for
 
   $bool = ref $blosxom::header eq 'HASH';
+
+=item $value = $header->get( $field )
+
+=item @values = $header->get( @fields )
+
+Returns the value of one or more header fields.
+Accepts a list of field names.
+C<$field> isn't case-sensitive.
+You can use underscores as a replacement for dashes.
+The following forms are semantically equivalent:
+
+  $header->get( 'Last-Modified'  );
+  $header->get( 'Last_modified'  );
+  $header->get( '-last_modified' );
 
 =item $header->set( $field => $value )
 
@@ -399,8 +406,6 @@ Internally, this method is a shortcut for
 
 Sets the value of one or more header fields.
 Accepts a list of named arguments.
-The header field name ($field) isn't case-sensitive.
-You can use '_' as a replacement for '-' in header names.
 
 The $value argument must be a plain string, except for when the Set-Cookie
 or P3P header is specified.
@@ -408,50 +413,46 @@ In exceptional cases, $value may be a reference to an array.
 
   $header->set(
       Set_Cookie => [ $cookie1, $cookie2 ],
-      P3P        => [ qw/CAO DSP LAW CURa/ ],
+      P3P        => [ 'CAO', 'DSP', 'LAW', 'CURa' ],
   );
-
-=item $value = $header->get( $field )
-
-=item @values = $header->get( @fields )
-
-Returns the value of one or more header fields.
-
-The following forms are obsolete. Use cookie() or p3p() instead.
-
-  my @cookies = $header->get( 'Set-Cookie' );
-  my @tags    = $header->get( 'P3P' );
-
-  # become
-
-  my @cookies = $header->cookie;
-  my @tags    = $header->p3p;
 
 =item $bool = $header->exists( $field )
 
 Returns a Boolean value telling whether the specified HTTP header exists.
+Accepts a field name.
 
 =item @deleted = $header->delete( @fields )
 
-Deletes the specified elements from HTTP headers.
-Returns values of deleted elements.
+Deletes the specified fields from HTTP headers.
+Accepts a list of field names.
+Returns values of deleted fields.
 
 =item $header->push_cookie( @cookies )
 
 Pushes the Set-Cookie headers onto HTTP headers.
+Accepts a list of cookies.
 Returns the number of the elements following the completed
 push_cookie().  
 
+  # get values of Set-Cookie headers
   my @cookies = $header->cookie; # ( 'foo', 'bar' )
+
+  # add Set-Cookie header
   $header->push_cookie( 'baz' );
+
   @cookies = $header->cookie; # ( 'foo', 'bar', 'baz' )
 
 =item $header->push_p3p( @p3p )
 
 Adds P3P tags to the P3P header.
+Accepts a list of P3P tags.
 
-  my @tags = $header->p3p; # ( 'CAO', 'DSP' )
-  $header->push_p3p( 'LAW', 'CURa' );
+  # get P3P tags
+  my @tags = $header->p3p; # ( 'CAO', 'DSP', 'LAW' )
+
+  # add P3P tags
+  $header->push_p3p( 'CURa' );
+
   @tags = $header->p3p; # ( 'CAO', 'DSP', 'LAW', 'CURa' )
 
 =item $header->clear
@@ -461,6 +462,9 @@ This will remove all header fields.
 Internally, this method is a shortcut for
 
   %{ $blosxom::header } = ( -type => q{} );
+
+If C<-type> element didn't exist, C<< CGI::header() >> would output the default
+Content-Type header.
 
 =item @fields = $header->field_names
 
@@ -493,7 +497,6 @@ Represents suggested name for the saved file.
 =item $header->charset
 
 Returns the upper-cased character set specified in the Content-Type header.
-If not provided, defaults to C<ISO-8859-1>.
 
   $charset = $header->charset; # UTF-8 (Readonly)
 
