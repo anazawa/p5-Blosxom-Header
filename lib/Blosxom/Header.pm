@@ -24,18 +24,24 @@ sub import {
 }
 
 
+# Functions
+
+sub header_get    { __PACKAGE__->instance->get( @_ )    }
+sub header_set    { __PACKAGE__->instance->set( @_ )    }
+sub header_exists { __PACKAGE__->instance->exists( @_ ) }
+sub header_delete { __PACKAGE__->instance->delete( @_ ) }
+sub header_push   { __PACKAGE__->instance->_push( @_ )  }
+
+
 # Class methods
-{
-    my $instance;
 
-    sub instance {
-        my $class = shift;
-        return $class if ref $class;
-        return $instance if defined $instance;
-        $instance = $class->_new_instance;
-    }
+my $instance;
 
-    sub has_instance { $instance }
+sub instance {
+    my $class = shift;
+    return $class if ref $class;
+    return $instance if defined $instance;
+    $instance = $class->_new_instance;
 }
 
 sub _new_instance {
@@ -43,6 +49,8 @@ sub _new_instance {
     tie my %proxy => 'Blosxom::Header::Proxy';
     bless \%proxy => $class;
 }
+
+sub has_instance { $instance }
 
 
 # Instance methods
@@ -70,13 +78,11 @@ sub delete {
     delete @{ $self }{ @fields };
 }
 
-sub field_names { keys %{ $_[0] } }
-
 sub exists { exists $_[0]->{ $_[1] } }
 sub clear  { %{ $_[0] } = ()         }
 
-sub push_cookie { shift->_push( -cookie => @_ ) }
-sub push_p3p    { shift->_push( -p3p    => @_ ) }
+sub push_cookie { shift->_push( Set_Cookie => @_ ) }
+sub push_p3p    { shift->_push( P3P        => @_ ) }
 
 sub _push {
     my ( $self, $field, @values ) = @_;
@@ -93,31 +99,33 @@ sub _push {
     scalar @values;
 }
 
-{
-    no strict 'refs';
-
-    for my $method ( qw/attachment expires nph target/ ) {
-        my $field = "-$method";
-        *$method = sub {
-            my $self = shift;
-            return $self->{ $field } = shift if @_;
-            $self->{ $field };
-        };
-    }
+sub expires {
+    my $self = shift;
+    return $self->{Expires} = shift if @_;
+    $self->{Expires};
 }
+
+sub target {
+    my $self = shift;
+    return $self->{Window_Target} = shift if @_;
+    $self->{Window_Target};
+}
+
+sub attachment { shift->_proxy->attachment( @_ ) }
+sub nph        { shift->_proxy->nph( @_ )        }
 
 sub cookie {
     my $self = shift;
 
     if ( @_ > 1 ) {
-        $self->{-cookie} = [ @_ ];
+        $self->{Set_Cookie} = [ @_ ];
         return wantarray ? @_ : $_[0];
     }
     elsif ( @_ ) {
-        return $self->{-cookie} = shift;
+        return $self->{Set_Cookie} = shift;
     }
 
-    if ( my $cookies = $self->{-cookie} ) {
+    if ( my $cookies = $self->{Set_Cookie} ) {
         return $cookies unless ref $cookies eq 'ARRAY';
         return wantarray ? @{ $cookies } : $cookies->[0];
     }
@@ -129,16 +137,16 @@ sub p3p {
     my $self = shift;
 
     if ( @_ > 1 ) {
-        $self->{-p3p} = [ @_ ];
+        $self->{P3P} = [ @_ ];
         return wantarray ? @_ : $_[0];
     }
     elsif ( @_ ) {
         my @tags = split / /, shift;
-        $self->{-p3p} = @tags > 1 ? \@tags : $tags[0];
+        $self->{P3P} = @tags > 1 ? \@tags : $tags[0];
         return wantarray ? @tags : $tags[0];
     }
 
-    if ( my $tags = $self->{-p3p} ) {
+    if ( my $tags = $self->{P3P} ) {
         my @tags = ref $tags eq 'ARRAY' ? @{ $tags } : ( $tags );
         @tags = map { split / / } @tags;
         return wantarray ? @tags : $tags[0];
@@ -181,7 +189,7 @@ sub status {
         my $code = shift;
 
         if ( my $message = status_message( $code ) ) {
-            $self->{-status} = "$code $message";
+            $self->{Status} = "$code $message";
         }
         else {
             carp( qq{Unknown status code "$code" passed to status()} );
@@ -190,21 +198,14 @@ sub status {
 
         return $code;
     }
-    elsif ( my $status = $self->{-status} ) {
+    elsif ( my $status = $self->{Status} ) {
         return substr( $status, 0, 3 );
     }
 
     return;
 }
 
-
-# Functions to export
-
-sub header_get    { __PACKAGE__->instance->get( @_ )    }
-sub header_set    { __PACKAGE__->instance->set( @_ )    }
-sub header_exists { __PACKAGE__->instance->exists( @_ ) }
-sub header_delete { __PACKAGE__->instance->delete( @_ ) }
-sub header_push   { __PACKAGE__->instance->_push( @_ )  }
+sub field_names { keys %{ $_[0] } }
 
 
 # Internal functions

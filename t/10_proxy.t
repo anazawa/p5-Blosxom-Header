@@ -1,7 +1,7 @@
 use strict;
 use Blosxom::Header::Proxy;
 use Test::Exception;
-use Test::More tests => 11;
+use Test::More tests => 10;
 
 {
     package blosxom;
@@ -59,31 +59,31 @@ subtest 'EXISTS()' => sub {
 
     $Header = { -type => q{} };
     ok !exists $proxy{Content_Type};
-    ok exists $proxy{-type};
+    #ok exists $proxy{-type};
 
     $Header = {};
     ok exists $proxy{Content_Type};
-    ok !exists $proxy{-type};
+    #ok !exists $proxy{-type};
 
     $Header = { -type => 'foo' };
     ok exists $proxy{Content_Type};
-    ok exists $proxy{-type};
+    #ok exists $proxy{-type};
 
     $Header = { -type => undef };
     ok exists $proxy{Content_Type};
-    ok exists $proxy{-type};
+    #ok exists $proxy{-type};
 
     $Header = { -attachment => 'foo' };
     ok exists $proxy{Content_Disposition};
-    ok exists $proxy{-attachment};
+    #ok exists $proxy{-attachment};
 
     $Header = { -attachment => q{} };
     ok !exists $proxy{Content_Disposition};
-    ok exists $proxy{-attachment};
+    #ok exists $proxy{-attachment};
 
     $Header = { -attachment => undef };
     ok !exists $proxy{Content_Disposition};
-    ok exists $proxy{-attachment};
+    #ok exists $proxy{-attachment};
 };
 
 subtest 'DELETE()' => sub {
@@ -107,9 +107,9 @@ subtest 'DELETE()' => sub {
     is delete $proxy{Content_Disposition}, 'attachment; filename="foo"';
     is_deeply $Header, {};
 
-    $Header = { -attachment => 'foo' };
-    is delete $proxy{-attachment}, 'foo';
-    is_deeply $Header, {};
+    #$Header = { -attachment => 'foo' };
+    #is delete $proxy{-attachment}, 'foo';
+    #is_deeply $Header, {};
 };
 
 subtest 'content_type()' => sub {
@@ -147,55 +147,55 @@ subtest 'content_type()' => sub {
 subtest 'FETCH()' => sub {
     $Header = {};
     is $proxy{Content_Type}, 'text/html; charset=ISO-8859-1';
-    is $proxy{-type}, undef;
-    is $proxy{-charset}, undef;
+    #is $proxy{-type}, undef;
+    #is $proxy{-charset}, undef;
 
     $Header = { -type => 'text/plain' };
     is $proxy{Content_Type}, 'text/plain; charset=ISO-8859-1';
-    is $proxy{-type}, 'text/plain';
-    is $proxy{-charset}, undef;
+    #is $proxy{-type}, 'text/plain';
+    #is $proxy{-charset}, undef;
 
     $Header = { -charset => 'utf-8' };
     is $proxy{Content_Type}, 'text/html; charset=utf-8';
-    is $proxy{-type}, undef;
-    is $proxy{-charset}, 'utf-8';
+    #is $proxy{-type}, undef;
+    #is $proxy{-charset}, 'utf-8';
 
     $Header = { -type => 'text/plain', -charset => 'utf-8' };
     is $proxy{Content_Type}, 'text/plain; charset=utf-8';
-    is $proxy{-type}, 'text/plain';
-    is $proxy{-charset}, 'utf-8';
+    #is $proxy{-type}, 'text/plain';
+    #is $proxy{-charset}, 'utf-8';
 
     $Header = { -type => q{} };
     is $proxy{Content_Type}, undef;
-    is $proxy{-type}, q{};
-    is $proxy{-charset}, undef;
+    #is $proxy{-type}, q{};
+    #is $proxy{-charset}, undef;
 
     $Header = { -type => q{}, -charset => 'utf-8' };
     is $proxy{Content_Type}, undef;
-    is $proxy{-type}, q{};
-    is $proxy{-charset}, 'utf-8';
+    #is $proxy{-type}, q{};
+    #is $proxy{-charset}, 'utf-8';
 
     $Header = { -type => 'text/plain; charset=EUC-JP' };
     is $proxy{Content_Type}, 'text/plain; charset=EUC-JP';
-    is $proxy{-type}, 'text/plain; charset=EUC-JP';
-    is $proxy{-charset}, undef;
+    #is $proxy{-type}, 'text/plain; charset=EUC-JP';
+    #is $proxy{-charset}, undef;
 
     $Header = {
         -type    => 'text/plain; charset=euc-jp',
         -charset => 'utf-8',
     };
     is $proxy{Content_Type}, 'text/plain; charset=euc-jp';
-    is $proxy{-type}, 'text/plain; charset=euc-jp';
-    is $proxy{-charset}, 'utf-8';
+    #is $proxy{-type}, 'text/plain; charset=euc-jp';
+    #is $proxy{-charset}, 'utf-8';
 
     $Header = { -charset => q{} };
     is $proxy{Content_Type}, 'text/html';
-    is $proxy{-type}, undef;
-    is $proxy{-charset}, q{};
+    #is $proxy{-type}, undef;
+    #is $proxy{-charset}, q{};
 
     $Header = { -attachment => 'foo' };
     is $proxy{Content_Disposition}, 'attachment; filename="foo"';
-    is $proxy{-attachment}, 'foo';
+    #is $proxy{-attachment}, 'foo';
 };
 
 subtest 'STORE()' => sub {
@@ -207,9 +207,9 @@ subtest 'STORE()' => sub {
     $proxy{Content_Disposition} = 'inline';
     is_deeply $Header, { -content_disposition => 'inline' };
     
-    $Header = { -content_disposition => 'inline' };
-    $proxy{-attachment} = 'genome.jpg';
-    is_deeply $Header, { -attachment => 'genome.jpg' };
+    #$Header = { -content_disposition => 'inline' };
+    #$proxy{-attachment} = 'genome.jpg';
+    #is_deeply $Header, { -attachment => 'genome.jpg' };
 
     $Header = { -charset => 'euc-jp' };
     $proxy{Content_Type} = 'text/plain; charset=utf-8';
@@ -219,66 +219,67 @@ subtest 'STORE()' => sub {
     $proxy{Content_Type} = 'text/plain';
     is_deeply $Header, { -type => 'text/plain', -charset => q{} };
 
-    $Header = { -charset => 'euc-jp' };
-    $proxy{-type} = 'text/plain; charset=utf-8';
-    is_deeply $Header, {
-        -type    => 'text/plain; charset=utf-8',
-        -charset => 'euc-jp',
-    };
+    #$Header = { -charset => 'euc-jp' };
+    #$proxy{-type} = 'text/plain; charset=utf-8';
+    #is_deeply $Header, {
+    #    -type    => 'text/plain; charset=utf-8',
+    #    -charset => 'euc-jp',
+    #};
 
-    $Header = { -charset => 'euc-jp' };
-    $proxy{-type} = 'text/plain';
-    is_deeply $Header, { -type => 'text/plain', -charset => 'euc-jp' };
+    #$Header = { -charset => 'euc-jp' };
+    #$proxy{-type} = 'text/plain';
+    #is_deeply $Header, { -type => 'text/plain', -charset => 'euc-jp' };
+
 };
 
-subtest 'each()' => sub {
-    $Header = {};
-    is each %proxy, 'Content-Type';
-    is each %proxy, undef;
+#subtest 'each()' => sub {
+#    $Header = {};
+#    is each %proxy, 'Content-Type';
+#    is each %proxy, undef;
 
-    $Header = { -type => q{} };
-    is each %proxy, undef;
+#    $Header = { -type => q{} };
+#    is each %proxy, undef;
 
-    $Header = { -charset => 'foo', -nph => 1 };
-    is each %proxy, 'Content-Type';
-    is each %proxy, undef;
+#    $Header = { -charset => 'foo', -nph => 1 };
+#    is each %proxy, 'Content-Type';
+#    is each %proxy, undef;
 
-    $Header = { -type => q{}, -charset => 'foo', -nph => 1 };
-    is each %proxy, undef;
+#    $Header = { -type => q{}, -charset => 'foo', -nph => 1 };
+#    is each %proxy, undef;
 
-    $Header = { -foo => 'bar' };
-    is each %proxy, 'Foo';
-    is each %proxy, 'Content-Type';
-    is each %proxy, undef;
+#    $Header = { -foo => 'bar' };
+#    is each %proxy, 'Foo';
+#    is each %proxy, 'Content-Type';
+#    is each %proxy, undef;
 
-    $Header = {
-        -nph        => 'foo',
-        -charset    => 'foo',
-        -status     => 'foo',
-        -target     => 'foo',
-        -p3p        => 'foo',
-        -cookie     => 'foo',
-        -expires    => 'foo',
-        -attachment => 'foo',
-        -foo_bar    => 'foo',
-        -foo        => q{},
-        -bar        => q{},
-        -baz        => q{},
-        -qux        => q{},
-    };
+#    $Header = {
+#        -nph        => 'foo',
+#        -charset    => 'foo',
+#        -status     => 'foo',
+#        -target     => 'foo',
+#        -p3p        => 'foo',
+#        -cookie     => 'foo',
+#        -expires    => 'foo',
+#        -attachment => 'foo',
+#        -foo_bar    => 'foo',
+#        -foo        => q{},
+#        -bar        => q{},
+#        -baz        => q{},
+#        -qux        => q{},
+#    };
 
-    my @got = sort keys %proxy;
+#    my @got = sort keys %proxy;
 
-    my @expected = qw(
-        Content-Disposition
-        Content-Type
-        Expires
-        Foo-bar
-        P3P
-        Set-Cookie
-        Status
-        Window-Target
-    );
+#    my @expected = qw(
+#        Content-Disposition
+#        Content-Type
+#        Expires
+#        Foo-bar
+#        P3P
+#        Set-Cookie
+#        Status
+#        Window-Target
+#    );
 
-    is_deeply \@got, \@expected;
-};
+#    is_deeply \@got, \@expected;
+#};

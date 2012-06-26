@@ -212,9 +212,42 @@ subtest 'type()' => sub {
 };
 
 subtest 'field_names()' => sub {
-    $Header = { -foo => 'bar' };
+    #$Header = { -foo => 'bar' };
+    #my @got = sort $header->field_names;
+    #my @got = sort $header->_field_names;
+    #my @expected = qw( Content-Type Foo );
+    #is_deeply \@got, \@expected;
+
+    $Header = {
+        -nph        => 'foo',
+        -charset    => 'foo',
+        -status     => 'foo',
+        -target     => 'foo',
+        -p3p        => 'foo',
+        -cookie     => 'foo',
+        -expires    => 'foo',
+        -attachment => 'foo',
+        -foo_bar    => 'foo',
+        -foo        => q{},
+        -bar        => q{},
+        -baz        => q{},
+        -qux        => q{},
+    };
+
     my @got = sort $header->field_names;
-    my @expected = qw( Content-Type Foo );
+
+    #my @expected = qw(
+    my @expected = qw(
+        Content-Disposition
+        Content-Type
+        Expires
+        Foo-bar
+        P3P
+        Set-Cookie
+        Status
+        Window-Target
+    );
+
     is_deeply \@got, \@expected;
 };
 
