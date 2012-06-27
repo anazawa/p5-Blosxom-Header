@@ -1,6 +1,6 @@
 use strict;
 use Blosxom::Header;
-use Test::More tests => 17;
+use Test::More tests => 20;
 use Test::Warn;
 
 {
@@ -96,8 +96,8 @@ subtest 'expires()' => sub {
 subtest 'push_cookie()' => sub {
     $Header = {};
 
-    warning_is { $header->push_cookie }
-        'Useless use of _push() with no values';
+    my $expected = 'Useless use of _push() with no values';
+    warning_is { $header->push_cookie } $expected;
 
     is $header->push_cookie( 'foo' ), 1, '_push()';
     is $Header->{-cookie}, 'foo';
@@ -124,12 +124,10 @@ subtest 'cookie()' => sub {
 
 subtest 'status()' => sub {
     $Header = {};
-
     is $header->status, undef;
     is $header->status( 304 ), '304';
     is $Header->{-status}, '304 Not Modified';
     is $header->status, '304';
-
     my $expected = 'Unknown status code "999" passed to status()';
     warning_is { $header->status( 999 ) } $expected;
 };
@@ -212,12 +210,6 @@ subtest 'type()' => sub {
 };
 
 subtest 'field_names()' => sub {
-    #$Header = { -foo => 'bar' };
-    #my @got = sort $header->field_names;
-    #my @got = sort $header->_field_names;
-    #my @expected = qw( Content-Type Foo );
-    #is_deeply \@got, \@expected;
-
     $Header = {
         -nph        => 'foo',
         -charset    => 'foo',
@@ -236,7 +228,6 @@ subtest 'field_names()' => sub {
 
     my @got = sort $header->field_names;
 
-    #my @expected = qw(
     my @expected = qw(
         Content-Disposition
         Content-Type
@@ -255,13 +246,13 @@ subtest 'p3p()' => sub {
     $Header = {};
     my @got = $header->p3p( 'CAO DSP LAW CURa' );
     my @expected = qw( CAO DSP LAW CURa );
-    is_deeply $Header, { -p3p => [qw/CAO DSP LAW CURa/] };
+    is_deeply $Header, { -p3p => \@expected };
     is_deeply \@got, \@expected;
 
     $Header = {};
     @got = $header->p3p( qw/CAO DSP LAW CURa/ );
     @expected = qw( CAO DSP LAW CURa );
-    is_deeply $Header, { -p3p => [qw/CAO DSP LAW CURa/] };
+    is_deeply $Header, { -p3p => \@expected };
     is_deeply \@got, \@expected;
 
     $Header = { -p3p => [qw/CAO DSP LAW CURa/] };
@@ -287,7 +278,7 @@ subtest 'cookie()' => sub {
     $Header = {};
     my @got = $header->cookie( 'foo', 'bar' );
     my @expected = qw( foo bar );
-    is_deeply $Header, { -cookie => [qw/foo bar/] };
+    is_deeply $Header, { -cookie => \@expected };
     is_deeply \@got, \@expected;
 
     $Header = { -cookie => [qw/foo bar/] };
@@ -295,3 +286,28 @@ subtest 'cookie()' => sub {
     @expected = qw( foo bar );
     is_deeply \@got, \@expected;
 };
+
+subtest 'nph()' => sub {
+    $Header = {};
+    ok !$header->nph;
+    ok $header->nph( 1 );
+    ok $header->nph;
+    is_deeply $Header, { -nph => 1 };
+};
+
+subtest 'attachment()' => sub {
+    $Header = {};
+    is $header->attachment, undef;
+    is $header->attachment( 'genome.jpg' ), 'genome.jpg';
+    is $header->attachment, 'genome.jpg';
+    is_deeply $Header, { -attachment => 'genome.jpg' };
+};
+
+subtest 'target()' => sub {
+    $Header = {};
+    is $header->target, undef;
+    is $header->target( 'ResultsWindow' ), 'ResultsWindow';
+    is $header->target, 'ResultsWindow';
+    is_deeply $Header, { -target => 'ResultsWindow' };
+};
+

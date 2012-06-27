@@ -55,10 +55,6 @@ sub has_instance { $instance }
 
 # Instance methods
 
-sub is_initialized { shift->_proxy->is_initialized }
-
-sub _proxy { tied %{ $_[0] } }
-
 sub get {
     my ( $self, @fields ) = @_;
     return _carp( USELESS, 'get()' ) unless @fields;
@@ -78,8 +74,9 @@ sub delete {
     delete @{ $self }{ @fields };
 }
 
-sub exists { exists $_[0]->{ $_[1] } }
-sub clear  { %{ $_[0] } = ()         }
+sub exists      { exists $_[0]->{ $_[1] } }
+sub clear       { %{ $_[0] } = ()         }
+sub field_names { keys %{ $_[0] }         }
 
 sub push_cookie { shift->_push( Set_Cookie => @_ ) }
 sub push_p3p    { shift->_push( P3P        => @_ ) }
@@ -110,9 +107,6 @@ sub target {
     return $self->{Window_Target} = shift if @_;
     $self->{Window_Target};
 }
-
-sub attachment { shift->_proxy->attachment( @_ ) }
-sub nph        { shift->_proxy->nph( @_ )        }
 
 sub cookie {
     my $self = shift;
@@ -173,13 +167,10 @@ sub type {
 
 sub charset {
     my $self = shift;
-
-    if ( my $content_type = $self->{Content_Type} ) {
-        my ( $charset ) = ( $content_type =~ /charset="?([^;"]+)"?/ );
-        return uc $charset if $charset;
-    }
-
-    return;
+    my $type = $self->{Content_Type};
+    my ( $charset ) = ( $type =~ /charset="?([^;"]+)"?/ ) if $type;
+    $charset = uc $charset if $charset;
+    $charset;
 }
 
 sub status {
@@ -205,7 +196,12 @@ sub status {
     return;
 }
 
-sub field_names { keys %{ $_[0] } }
+sub is_initialized { shift->_proxy->is_initialized   }
+sub attachment     { shift->_proxy->attachment( @_ ) }
+sub nph            { shift->_proxy->nph( @_ )        }
+
+sub _proxy { tied %{ $_[0] } }
+
 
 
 # Internal functions

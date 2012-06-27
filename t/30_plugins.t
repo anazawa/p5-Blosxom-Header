@@ -1,6 +1,6 @@
 use strict;
 use FindBin;
-use Test::More tests => 3*2 + 1;
+use Test::More tests => 3 * 2 + 1;
 
 {
     package blosxom;

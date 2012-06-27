@@ -49,9 +49,8 @@ sub STORE {
     my ( $self, $field, $value ) = @_;
     my $norm = $self->( $field );
     return $self->content_type( $value ) if $norm eq '-content_type';
-    my $header = $self->header;
-    delete $header->{-attachment} if $norm eq '-content_disposition';
-    $header->{ $norm } = $value;
+    delete $self->header->{-attachment} if $norm eq '-content_disposition';
+    $self->header->{ $norm } = $value;
     return;
 }
 
@@ -79,21 +78,23 @@ sub DELETE {
 sub EXISTS {
     my ( $self, $field ) = @_;
 
-    my $header = $self->header;
     my $norm = $self->( $field );
 
     if ( $norm eq '-content_type' ) {
-        my $type = $header->{-type};
+        my $type = $self->header->{-type};
         return ( $type or !defined $type );
     }
     elsif ( $norm eq '-content_disposition' ) {
-        return 1 if $header->{-attachment};
+        return 1 if $self->header->{-attachment};
     }
 
-    exists $header->{ $norm };
+    exists $self->header->{ $norm };
 }
 
-sub CLEAR { %{ shift->header } = ( -type => q{} ) }
+sub CLEAR {
+    my $self = shift;
+    %{ $self->header } = ( -type => q{} );
+}
 
 {
     my %field_name_of = (
@@ -144,7 +145,6 @@ sub CLEAR { %{ shift->header } = ( -type => q{} ) }
         $norm && $field_name_of->( $norm );
     }
 }
-
 
 sub SCALAR {
     my $self = shift;
@@ -198,24 +198,21 @@ sub content_type {
 
 sub content_disposition {
     my $self = shift;
-    my $header = $self->header;
-    my $attachment = $header->{-attachment};
+    my $attachment = $self->header->{-attachment};
     return qq{attachment; filename="$attachment"} if $attachment;
-    $header->{-content_disposition};
+    $self->header->{-content_disposition};
 }
 
 sub attachment {
     my $self = shift;
-    my $header = $self->header;
-    return $header->{-attachment} = shift if @_;
-    $header->{-attachment};
+    return $self->header->{-attachment} = shift if @_;
+    $self->header->{-attachment};
 }
 
 sub nph {
     my $self = shift;
-    my $header = $self->header;
-    return $header->{-nph} = shift if @_;
-    $header->{-nph};
+    return $self->header->{-nph} = shift if @_;
+    $self->header->{-nph};
 }
 
 1;

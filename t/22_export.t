@@ -1,5 +1,5 @@
 use strict;
-use Test::More tests => 7;
+use Test::More tests => 6;
 
 BEGIN {
     my @methods = qw(
@@ -13,9 +13,6 @@ BEGIN {
 ok( Blosxom::Header->has_instance );
 ok( $Header );
 is $Header, Blosxom::Header->has_instance;
-
-my $h = Blosxom::Header->instance;
-is $h, $Header;
 
 {
     package blosxom;

@@ -1,5 +1,8 @@
 Revision history for Perl extension Blosxom::Header.
 
+  - Requires List::Util
+  - Added t/plugins.t
+
 0.05004 Jun 21, 2012
   - Added field_names()
   - Exports header_push() on demand

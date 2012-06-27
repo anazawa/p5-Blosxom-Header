@@ -86,3 +86,12 @@ __DATA__
 ===
 --- input:    -p3p
 --- expected: -p3p
+===
+--- input:    -charset
+--- expected: 
+===
+--- input:    -nph
+--- expected: 
+===
+--- input:    -type
+--- expected: 
