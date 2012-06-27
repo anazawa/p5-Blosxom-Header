@@ -1,6 +1,6 @@
 use strict;
 use Blosxom::Header;
-use Test::More tests => 20;
+use Test::More tests => 19;
 use Test::Warn;
 
 {
@@ -88,7 +88,8 @@ subtest 'delete()' => sub {
 subtest 'expires()' => sub {
     $Header = {};
     is $header->expires, undef;
-    is $header->expires( 'now' ), 'now', 'set expires()';
+    #is $header->expires( 'now' ), 'now', 'set expires()';
+    $header->expires( 'now' );
     is $header->expires, 'now', 'get expires()';
     is $Header->{-expires}, 'now';
 };
@@ -109,23 +110,25 @@ subtest 'push_cookie()' => sub {
     is_deeply $Header->{-cookie}, [ 'foo', 'bar', 'baz' ];
 };
 
-subtest 'cookie()' => sub {
-    $Header = {};
+#subtest 'cookie()' => sub {
+#    $Header = {};
 
-    is $header->cookie, undef;
-    is $header->cookie( 'foo' ), 'foo', 'set cookie()';
-    is $header->cookie,          'foo', 'get cookie()';
-    is $Header->{-cookie}, 'foo';
+#    is $header->cookie, undef;
+    #is $header->cookie( 'foo' ), 'foo', 'set cookie()';
+#    $header->cookie( 'foo' );
+#    is $header->cookie,          'foo', 'get cookie()';
+#    is $Header->{-cookie}, 'foo';
 
-    my @cookies = qw(foo bar baz);
-    $header->cookie( @cookies );
-    is_deeply $Header->{-cookie}, \@cookies, 'cookie() receives LIST';
-};
+#    my @cookies = qw(foo bar baz);
+#    $header->cookie( @cookies );
+#    is_deeply $Header->{-cookie}, \@cookies, 'cookie() receives LIST';
+#};
 
 subtest 'status()' => sub {
     $Header = {};
     is $header->status, undef;
-    is $header->status( 304 ), '304';
+    #is $header->status( 304 ), '304';
+    $header->status( 304 );
     is $Header->{-status}, '304 Not Modified';
     is $header->status, '304';
     my $expected = 'Unknown status code "999" passed to status()';
@@ -184,7 +187,8 @@ subtest 'type()' => sub {
     is_deeply \@got, \@expected;
 
     $Header = { -charset => 'utf-8' };
-    is $header->type( 'text/plain; charset=EUC-JP' ), 'text/plain';
+    #is $header->type( 'text/plain; charset=EUC-JP' ), 'text/plain';
+    $header->type( 'text/plain; charset=EUC-JP' );
     is_deeply $Header, { -type => 'text/plain; charset=EUC-JP' };
 
     $Header = { -type => '   TEXT  / HTML   ', -charset => q{} };
@@ -244,20 +248,22 @@ subtest 'field_names()' => sub {
 
 subtest 'p3p()' => sub {
     $Header = {};
-    my @got = $header->p3p( 'CAO DSP LAW CURa' );
+    #my @got = $header->p3p( 'CAO DSP LAW CURa' );
+    $header->p3p( 'CAO DSP LAW CURa' );
     my @expected = qw( CAO DSP LAW CURa );
     is_deeply $Header, { -p3p => \@expected };
-    is_deeply \@got, \@expected;
+#is_deeply \@got, \@expected;
 
     $Header = {};
-    @got = $header->p3p( qw/CAO DSP LAW CURa/ );
+    #@got = $header->p3p( qw/CAO DSP LAW CURa/ );
+    $header->p3p( qw/CAO DSP LAW CURa/ );
     @expected = qw( CAO DSP LAW CURa );
     is_deeply $Header, { -p3p => \@expected };
-    is_deeply \@got, \@expected;
+#is_deeply \@got, \@expected;
 
     $Header = { -p3p => [qw/CAO DSP LAW CURa/] };
     is $header->p3p, 'CAO';
-    @got = $header->p3p;
+    my @got = $header->p3p;
     @expected = qw( CAO DSP LAW CURa );
     is_deeply \@got, \@expected;
 
@@ -276,15 +282,17 @@ subtest 'p3p()' => sub {
 
 subtest 'cookie()' => sub {
     $Header = {};
-    my @got = $header->cookie( 'foo', 'bar' );
+    #my @got = $header->cookie( 'foo', 'bar' );
+    $header->cookie( 'foo', 'bar' );
     my @expected = qw( foo bar );
     is_deeply $Header, { -cookie => \@expected };
-    is_deeply \@got, \@expected;
+#is_deeply \@got, \@expected;
 
     $Header = { -cookie => [qw/foo bar/] };
-    @got = $header->cookie;
+    #my @got = $header->cookie;
     @expected = qw( foo bar );
-    is_deeply \@got, \@expected;
+    #is_deeply \@got, \@expected;
+    is_deeply [ $header->cookie ], \@expected;
 };
 
 subtest 'nph()' => sub {

@@ -12,7 +12,7 @@ our $VERSION = '0.05004';
 
 our @EXPORT_OK = qw(
     $Header       header_get    header_set
-    header_exists header_delete header_push
+    header_exists header_delete header_push push_cookie push_p3p
 );
 
 our $Header;
@@ -30,6 +30,8 @@ sub header_get    { __PACKAGE__->instance->get( @_ )    }
 sub header_set    { __PACKAGE__->instance->set( @_ )    }
 sub header_exists { __PACKAGE__->instance->exists( @_ ) }
 sub header_delete { __PACKAGE__->instance->delete( @_ ) }
+
+# This function is obsolete and will be removed in 0.06
 sub header_push   { __PACKAGE__->instance->_push( @_ )  }
 
 
@@ -78,8 +80,18 @@ sub exists      { exists $_[0]->{ $_[1] } }
 sub clear       { %{ $_[0] } = ()         }
 sub field_names { keys %{ $_[0] }         }
 
-sub push_cookie { shift->_push( Set_Cookie => @_ ) }
-sub push_p3p    { shift->_push( P3P        => @_ ) }
+#sub push_cookie { shift->_push( Set_Cookie => @_ ) }
+#sub push_p3p    { shift->_push( P3P        => @_ ) }
+
+sub push_cookie {
+    my $self = ref $_[0] ? shift : __PACKAGE__->instance;
+    $self->_push( Set_Cookie => @_ );
+}
+
+sub push_p3p {
+    my $self = ref $_[0] ? shift : __PACKAGE__->instance;
+    $self->_push( P3P => @_ );
+}
 
 sub _push {
     my ( $self, $field, @values ) = @_;
@@ -111,15 +123,11 @@ sub target {
 sub cookie {
     my $self = shift;
 
-    if ( @_ > 1 ) {
-        $self->{Set_Cookie} = [ @_ ];
-        return wantarray ? @_ : $_[0];
+    if ( @_ ) {
+        $self->{Set_Cookie} = @_ > 1 ? [ @_ ] : shift;
+        return;
     }
-    elsif ( @_ ) {
-        return $self->{Set_Cookie} = shift;
-    }
-
-    if ( my $cookies = $self->{Set_Cookie} ) {
+    elsif ( my $cookies = $self->{Set_Cookie} ) {
         return $cookies unless ref $cookies eq 'ARRAY';
         return wantarray ? @{ $cookies } : $cookies->[0];
     }
@@ -130,17 +138,12 @@ sub cookie {
 sub p3p {
     my $self = shift;
 
-    if ( @_ > 1 ) {
-        $self->{P3P} = [ @_ ];
-        return wantarray ? @_ : $_[0];
-    }
-    elsif ( @_ ) {
-        my @tags = split / /, shift;
+    if ( @_ ) {
+        my @tags = @_ > 1 ? @_ : split / /, shift;
         $self->{P3P} = @tags > 1 ? \@tags : $tags[0];
-        return wantarray ? @tags : $tags[0];
+        return;
     }
-
-    if ( my $tags = $self->{P3P} ) {
+    elsif ( my $tags = $self->{P3P} ) {
         my @tags = ref $tags eq 'ARRAY' ? @{ $tags } : ( $tags );
         @tags = map { split / / } @tags;
         return wantarray ? @tags : $tags[0];
@@ -151,24 +154,19 @@ sub p3p {
 
 sub type {
     my $self = shift;
-
-    $self->{Content_Type} = shift if @_;
-
-    if ( my $content_type = $self->{Content_Type} ) {
-        my ( $type, $rest ) = split /;\s*/, $content_type, 2;
-        return q{} unless defined $type;
-        $type =~ s/\s+//g;
-        $type = lc $type;
-        return wantarray ? ( $type, $rest ) : $type;
-    }
-
-    return;
+    return $self->{Content_Type} = shift if @_;
+    my $content_type = $self->{Content_Type};
+    return unless $content_type;
+    my ( $type, $rest ) = split /;\s*/, $content_type, 2;
+    return q{} unless defined $type;
+    $type =~ s/\s+//g;
+    wantarray ? ( lc $type, $rest ) : lc $type;
 }
 
 sub charset {
     my $self = shift;
     my $type = $self->{Content_Type};
-    my ( $charset ) = ( $type =~ /charset="?([^;"]+)"?/ ) if $type;
+    my ( $charset ) = $type =~ /charset="?([^;"]+)"?/ if $type;
     $charset = uc $charset if $charset;
     $charset;
 }
@@ -178,16 +176,9 @@ sub status {
 
     if ( @_ ) {
         my $code = shift;
-
-        if ( my $message = status_message( $code ) ) {
-            $self->{Status} = "$code $message";
-        }
-        else {
-            carp( qq{Unknown status code "$code" passed to status()} );
-            return;
-        }
-
-        return $code;
+        my $message = status_message( $code );
+        return $self->{Status} = "$code $message" if $message;
+        carp( qq{Unknown status code "$code" passed to status()} );
     }
     elsif ( my $status = $self->{Status} ) {
         return substr( $status, 0, 3 );
