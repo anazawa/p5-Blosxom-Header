@@ -20,10 +20,10 @@ for my $plugin ( @plugins ) {
     $plugin->last;
 }
 
-my $expected = {
+my %expected = (
     -foo => 'bar',
     -bar => 'baz',
     -baz => 'qux',
-};
+);
 
-is_deeply $blosxom::header, $expected;
+is_deeply $blosxom::header, \%expected;

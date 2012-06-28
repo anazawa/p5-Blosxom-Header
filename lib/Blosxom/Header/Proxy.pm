@@ -55,10 +55,9 @@ sub STORE {
 }
 
 sub DELETE {
-    my ( $self, $field ) = @_;
-    
+    my $self   = shift;
+    my $norm   = $self->( shift );
     my $header = $self->header;
-    my $norm = $self->( $field );
 
     if ( $norm eq '-content_type' ) {
         my $deleted = $self->content_type;
@@ -76,9 +75,8 @@ sub DELETE {
 }
 
 sub EXISTS {
-    my ( $self, $field ) = @_;
-
-    my $norm = $self->( $field );
+    my $self = shift;
+    my $norm = $self->( shift );
 
     if ( $norm eq '-content_type' ) {
         my $type = $self->header->{-type};

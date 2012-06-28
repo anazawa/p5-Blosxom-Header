@@ -88,7 +88,6 @@ subtest 'delete()' => sub {
 subtest 'expires()' => sub {
     $Header = {};
     is $header->expires, undef;
-    #is $header->expires( 'now' ), 'now', 'set expires()';
     $header->expires( 'now' );
     is $header->expires, 'now', 'get expires()';
     is $Header->{-expires}, 'now';
@@ -110,24 +109,9 @@ subtest 'push_cookie()' => sub {
     is_deeply $Header->{-cookie}, [ 'foo', 'bar', 'baz' ];
 };
 
-#subtest 'cookie()' => sub {
-#    $Header = {};
-
-#    is $header->cookie, undef;
-    #is $header->cookie( 'foo' ), 'foo', 'set cookie()';
-#    $header->cookie( 'foo' );
-#    is $header->cookie,          'foo', 'get cookie()';
-#    is $Header->{-cookie}, 'foo';
-
-#    my @cookies = qw(foo bar baz);
-#    $header->cookie( @cookies );
-#    is_deeply $Header->{-cookie}, \@cookies, 'cookie() receives LIST';
-#};
-
 subtest 'status()' => sub {
     $Header = {};
     is $header->status, undef;
-    #is $header->status( 304 ), '304';
     $header->status( 304 );
     is $Header->{-status}, '304 Not Modified';
     is $header->status, '304';
@@ -157,9 +141,6 @@ subtest 'charset()' => sub {
     $Header = { -type => 'text/html; charset=iso-8859-1; Foo=1' };
     is $header->charset, 'ISO-8859-1';
 
-    $Header = { -type => 'text/html; charset="iso-8859-1"; Foo=1' };
-    is $header->charset, 'ISO-8859-1';
-
     $Header = {
         -type    => 'text/html; charset=euc-jp',
         -charset => 'utf-8',
@@ -187,12 +168,8 @@ subtest 'type()' => sub {
     is_deeply \@got, \@expected;
 
     $Header = { -charset => 'utf-8' };
-    #is $header->type( 'text/plain; charset=EUC-JP' ), 'text/plain';
     $header->type( 'text/plain; charset=EUC-JP' );
     is_deeply $Header, { -type => 'text/plain; charset=EUC-JP' };
-
-    $Header = { -type => '   TEXT  / HTML   ', -charset => q{} };
-    is $header->type, 'text/html';
 
     $Header = { -type => 'text/plain', -charset => 'utf-8' };
     @got = $header->type;
@@ -211,6 +188,9 @@ subtest 'type()' => sub {
     @got = $header->type;
     @expected = ( 'text/plain', 'charset=euc-jp' );
     is_deeply \@got, \@expected;
+
+    $Header = { -type => q{} };
+    is $header->type, q{};
 };
 
 subtest 'field_names()' => sub {
@@ -248,23 +228,24 @@ subtest 'field_names()' => sub {
 
 subtest 'p3p()' => sub {
     $Header = {};
-    #my @got = $header->p3p( 'CAO DSP LAW CURa' );
-    $header->p3p( 'CAO DSP LAW CURa' );
-    my @expected = qw( CAO DSP LAW CURa );
-    is_deeply $Header, { -p3p => \@expected };
-#is_deeply \@got, \@expected;
+    $header->p3p( 'CAO' );
+    is_deeply $Header, { -p3p => 'CAO' };
 
     $Header = {};
-    #@got = $header->p3p( qw/CAO DSP LAW CURa/ );
+    $header->p3p( 'CAO DSP LAW CURa' );
+    is_deeply $Header, { -p3p => [qw/CAO DSP LAW CURa/] };
+
+    $Header = {};
     $header->p3p( qw/CAO DSP LAW CURa/ );
-    @expected = qw( CAO DSP LAW CURa );
-    is_deeply $Header, { -p3p => \@expected };
-#is_deeply \@got, \@expected;
+    is_deeply $Header, { -p3p => [qw/CAO DSP LAW CURa/] };
+
+    $Header = { -p3p => 'CAO' };
+    is $header->p3p, 'CAO';
 
     $Header = { -p3p => [qw/CAO DSP LAW CURa/] };
     is $header->p3p, 'CAO';
     my @got = $header->p3p;
-    @expected = qw( CAO DSP LAW CURa );
+    my @expected = qw( CAO DSP LAW CURa );
     is_deeply \@got, \@expected;
 
     $Header = { -p3p => [ 'CAO DSP', 'LAW CURa' ] };
@@ -282,23 +263,24 @@ subtest 'p3p()' => sub {
 
 subtest 'cookie()' => sub {
     $Header = {};
-    #my @got = $header->cookie( 'foo', 'bar' );
+    $header->cookie( 'foo' );
+    is_deeply $Header, { -cookie => 'foo' };
+
+    $Header = {};
     $header->cookie( 'foo', 'bar' );
-    my @expected = qw( foo bar );
-    is_deeply $Header, { -cookie => \@expected };
-#is_deeply \@got, \@expected;
+    is_deeply $Header, { -cookie => [qw/foo bar/] };
 
     $Header = { -cookie => [qw/foo bar/] };
-    #my @got = $header->cookie;
-    @expected = qw( foo bar );
-    #is_deeply \@got, \@expected;
-    is_deeply [ $header->cookie ], \@expected;
+    is $header->cookie, 'foo';
+    my @got = $header->cookie;
+    my @expected = qw( foo bar );
+    is_deeply \@got, \@expected;
 };
 
 subtest 'nph()' => sub {
     $Header = {};
     ok !$header->nph;
-    ok $header->nph( 1 );
+    $header->nph( 1 );
     ok $header->nph;
     is_deeply $Header, { -nph => 1 };
 };
@@ -306,7 +288,7 @@ subtest 'nph()' => sub {
 subtest 'attachment()' => sub {
     $Header = {};
     is $header->attachment, undef;
-    is $header->attachment( 'genome.jpg' ), 'genome.jpg';
+    $header->attachment( 'genome.jpg' );
     is $header->attachment, 'genome.jpg';
     is_deeply $Header, { -attachment => 'genome.jpg' };
 };
@@ -314,7 +296,7 @@ subtest 'attachment()' => sub {
 subtest 'target()' => sub {
     $Header = {};
     is $header->target, undef;
-    is $header->target( 'ResultsWindow' ), 'ResultsWindow';
+    $header->target( 'ResultsWindow' );
     is $header->target, 'ResultsWindow';
     is_deeply $Header, { -target => 'ResultsWindow' };
 };

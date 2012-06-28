@@ -9,7 +9,6 @@ my $proxy = tie my %proxy => 'Blosxom::Header::Proxy';
 run {
     my $block = shift;
     is $proxy->( $block->input ), $block->expected;
-    #is $proxy->field_name_of( $block->norm ), $block->field_name;
 };
 
 __DATA__

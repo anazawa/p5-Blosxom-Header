@@ -10,18 +10,16 @@ BEGIN {
     can_ok __PACKAGE__, @methods;
 }
 
-ok( Blosxom::Header->has_instance );
 ok( $Header );
-is $Header, Blosxom::Header->has_instance;
+ok( Blosxom::Header->has_instance );
+is $Header, Blosxom::Header->instance;
 
 {
     package blosxom;
-    our $header;
+    our $header = {};
 }
 
 subtest 'functions' => sub {
-    $blosxom::header = {};
-
     is header_get( 'Content-Type' ), 'text/html; charset=ISO-8859-1';
     is header_get( 'Status' ), undef;
 

@@ -80,9 +80,6 @@ sub exists      { exists $_[0]->{ $_[1] } }
 sub clear       { %{ $_[0] } = ()         }
 sub field_names { keys %{ $_[0] }         }
 
-#sub push_cookie { shift->_push( Set_Cookie => @_ ) }
-#sub push_p3p    { shift->_push( P3P        => @_ ) }
-
 sub push_cookie {
     my $self = ref $_[0] ? shift : __PACKAGE__->instance;
     $self->_push( Set_Cookie => @_ );
@@ -122,17 +119,11 @@ sub target {
 
 sub cookie {
     my $self = shift;
-
-    if ( @_ ) {
-        $self->{Set_Cookie} = @_ > 1 ? [ @_ ] : shift;
-        return;
-    }
-    elsif ( my $cookies = $self->{Set_Cookie} ) {
-        return $cookies unless ref $cookies eq 'ARRAY';
-        return wantarray ? @{ $cookies } : $cookies->[0];
-    }
-
-    return;
+    return $self->{Set_Cookie} = @_ > 1 ? [ @_ ] : shift if @_;
+    my $cookies = $self->{Set_Cookie};
+    return unless $cookies;
+    return $cookies unless ref $cookies eq 'ARRAY';
+    wantarray ? @{ $cookies } : $cookies->[0];
 }
 
 sub p3p {
@@ -156,17 +147,15 @@ sub type {
     my $self = shift;
     return $self->{Content_Type} = shift if @_;
     my $content_type = $self->{Content_Type};
-    return unless $content_type;
+    return q{} unless $content_type;
     my ( $type, $rest ) = split /;\s*/, $content_type, 2;
-    return q{} unless defined $type;
-    $type =~ s/\s+//g;
     wantarray ? ( lc $type, $rest ) : lc $type;
 }
 
 sub charset {
     my $self = shift;
     my $type = $self->{Content_Type};
-    my ( $charset ) = $type =~ /charset="?([^;"]+)"?/ if $type;
+    my ( $charset ) = $type =~ /charset=([^;]+)/ if $type;
     $charset = uc $charset if $charset;
     $charset;
 }

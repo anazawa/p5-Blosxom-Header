@@ -230,7 +230,7 @@ subtest 'content_type()' => sub {
 subtest 'attachment()' => sub {
     $Header = {};
     is $proxy->attachment, undef;
-    is $proxy->attachment( 'genome.jpg' ), 'genome.jpg';
+    $proxy->attachment( 'genome.jpg' );
     is $proxy->attachment, 'genome.jpg';
     is $proxy->header->{-attachment}, 'genome.jpg';
 };
@@ -238,7 +238,7 @@ subtest 'attachment()' => sub {
 subtest 'nph()' => sub {
     $Header = {};
     ok !$proxy->nph;
-    ok $proxy->nph( 1 );
+    $proxy->nph( 1 );
     ok $proxy->nph;
     is $proxy->header->{-nph}, 1;
 };
