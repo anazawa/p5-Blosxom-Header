@@ -11,7 +11,7 @@ use Test::More tests => 15;
 my $proxy = tie my %proxy => 'Blosxom::Header::Proxy';
 isa_ok $proxy, 'Blosxom::Header::Proxy';
 can_ok $proxy, qw(
-    FETCH STORE DELETE EXISTS CLEAR FIRSTKEY NEXTKEY SCALAR
+    FETCH STORE DELETE EXISTS CLEAR FIRSTKEY NEXTKEY
     is_initialized header content_type content_disposition
     attachment nph
 );
@@ -46,9 +46,10 @@ subtest 'CLEAR()' => sub {
 };
 
 subtest 'EXISTS()' => sub {
-    $Header = { -foo => 'bar' };
+    $Header = { -foo => 'bar', -bar => q{} };
     ok exists $proxy{Foo};
     ok !exists $proxy{Bar};
+    ok !exists $proxy{Baz};
 
     $Header = { -type => q{} };
     ok !exists $proxy{Content_Type};
@@ -69,6 +70,9 @@ subtest 'EXISTS()' => sub {
     ok !exists $proxy{Content_Disposition};
 
     $Header = { -attachment => undef };
+    ok !exists $proxy{Content_Disposition};
+
+    $Header = {};
     ok !exists $proxy{Content_Disposition};
 };
 
@@ -91,6 +95,10 @@ subtest 'DELETE()' => sub {
 
     $Header = { -attachment => 'foo' };
     is delete $proxy{Content_Disposition}, 'attachment; filename="foo"';
+    is_deeply $Header, {};
+
+    $Header = { -content_disposition => 'inline' };
+    is delete $proxy{Content_Disposition}, 'inline';
     is_deeply $Header, {};
 };
 
@@ -225,6 +233,10 @@ subtest 'content_type()' => sub {
     $Header = {};
     $proxy->content_type( 'text/plain' );
     is_deeply $Header, { -type => 'text/plain', -charset => q{} };
+
+    $Header = {};
+    $proxy->content_type( undef );
+    is_deeply $Header, { -type => q{} };
 };
 
 subtest 'attachment()' => sub {

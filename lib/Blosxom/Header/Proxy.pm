@@ -2,12 +2,22 @@ package Blosxom::Header::Proxy;
 use strict;
 use warnings;
 use Carp qw/croak/;
-use List::Util qw/first/;
 
 # Naming conventions
 #   $field : raw field name (e.g. Foo-Bar)
 #   $norm  : normalized field name (e.g. -foo_bar)
 
+# Class methods
+
+sub is_initialized { ref $blosxom::header eq 'HASH' }
+
+sub header {
+    my $class = shift;
+    return $blosxom::header if $class->is_initialized;
+    croak( q{$blosxom::header hasn't been initialized yet.} );
+}
+
+# Constructor
 sub TIEHASH {
     my $class = shift;
 
@@ -22,7 +32,7 @@ sub TIEHASH {
         -window_target => q{-target},
     );
 
-    my $self = sub {
+    my $normalizer = sub {
         my $field = lc shift;
 
         # add an initial dash if not exists
@@ -34,8 +44,14 @@ sub TIEHASH {
         exists $norm_of{ $field } ? $norm_of{ $field } : $field;
     };
 
-    bless $self, $class;
+    bless $normalizer, $class;
 }
+
+
+# Instance methods
+
+sub normalize     { $_[0]->( $_[1] )          }
+sub is_normalized { $_[0]->( $_[1] ) eq $_[1] }
 
 sub FETCH {
     my ( $self, $field ) = @_;
@@ -49,7 +65,7 @@ sub STORE {
     my ( $self, $field, $value ) = @_;
     my $norm = $self->( $field );
     return $self->content_type( $value ) if $norm eq '-content_type';
-    delete $self->header->{-attachment} if $norm eq '-content_disposition';
+    return $self->content_disposition( $value ) if $norm eq '-content_disposition';
     $self->header->{ $norm } = $value;
     return;
 }
@@ -67,27 +83,14 @@ sub DELETE {
     }
     elsif ( $norm eq '-content_disposition' ) {
         my $deleted = $self->content_disposition;
-        delete $header->{-attachment};
+        delete @{ $header }{ '-attachment', $norm };
         return $deleted;
     }
 
     delete $header->{ $norm };
 }
 
-sub EXISTS {
-    my $self = shift;
-    my $norm = $self->( shift );
-
-    if ( $norm eq '-content_type' ) {
-        my $type = $self->header->{-type};
-        return ( $type or !defined $type );
-    }
-    elsif ( $norm eq '-content_disposition' ) {
-        return 1 if $self->header->{-attachment};
-    }
-
-    exists $self->header->{ $norm };
-}
+sub EXISTS { shift->FETCH( @_ ) }
 
 sub CLEAR {
     my $self = shift;
@@ -102,7 +105,7 @@ sub CLEAR {
         -p3p        => 'P3P',
     );
 
-    my $field_name_of = sub {
+    my $denormalizer = sub {
         my $norm  = shift;
         my $field = $field_name_of{ $norm };
         
@@ -140,26 +143,8 @@ sub CLEAR {
             last;
         }
 
-        $norm && $field_name_of->( $norm );
+        $norm && $denormalizer->( $norm );
     }
-}
-
-sub SCALAR {
-    my $self = shift;
-    my %header = %{ $self->header }; # copy
-    return 1 unless %header;
-    my ( $type ) = delete @header{ '-type', '-charset' };
-    return 1 if $type or !defined $type; # Content-Type exists
-    my $scalar = first { $_ } values %header;
-    $scalar ? 1 : 0;
-}
-
-sub is_initialized { ref $blosxom::header eq 'HASH' }
-
-sub header {
-    my $self = shift;
-    return $blosxom::header if $self->is_initialized;
-    croak( q{$blosxom::header hasn't been initialized yet.} );
 }
 
 sub content_type {
@@ -195,10 +180,19 @@ sub content_type {
 }
 
 sub content_disposition {
-    my $self = shift;
-    my $attachment = $self->header->{-attachment};
-    return qq{attachment; filename="$attachment"} if $attachment;
-    $self->header->{-content_disposition};
+    my $self   = shift;
+    my $header = $self->header;
+
+    if ( @_ ) {
+        $header->{-content_disposition} = shift;
+        delete $header->{-attachment};
+        return;
+    }
+    elsif ( my $attachment = $header->{-attachment} ) {
+        return qq{attachment; filename="$attachment"};
+    }
+
+    $header->{-content_disposition};
 }
 
 sub attachment {

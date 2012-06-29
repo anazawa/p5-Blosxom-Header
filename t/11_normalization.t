@@ -2,14 +2,17 @@ use strict;
 use Blosxom::Header::Proxy;
 use Test::Base;
 
-plan tests => 1 * blocks;
+plan tests => blocks() + 2;
 
-my $proxy = tie my %proxy => 'Blosxom::Header::Proxy';
+my $proxy = Blosxom::Header::Proxy->TIEHASH;
 
 run {
     my $block = shift;
-    is $proxy->( $block->input ), $block->expected;
+    is $proxy->normalize( $block->input ), $block->expected;
 };
+
+ok $proxy->is_normalized( '-foo_bar' );
+ok !$proxy->is_normalized( 'Foo-Bar' );
 
 __DATA__
 ===

@@ -32,7 +32,7 @@ sub header_exists { __PACKAGE__->instance->exists( @_ ) }
 sub header_delete { __PACKAGE__->instance->delete( @_ ) }
 
 # This function is obsolete and will be removed in 0.06
-sub header_push   { __PACKAGE__->instance->_push( @_ )  }
+sub header_push { __PACKAGE__->instance->_push( @_ )  }
 
 
 # Class methods
@@ -176,12 +176,13 @@ sub status {
     return;
 }
 
-sub is_initialized { shift->_proxy->is_initialized   }
+#sub is_initialized { shift->_proxy->is_initialized   }
+sub is_initialized { Blosxom::Header::Proxy->is_initialized }
+
 sub attachment     { shift->_proxy->attachment( @_ ) }
 sub nph            { shift->_proxy->nph( @_ )        }
 
 sub _proxy { tied %{ $_[0] } }
-
 
 
 # Internal functions
