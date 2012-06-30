@@ -206,23 +206,19 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
   use Blosxom::Header;
 
-  my $Header = Blosxom::Header->instance;
+  my $header = Blosxom::Header->instance;
 
-  # or
-
-  use Blosxom::Header qw/$Header/;
-
-  $Header->set(
+  $header->set(
       Status        => '304 Not Modified',
       Last_Modified => 'Wed, 23 Sep 2009 13:36:33 GMT',
   );
 
-  my $status = $Header->get( 'Status' );
-  my @deleted = $Header->delete( qw/Content-Disposition Content-Length/ );
+  my $status = $header->get( 'Status' );
+  my @deleted = $header->delete( qw/Content-Disposition Content-Length/ );
 
   # Procedural interface
 
-  use Blosxom::Header qw( header_set header_get header_delete );
+  use Blosxom::Header qw/header_set header_get header_delete/;
 
   header_set(
       Status        => '304 Not Modified',
@@ -233,6 +229,11 @@ Blosxom::Header - Missing interface to modify HTTP headers
   my @deleted = header_delete( qw/Content-Disposition Content-Length/ );
 
 =head1 DESCRIPTION
+
+Provides Blosxom plugin developers
+with an interface to handle HTTP response headers.
+
+=head2 BACKGROUND
 
 Blosxom, an weblog application, globalizes C<$header> which is a reference to
 a hash. This application passes C<$header> to C<CGI::header()> to generate HTTP
@@ -296,9 +297,6 @@ The same reference as C<< Blosxom::Header->instance >> returns.
 
   use Blosxom::Header qw/$Header/;
 
-In this case, this module creates the instance when loaded.
-Otherwise doesn't.
-
 =back
 
 =head2 FUNCTIONS
@@ -325,13 +323,26 @@ A synonym for C<< Blosxom::Header->instance->exists() >>.
 
 A synonym for C<< Blosxom::Header->instance->delete() >>.
 
-=item header_push( Set_Cookie => @cookies )
+=item push_cookie( @cookies )
 
 A synonym for C<< Blosxom::Header->instance->push_cookie() >>.
 
-=item header_push( P3P => @tags )
+=item push_p3p( @tags )
 
 A synonym for C<< Blosxom::Header->instance->push_p3p() >>.
+
+=item header_push( Set_Cookie => @cookies )
+
+=item header_push( P3P => @tags )
+
+This function is obsolete and will be removed in 0.06.
+Use C<push_cookie()> or C<push_p3p()> instead.
+
+  header_push( Set_Cookie => @cookies );
+  header_push( P3P => @tags );
+  # become
+  push_cookie( @cookies );
+  push_p3p( @tags );
 
 =back
 
@@ -342,7 +353,6 @@ A synonym for C<< Blosxom::Header->instance->push_p3p() >>.
 =item $header = Blosxom::Header->instance
 
 Returns a current Blosxom::Header object instance or create a new one.
-This class can have only one instance in any system.
 
 =item $header = Blosxom::Header->has_instance
 
@@ -372,11 +382,6 @@ Returns the value of one or more header fields.
 Accepts a list of field names.
 C<$field> isn't case-sensitive.
 You can use underscores as a replacement for dashes.
-The following forms are semantically equivalent:
-
-  $header->get( 'Last-Modified'  );
-  $header->get( 'Last_modified'  );
-  $header->get( '-last_modified' );
 
 =item $header->set( $field => $value )
 
@@ -397,12 +402,10 @@ In exceptional cases, $value may be a reference to an array.
 =item $bool = $header->exists( $field )
 
 Returns a Boolean value telling whether the specified HTTP header exists.
-Accepts a field name.
 
 =item @deleted = $header->delete( @fields )
 
 Deletes the specified fields from HTTP headers.
-Accepts a list of field names.
 Returns values of deleted fields.
 
 =item $header->push_cookie( @cookies )
@@ -441,9 +444,6 @@ Internally, this method is a shortcut for
 
   %{ $blosxom::header } = ( -type => q{} );
 
-If C<-type> element didn't exist, C<< CGI::header() >> would output the default
-Content-Type header.
-
 =item @fields = $header->field_names
 
 Returns the list of distinct names for the fields present in the header.
@@ -469,7 +469,7 @@ Represents suggested name for the saved file.
   $header->attachment( 'genome.jpg' );
   my $attachment = $header->attachment; # genome.jpg
 
-  my $cd = $header->get( 'Content-Disposition' );
+  my $disposition = $header->get( 'Content-Disposition' );
   # => 'attachment; filename="genome.jpg"'
 
 =item $header->charset
@@ -533,8 +533,10 @@ Represents HTTP status code.
   $header->status( 304 );
   my $code = $header->status; # 304
 
-  my $status = $header->get( 'Status' ); # 304 Not Modified
+cf.
+
   $header->set( Status => '304 Not Modified' );
+  my $status = $header->get( 'Status' ); # 304 Not Modified
 
 =item $header->target
 
@@ -554,15 +556,20 @@ The Content-Type header indicates the media type of the message content.
 
   $header->type( 'text/plain; charset=utf-8' );
 
+The above is a shortcut for
+
   $header->set( Content_Type => 'text/plain; charset=utf-8' );
 
 The value returned will be converted to lower case, and potential parameters
 will be chopped off and returned as a separate value if in an array context.
 
   my $type = $header->type; # 'text/html'
-  my @ct   = $header->type; # ( 'text/html', 'charset=ISO-8859-1' )
+  my @type = $header->type; # ( 'text/html', 'charset=ISO-8859-1' )
 
-  my $ct = $header->get( 'Content-Type' ); # 'text/html; charset=ISO-8859-1'
+cf.
+
+  my $content_type = $header->get( 'Content-Type' );
+  # => 'text/html; charset=ISO-8859-1'
 
 If there is no such header field, then the empty string is returned.
 This makes it safe to do the following:

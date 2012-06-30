@@ -234,9 +234,9 @@ subtest 'content_type()' => sub {
     $proxy->content_type( 'text/plain' );
     is_deeply $Header, { -type => 'text/plain', -charset => q{} };
 
-    $Header = {};
-    $proxy->content_type( undef );
-    is_deeply $Header, { -type => q{} };
+    #$Header = {};
+    #$proxy->content_type( undef );
+    #is_deeply $Header, { -type => q{} };
 };
 
 subtest 'attachment()' => sub {
