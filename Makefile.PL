@@ -8,7 +8,6 @@ requires 'constant'     => '1.17';
 requires 'Carp'         => '1.10';
 requires 'Exporter'     => '5.63';
 requires 'HTTP::Status' => '6.03';
-requires 'List::Util'   => '1.19';
 
 test_requires 'Test::Base'      => '0.60';
 test_requires 'Test::Exception' => '0.31';

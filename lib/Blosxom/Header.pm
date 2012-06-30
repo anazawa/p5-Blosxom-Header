@@ -8,7 +8,7 @@ use Blosxom::Header::Proxy;
 use Carp qw/carp/;
 use HTTP::Status qw/status_message/;
 
-our $VERSION = '0.05004';
+our $VERSION = '0.05005';
 
 our @EXPORT_OK = qw(
     $Header       header_get    header_set
