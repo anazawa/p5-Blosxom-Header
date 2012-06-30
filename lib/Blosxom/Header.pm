@@ -11,9 +11,12 @@ use HTTP::Status qw/status_message/;
 our $VERSION = '0.05005';
 
 our @EXPORT_OK = qw(
-    $Header       header_get    header_set
+    $Header       header_get    header_set  header
     header_exists header_delete header_push push_cookie push_p3p
 );
+
+
+# Variable to export
 
 our $Header;
 
@@ -24,15 +27,21 @@ sub import {
 }
 
 
-# Functions
+# Functions to export
 
-sub header_get    { __PACKAGE__->instance->get( @_ )    }
-sub header_set    { __PACKAGE__->instance->set( @_ )    }
+sub header {
+    my $instance = __PACKAGE__->instance;
+    return $instance->{ $_[0] } if @_ == 1;
+    $instance->set( @_ );
+}
+
 sub header_exists { __PACKAGE__->instance->exists( @_ ) }
 sub header_delete { __PACKAGE__->instance->delete( @_ ) }
 
-# This function is obsolete and will be removed in 0.06
-sub header_push { __PACKAGE__->instance->_push( @_ )  }
+# The following function are obsolete and will be removed in 0.06
+sub header_get  { __PACKAGE__->instance->get( @_ )   }
+sub header_set  { __PACKAGE__->instance->set( @_ )   }
+sub header_push { __PACKAGE__->instance->_push( @_ ) }
 
 
 # Class methods
