@@ -1,6 +1,7 @@
 package Blosxom::Header::Proxy;
 use strict;
 use warnings;
+use base 'Blosxom::Header::Normalizer';
 use Carp qw/croak/;
 
 # Naming conventions
@@ -17,45 +18,15 @@ sub header {
     croak( q{$blosxom::header hasn't been initialized yet.} );
 }
 
-# Constructor
-sub TIEHASH {
-    my $class = shift;
-
-    my %norm_of = (
-        -attachment    => q{},
-        -charset       => q{},
-        -cookie        => q{},
-        -nph           => q{},
-        -set_cookie    => q{-cookie},
-        -target        => q{},
-        -type          => q{},
-        -window_target => q{-target},
-    );
-
-    my $normalizer = sub {
-        my $field = lc shift;
-
-        # add an initial dash if not exists
-        $field = "-$field" unless $field =~ /^-/;
-
-        # transliterate dashes into underscores in field names
-        substr( $field, 1 ) =~ tr{-}{_};
-
-        exists $norm_of{ $field } ? $norm_of{ $field } : $field;
-    };
-
-    bless $normalizer, $class;
-}
+# constructor
+sub TIEHASH { shift->new( @_ ) }
 
 
 # Instance methods
 
-sub normalize     { $_[0]->( $_[1] )          }
-sub is_normalized { $_[0]->( $_[1] ) eq $_[1] }
-
 sub FETCH {
     my ( $self, $field ) = @_;
-    my $norm = $self->( $field );
+    my $norm = $self->normalize( $field );
     return $self->content_type if $norm eq '-content_type';    
     return $self->content_disposition if $norm eq '-content_disposition';    
     $self->header->{ $norm };
@@ -63,7 +34,7 @@ sub FETCH {
 
 sub STORE {
     my ( $self, $field, $value ) = @_;
-    my $norm = $self->( $field );
+    my $norm = $self->normalize( $field );
     return $self->content_type( $value ) if $norm eq '-content_type';
     return $self->content_disposition( $value ) if $norm eq '-content_disposition';
     $self->header->{ $norm } = $value;
@@ -72,7 +43,7 @@ sub STORE {
 
 sub DELETE {
     my $self   = shift;
-    my $norm   = $self->( shift );
+    my $norm   = $self->normalize( shift );
     my $header = $self->header;
 
     if ( $norm eq '-content_type' ) {
@@ -97,55 +68,34 @@ sub CLEAR {
     %{ $self->header } = ( -type => q{} );
 }
 
-{
-    my %field_name_of = (
-        -attachment => 'Content-Disposition',
-        -cookie     => 'Set-Cookie',
-        -target     => 'Window-Target',
-        -p3p        => 'P3P',
-    );
 
-    my $denormalizer = sub {
-        my $norm  = shift;
-        my $field = $field_name_of{ $norm };
-        
-        if ( !$field ) {
-            # get rid of an initial dash if exists
-            $norm =~ s/^-//;
+# Iterator
 
-            # transliterate underscores into dashes
-            $norm =~ tr/_/-/;
-
-            # uppercase the first character
-            $field = ucfirst $norm;
-        }
-
-        $field;
-    };
-
-    sub FIRSTKEY {
-        my $self = shift;
-        keys %{ $self->header };
-        return 'Content-Type' if $self->EXISTS( 'Content-Type' );
-        $self->NEXTKEY;
-    }
-
-    sub NEXTKEY {
-        my $self = shift;
-
-        my $norm;
-        while ( my ( $key, $value ) = each %{ $self->header } ) {
-            next unless $value;
-            next if $key eq '-type';
-            next if $key eq '-charset';
-            next if $key eq '-nph';
-            $norm = $key;
-            last;
-        }
-
-        $norm && $denormalizer->( $norm );
-    }
+sub FIRSTKEY {
+    my $self = shift;
+    keys %{ $self->header };
+    return 'Content-Type' if $self->EXISTS( 'Content-Type' );
+    $self->NEXTKEY;
 }
+
+sub NEXTKEY {
+    my $self = shift;
+
+    my $norm;
+    while ( my ( $key, $value ) = each %{ $self->header } ) {
+        next unless $value;
+        next if $key eq '-type';
+        next if $key eq '-charset';
+        next if $key eq '-nph';
+        $norm = $key;
+        last;
+    }
+
+    $norm && $self->denormalize( $norm );
+}
+
+
+# Convenience methods
 
 sub content_type {
     my $self   = shift;

@@ -1,18 +1,22 @@
 use strict;
-use Blosxom::Header::Proxy;
+use Blosxom::Header::Normalizer;
 use Test::Base;
 
-plan tests => blocks() + 2;
+plan tests => blocks() + 5;
 
-my $proxy = Blosxom::Header::Proxy->TIEHASH;
+my $normalizer = Blosxom::Header::Normalizer->new;
+isa_ok $normalizer, 'Blosxom::Header::Normalizer';
+can_ok $normalizer, qw( normalize is_normalized denormalize );
 
 run {
     my $block = shift;
-    is $proxy->normalize( $block->input ), $block->expected;
+    is $normalizer->normalize( $block->input ), $block->expected;
 };
 
-ok $proxy->is_normalized( '-foo_bar' );
-ok !$proxy->is_normalized( 'Foo-Bar' );
+ok $normalizer->is_normalized( '-foo_bar' );
+ok !$normalizer->is_normalized( 'Foo-Bar' );
+
+is $normalizer->denormalize( '-foo_bar' ), 'Foo-bar';
 
 __DATA__
 ===
