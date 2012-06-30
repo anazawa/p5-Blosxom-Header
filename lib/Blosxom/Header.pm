@@ -27,178 +27,172 @@ sub import {
 }
 
 
-# Functions to export
+# Functions
 
-sub header {
-    my $instance = __PACKAGE__->instance;
-    return $instance->{ $_[0] } if @_ == 1;
-    $instance->set( @_ );
-}
-
+sub header_get    { __PACKAGE__->instance->get( @_ )    }
+sub header_set    { __PACKAGE__->instance->set( @_ )    }
 sub header_exists { __PACKAGE__->instance->exists( @_ ) }
 sub header_delete { __PACKAGE__->instance->delete( @_ ) }
 
-# The following function are obsolete and will be removed in 0.06
-sub header_get  { __PACKAGE__->instance->get( @_ )   }
-sub header_set  { __PACKAGE__->instance->set( @_ )   }
+# The following function is obsolete and will be removed in 0.06
 sub header_push { __PACKAGE__->instance->_push( @_ ) }
-
-
-# Class methods
-
-my $instance;
-
-sub instance {
-    my $class = shift;
-    return $class if ref $class;
-    return $instance if defined $instance;
-    $instance = $class->_new_instance;
-}
-
-sub _new_instance {
-    my $class = shift;
-    tie my %proxy => 'Blosxom::Header::Proxy';
-    bless \%proxy => $class;
-}
-
-sub has_instance { $instance }
-
-
-# Instance methods
-
-sub get {
-    my ( $self, @fields ) = @_;
-    return _carp( USELESS, 'get()' ) unless @fields;
-    @{ $self }{ @fields };
-}
-
-sub set {
-    my ( $self, %fields ) = @_;
-    return _carp( USELESS, 'set()' ) unless %fields;
-    @{ $self }{ keys %fields } = values %fields;
-    return;
-}
-
-sub delete {
-    my ( $self, @fields ) = @_;
-    return _carp( USELESS, 'delete()' ) unless @fields;
-    delete @{ $self }{ @fields };
-}
-
-sub exists      { exists $_[0]->{ $_[1] } }
-sub clear       { %{ $_[0] } = ()         }
-sub field_names { keys %{ $_[0] }         }
-
-sub push_cookie {
-    my $self = ref $_[0] ? shift : __PACKAGE__->instance;
-    $self->_push( Set_Cookie => @_ );
-}
-
-sub push_p3p {
-    my $self = ref $_[0] ? shift : __PACKAGE__->instance;
-    $self->_push( P3P => @_ );
-}
-
-sub _push {
-    my ( $self, $field, @values ) = @_;
-
-    return _carp( USELESS, '_push()' ) unless @values;
-
-    if ( my $value = $self->{ $field } ) {
-        return push @{ $value }, @values if ref $value eq 'ARRAY';
-        unshift @values, $value;
-    }
-
-    $self->{ $field } = @values > 1 ? \@values : $values[0];
-
-    scalar @values;
-}
-
-sub expires {
-    my $self = shift;
-    return $self->{Expires} = shift if @_;
-    $self->{Expires};
-}
-
-sub target {
-    my $self = shift;
-    return $self->{Window_Target} = shift if @_;
-    $self->{Window_Target};
-}
-
-sub cookie {
-    my $self = shift;
-    return $self->{Set_Cookie} = @_ > 1 ? [ @_ ] : shift if @_;
-    my $cookies = $self->{Set_Cookie};
-    return unless $cookies;
-    return $cookies unless ref $cookies eq 'ARRAY';
-    wantarray ? @{ $cookies } : $cookies->[0];
-}
-
-sub p3p {
-    my $self = shift;
-
-    if ( @_ ) {
-        my @tags = @_ > 1 ? @_ : split / /, shift;
-        $self->{P3P} = @tags > 1 ? \@tags : $tags[0];
-        return;
-    }
-    elsif ( my $tags = $self->{P3P} ) {
-        my @tags = ref $tags eq 'ARRAY' ? @{ $tags } : ( $tags );
-        @tags = map { split / / } @tags;
-        return wantarray ? @tags : $tags[0];
-    }
-
-    return;
-}
-
-sub type {
-    my $self = shift;
-    return $self->{Content_Type} = shift if @_;
-    my $content_type = $self->{Content_Type};
-    return q{} unless $content_type;
-    my ( $type, $rest ) = split /;\s*/, $content_type, 2;
-    wantarray ? ( lc $type, $rest ) : lc $type;
-}
-
-sub charset {
-    my $self = shift;
-    my $type = $self->{Content_Type};
-    my ( $charset ) = $type =~ /charset=([^;]+)/ if $type;
-    $charset = uc $charset if $charset;
-    $charset;
-}
-
-sub status {
-    my $self = shift;
-
-    if ( @_ ) {
-        my $code = shift;
-        my $message = status_message( $code );
-        return $self->{Status} = "$code $message" if $message;
-        carp( qq{Unknown status code "$code" passed to status()} );
-    }
-    elsif ( my $status = $self->{Status} ) {
-        return substr( $status, 0, 3 );
-    }
-
-    return;
-}
-
-#sub is_initialized { shift->_proxy->is_initialized   }
-sub is_initialized { Blosxom::Header::Proxy->is_initialized }
-
-sub attachment     { shift->_proxy->attachment( @_ ) }
-sub nph            { shift->_proxy->nph( @_ )        }
-
-sub _proxy { tied %{ $_[0] } }
-
-
-# Internal functions
 
 sub _carp {
     my ( $format, @args ) = @_;
     carp( sprintf $format, @args );
+}
+
+{
+    my $instance;
+
+    # Class methods
+
+    sub instance {
+        my $class = shift;
+        return $class if ref $class;
+        return $instance if defined $instance;
+        $instance = $class->_new_instance;
+    }
+
+    sub _new_instance {
+        my $class = shift;
+        tie my %proxy => 'Blosxom::Header::Proxy';
+        bless \%proxy => $class;
+    }
+
+    sub has_instance { $instance }
+
+    sub is_initialized { Blosxom::Header::Proxy->is_initialized }
+
+
+    # Instance methods
+
+    sub get {
+        my ( $self, @fields ) = @_;
+        return _carp( USELESS, 'get()' ) unless @fields;
+        @{ $self }{ @fields };
+    }
+
+    sub set {
+        my ( $self, %fields ) = @_;
+        return _carp( USELESS, 'set()' ) unless %fields;
+        @{ $self }{ keys %fields } = values %fields;
+        return;
+    }
+
+    sub delete {
+        my ( $self, @fields ) = @_;
+        return _carp( USELESS, 'delete()' ) unless @fields;
+        delete @{ $self }{ @fields };
+    }
+
+    sub exists      { exists $_[0]->{ $_[1] } }
+    sub clear       { %{ $_[0] } = ()         }
+    sub field_names { keys %{ $_[0] }         }
+
+    sub push_cookie {
+        my $self = ref $_[0] ? shift : __PACKAGE__->instance;
+        $self->_push( Set_Cookie => @_ );
+    }
+
+    sub push_p3p {
+        my $self = ref $_[0] ? shift : __PACKAGE__->instance;
+        $self->_push( P3P => @_ );
+    }
+
+    sub _push {
+        my ( $self, $field, @values ) = @_;
+
+        return _carp( USELESS, '_push()' ) unless @values;
+
+        if ( my $value = $self->{ $field } ) {
+            return push @{ $value }, @values if ref $value eq 'ARRAY';
+            unshift @values, $value;
+        }
+
+        $self->{ $field } = @values > 1 ? \@values : $values[0];
+
+        scalar @values;
+    }
+
+
+    # Convenience methods
+
+    sub expires {
+        my $self = shift;
+        return $self->{Expires} = shift if @_;
+        $self->{Expires};
+    }
+
+    sub target {
+        my $self = shift;
+        return $self->{Window_Target} = shift if @_;
+        $self->{Window_Target};
+    }
+
+    sub cookie {
+        my $self = shift;
+        return $self->{Set_Cookie} = @_ > 1 ? [ @_ ] : shift if @_;
+        my $cookies = $self->{Set_Cookie};
+        return unless $cookies;
+        return $cookies unless ref $cookies eq 'ARRAY';
+        wantarray ? @{ $cookies } : $cookies->[0];
+    }
+
+    sub p3p {
+        my $self = shift;
+
+        if ( @_ ) {
+            my @tags = @_ > 1 ? @_ : split / /, shift;
+            $self->{P3P} = @tags > 1 ? \@tags : $tags[0];
+            return;
+        }
+        elsif ( my $tags = $self->{P3P} ) {
+            my @tags = ref $tags eq 'ARRAY' ? @{ $tags } : ( $tags );
+            @tags = map { split / / } @tags;
+            return wantarray ? @tags : $tags[0];
+        }
+
+        return;
+    }
+
+    sub type {
+        my $self = shift;
+        return $self->{Content_Type} = shift if @_;
+        my $content_type = $self->{Content_Type};
+        return q{} unless $content_type;
+        my ( $type, $rest ) = split /;\s*/, $content_type, 2;
+        wantarray ? ( lc $type, $rest ) : lc $type;
+    }
+
+    sub charset {
+        my $self = shift;
+        my $type = $self->{Content_Type};
+        my ( $charset ) = $type =~ /charset=([^;]+)/ if $type;
+        $charset = uc $charset if $charset;
+        $charset;
+    }
+
+    sub status {
+        my $self = shift;
+
+        if ( @_ ) {
+            my $code = shift;
+            my $message = status_message( $code );
+            return $self->{Status} = "$code $message" if $message;
+            carp( qq{Unknown status code "$code" passed to status()} );
+        }
+        elsif ( my $status = $self->{Status} ) {
+            return substr( $status, 0, 3 );
+        }
+
+        return;
+    }
+
+    sub attachment { shift->_proxy->attachment( @_ ) }
+    sub nph        { shift->_proxy->nph( @_ )        }
+
+    sub _proxy { tied %{ $_[0] } }
 }
 
 1;
@@ -260,9 +254,9 @@ headers.
   print header( $header );
 
 Plugins may modify C<$header> directly because the variable is global.
-On the other hand, C<header()> doesn't care whether keys of C<$header> are
+On the other hand, C<header()> doesn't care whether C<keys> of C<$header> are
 lowercased nor start with a dash.
-There is no agreement with how to normalize keys of C<$header>.
+There is no agreement with how to normalize C<keys> of C<$header>.
 
 =head2 HOW THIS MODULE NORMALIZES FIELD NAMES
 

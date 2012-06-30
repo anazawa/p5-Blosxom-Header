@@ -4,7 +4,7 @@ use Test::More tests => 6;
 BEGIN {
     my @methods = qw(
         header_get    header_set  header_exists
-        header_delete push_cookie push_p3p header
+        header_delete push_cookie push_p3p
     );
     use_ok 'Blosxom::Header', ( '$Header', @methods );
     can_ok __PACKAGE__, @methods;
@@ -20,13 +20,13 @@ is $Header, Blosxom::Header->instance;
 }
 
 subtest 'functions' => sub {
-    is header( 'Content-Type' ), 'text/html; charset=ISO-8859-1';
-    is header( 'Status' ), undef;
+    is header_get( 'Content-Type' ), 'text/html; charset=ISO-8859-1';
+    is header_get( 'Status' ), undef;
 
     ok header_exists( 'Content-Type' );
     ok !header_exists( 'Status' );
 
-    header( Status => '304 Not Modified' );
+    header_set( Status => '304 Not Modified' );
     is_deeply $blosxom::header, { -status => '304 Not Modified' };
 
     is header_delete( 'Status' ), '304 Not Modified';
