@@ -1,14 +1,8 @@
 package Blosxom::Header::Proxy;
 use strict;
 use warnings;
-use base 'Blosxom::Header::Normalizer';
+use base qw/Blosxom::Header::Normalizer/;
 use Carp qw/croak/;
-
-# Naming conventions
-#   $field : raw field name (e.g. Foo-Bar)
-#   $norm  : normalized field name (e.g. -foo_bar)
-
-# Class methods
 
 sub is_initialized { ref $blosxom::header eq 'HASH' }
 
@@ -18,11 +12,12 @@ sub header {
     croak( q{$blosxom::header hasn't been initialized yet.} );
 }
 
-# constructor
-sub TIEHASH { shift->new( @_ ) }
-
-
-# Instance methods
+# Creates function aliases
+{
+    no strict 'refs';
+    *TIEHASH = __PACKAGE__->can( 'new' );
+    *EXISTS = \&FETCH;
+}
 
 sub FETCH {
     my ( $self, $field ) = @_;
@@ -61,8 +56,6 @@ sub DELETE {
     delete $header->{ $norm };
 }
 
-sub EXISTS { shift->FETCH( @_ ) }
-
 sub CLEAR {
     my $self = shift;
     %{ $self->header } = ( -type => q{} );
@@ -70,32 +63,55 @@ sub CLEAR {
 
 
 # Iterator
+{
+    my %field_name_of = (
+        -attachment => 'Content-Disposition',
+        -cookie     => 'Set-Cookie',
+        -target     => 'Window-Target',
+        -p3p        => 'P3P',
+    );
 
-sub FIRSTKEY {
-    my $self = shift;
-    keys %{ $self->header };
-    return 'Content-Type' if $self->EXISTS( 'Content-Type' );
-    $self->NEXTKEY;
-}
+    my $denormalize = sub {
+        my $norm  = shift;
+        my $field = $field_name_of{ $norm };
+        
+        if ( !$field ) {
+            # get rid of an initial dash if exists
+            $norm =~ s/^-//;
 
-sub NEXTKEY {
-    my $self = shift;
+            # transliterate underscores into dashes
+            $norm =~ tr/_/-/;
 
-    my $norm;
-    while ( my ( $key, $value ) = each %{ $self->header } ) {
-        next unless $value;
-        next if $key eq '-type';
-        next if $key eq '-charset';
-        next if $key eq '-nph';
-        $norm = $key;
-        last;
+            # uppercase the first character
+            $field = ucfirst $norm;
+        }
+
+        $field;
+    };
+
+    sub FIRSTKEY {
+        my $self = shift;
+        keys %{ $self->header };
+        return 'Content-Type' if $self->EXISTS( 'Content-Type' );
+        $self->NEXTKEY;
     }
 
-    $norm && $self->denormalize( $norm );
+    sub NEXTKEY {
+        my $self = shift;
+
+        my $norm;
+        while ( my ( $key, $value ) = each %{ $self->header } ) {
+            next unless $value;
+            next if $key eq '-type';
+            next if $key eq '-charset';
+            next if $key eq '-nph';
+            $norm = $key;
+            last;
+        }
+
+        $norm && $denormalize->( $norm );
+    }
 }
-
-
-# Convenience methods
 
 sub content_type {
     my $self   = shift;

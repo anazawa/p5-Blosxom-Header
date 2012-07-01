@@ -2,7 +2,9 @@ package Blosxom::Header::Normalizer;
 use strict;
 use warnings;
 
-# Class method
+# Naming conventions
+#   $field : raw field name (e.g. Foo-Bar)
+#   $norm  : normalized field name (e.g. -foo_bar)
 
 sub new {
     my $class = shift;
@@ -18,7 +20,7 @@ sub new {
         -window_target => q{-target},
     );
 
-    my $normalizer = sub {
+    my $self = sub {
         my $field = lc shift;
 
         # add an initial dash if not exists
@@ -30,41 +32,10 @@ sub new {
         exists $norm_of{ $field } ? $norm_of{ $field } : $field;
     };
 
-    bless $normalizer, $class;
+    bless $self, $class;
 }
-
-
-# Instance methods
 
 sub normalize     { $_[0]->( $_[1] )          }
 sub is_normalized { $_[0]->( $_[1] ) eq $_[1] }
-
-{
-    my %field_name_of = (
-        -attachment => 'Content-Disposition',
-        -cookie     => 'Set-Cookie',
-        -target     => 'Window-Target',
-        -p3p        => 'P3P',
-    );
-
-    sub denormalize {
-        my $self  = shift;
-        my $norm  = shift;
-        my $field = $field_name_of{ $norm };
-        
-        if ( !$field ) {
-            # get rid of an initial dash if exists
-            $norm =~ s/^-//;
-
-            # transliterate underscores into dashes
-            $norm =~ tr/_/-/;
-
-            # uppercase the first character
-            $field = ucfirst $norm;
-        }
-
-        $field;
-    }
-}
 
 1;
