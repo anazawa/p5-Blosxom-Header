@@ -7,7 +7,7 @@ use warnings;
 #   $norm  : normalized field name (e.g. -foo_bar)
 
 sub new {
-    my $class = shift;
+    my $self = bless {}, shift;
 
     my %norm_of = (
         -attachment    => q{},
@@ -20,7 +20,7 @@ sub new {
         -window_target => q{-target},
     );
 
-    my $self = sub {
+    $self->{normalizer} = sub {
         my $field = lc shift;
 
         # add an initial dash if not exists
@@ -32,10 +32,17 @@ sub new {
         exists $norm_of{ $field } ? $norm_of{ $field } : $field;
     };
 
-    bless $self, $class;
+    $self;
 }
 
-sub normalize     { $_[0]->( $_[1] )          }
-sub is_normalized { $_[0]->( $_[1] ) eq $_[1] }
+sub normalize {
+    my ( $self, $field ) = @_;
+    $self->{normalizer}->( $field );
+}
+
+sub is_normalized {
+    my ( $self, $src ) = @_;
+    $self->normalize( $src ) eq $src;
+}
 
 1;

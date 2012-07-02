@@ -2,6 +2,7 @@ package Blosxom::Header::Proxy;
 use strict;
 use warnings;
 use base qw/Blosxom::Header::Normalizer/;
+use Blosxom::Header::Iterator;
 use Carp qw/croak/;
 
 sub is_initialized { ref $blosxom::header eq 'HASH' }
@@ -15,8 +16,15 @@ sub header {
 # Creates function aliases
 {
     no strict 'refs';
-    *TIEHASH = __PACKAGE__->can( 'new' );
+    #*TIEHASH = __PACKAGE__->can( 'new' );
+    *TIEHASH = \&new;
     *EXISTS = \&FETCH;
+}
+
+sub new {
+    my $self = shift->SUPER::new;
+    $self->{iterator} = Blosxom::Header::Iterator->new;
+    $self;
 }
 
 sub FETCH {
@@ -61,57 +69,14 @@ sub CLEAR {
     %{ $self->header } = ( -type => q{} );
 }
 
-
-# Iterator
-{
-    my %field_name_of = (
-        -attachment => 'Content-Disposition',
-        -cookie     => 'Set-Cookie',
-        -target     => 'Window-Target',
-        -p3p        => 'P3P',
-    );
-
-    my $denormalize = sub {
-        my $norm  = shift;
-        my $field = $field_name_of{ $norm };
-        
-        if ( !$field ) {
-            # get rid of an initial dash if exists
-            $norm =~ s/^-//;
-
-            # transliterate underscores into dashes
-            $norm =~ tr/_/-/;
-
-            # uppercase the first character
-            $field = ucfirst $norm;
-        }
-
-        $field;
-    };
-
-    sub FIRSTKEY {
-        my $self = shift;
-        keys %{ $self->header };
-        return 'Content-Type' if $self->EXISTS( 'Content-Type' );
-        $self->NEXTKEY;
-    }
-
-    sub NEXTKEY {
-        my $self = shift;
-
-        my $norm;
-        while ( my ( $key, $value ) = each %{ $self->header } ) {
-            next unless $value;
-            next if $key eq '-type';
-            next if $key eq '-charset';
-            next if $key eq '-nph';
-            $norm = $key;
-            last;
-        }
-
-        $norm && $denormalize->( $norm );
-    }
+sub FIRSTKEY {
+    my $self = shift;
+    my $iterator = $self->{iterator};
+    $iterator->initialize( $self->header );
+    $iterator->next;
 }
+
+sub NEXTKEY { shift->{iterator}->next( @_ ) }
 
 sub content_type {
     my $self   = shift;
