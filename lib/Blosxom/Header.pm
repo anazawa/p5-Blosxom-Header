@@ -62,7 +62,8 @@ sub _carp {
 
     sub has_instance { $instance }
 
-    sub is_initialized { Blosxom::Header::Proxy->is_initialized }
+    #sub is_initialized { Blosxom::Header::Proxy->is_initialized }
+    sub is_initialized { shift->_proxy->is_initialized }
 
 
     # Instance methods

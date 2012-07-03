@@ -1,62 +1,82 @@
 package Blosxom::Header::Proxy;
 use strict;
 use warnings;
-use base qw/Blosxom::Header::Normalizer/;
-use Blosxom::Header::Iterator;
-use Carp qw/croak/;
+use base 'Blosxom::Header::Entity';
 
-sub is_initialized { ref $blosxom::header eq 'HASH' }
-
-sub header {
-    my $class = shift;
-    return $blosxom::header if $class->is_initialized;
-    croak( q{$blosxom::header hasn't been initialized yet.} );
-}
-
-# Creates function aliases
 {
     no strict 'refs';
-    #*TIEHASH = __PACKAGE__->can( 'new' );
-    *TIEHASH = \&new;
+    *TIEHASH = __PACKAGE__->can( 'new' );
     *EXISTS = \&FETCH;
 }
 
-sub new {
-    my $self = shift->SUPER::new;
-    $self->{iterator} = Blosxom::Header::Iterator->new;
-    $self;
-}
-
 sub FETCH {
-    my ( $self, $field ) = @_;
-    my $norm = $self->normalize( $field );
-    return $self->content_type if $norm eq '-content_type';    
-    return $self->content_disposition if $norm eq '-content_disposition';    
-    $self->header->{ $norm };
+    my $self   = shift;
+    my $norm   = $self->{normalize}->( shift );
+    my $header = $self->{header} || $self->header;
+
+    if ( $norm eq '-content_type' ) {
+        my $type    = $header->{-type};
+        my $charset = $header->{-charset};
+
+        if ( defined $type and $type eq q{} ) {
+            undef $charset;
+            undef $type;
+        }
+        elsif ( !defined $type ) {
+            $type    = 'text/html';
+            $charset = 'ISO-8859-1' unless defined $charset;
+        }
+        elsif ( $type =~ /\bcharset\b/ ) {
+            undef $charset;
+        }
+        elsif ( !defined $charset ) {
+            $charset = 'ISO-8859-1';
+        }
+
+        return $charset ? "$type; charset=$charset" : $type;
+    }
+    elsif ( $norm eq '-content_disposition' ) {
+        my $attachment = $header->{-attachment};
+        return qq{attachment; filename="$attachment"} if $attachment;
+    }
+
+    $header->{ $norm };
 }
 
 sub STORE {
-    my ( $self, $field, $value ) = @_;
-    my $norm = $self->normalize( $field );
-    return $self->content_type( $value ) if $norm eq '-content_type';
-    return $self->content_disposition( $value ) if $norm eq '-content_disposition';
-    $self->header->{ $norm } = $value;
+    my $self   = shift;
+    my $norm   = $self->{normalize}->( shift );
+    my $value  = shift;
+    my $header = $self->{header} || $self->header;
+
+    if ( $norm eq '-content_type' ) {
+        my $has_charset = $value =~ /\bcharset\b/;
+        delete $header->{-charset} if $has_charset;
+        $header->{-charset} = q{} unless $has_charset;
+        $norm = '-type';
+    }
+    elsif ( $norm eq '-content_disposition' ) {
+        delete $header->{-attachment};
+    }
+
+    $header->{ $norm } = $value;
+
     return;
 }
 
 sub DELETE {
     my $self   = shift;
-    my $norm   = $self->normalize( shift );
-    my $header = $self->header;
+    my $norm   = $self->{normalize}->( shift );
+    my $header = $self->{header} || $self->header;
 
     if ( $norm eq '-content_type' ) {
-        my $deleted = $self->content_type;
+        my $deleted = $self->FETCH( $norm );
         delete $header->{-charset};
         $header->{-type} = q{};
         return $deleted;
     }
     elsif ( $norm eq '-content_disposition' ) {
-        my $deleted = $self->content_disposition;
+        my $deleted = $self->FETCH( $norm );
         delete @{ $header }{ '-attachment', $norm };
         return $deleted;
     }
@@ -66,76 +86,35 @@ sub DELETE {
 
 sub CLEAR {
     my $self = shift;
-    %{ $self->header } = ( -type => q{} );
+    %{ $self->{header} || $self->header } = ( -type => q{} );
 }
 
 sub FIRSTKEY {
     my $self = shift;
-    my $iterator = $self->{iterator};
-    $iterator->initialize( $self->header );
-    $iterator->next;
-}
+    my $header = $self->{header} || $self->header;
+    keys %{ $header };
+    exists $header->{-type} ? $self->NEXTKEY : 'Content-Type';
+};
 
-sub NEXTKEY { shift->{iterator}->next( @_ ) }
-
-sub content_type {
+sub NEXTKEY {
     my $self   = shift;
-    my $header = $self->header;
+    my $header = $self->{header} || $self->header;
 
-    if ( @_ ) {
-        my $content_type = shift;
-        my $has_charset = $content_type =~ /\bcharset\b/;
-        delete $header->{-charset} if $has_charset;
-        $header->{-charset} = q{} unless $has_charset;
-        return $header->{-type} = $content_type;
-    }
-
-    my ( $type, $charset ) = @{ $header }{ '-type', '-charset' };
-
-    if ( defined $type and $type eq q{} ) {
-        undef $charset;
-        undef $type;
-    }
-    elsif ( !defined $type ) {
-        $type    = 'text/html';
-        $charset = 'ISO-8859-1' unless defined $charset;
-    }
-    elsif ( $type =~ /\bcharset\b/ ) {
-        undef $charset;
-    }
-    elsif ( !defined $charset ) {
-        $charset = 'ISO-8859-1';
+    my $nextkey;
+    while ( my ( $norm, $value ) = each %{ $header } ) {
+        next if !$value or $norm eq '-charset' or $norm eq '-nph';
+        $nextkey = $self->{denormalize}->( $norm );
+        last;
     }
 
-    $charset ? "$type; charset=$charset" : $type;
+    $nextkey;
 }
 
-sub content_disposition {
-    my $self   = shift;
-    my $header = $self->header;
-
-    if ( @_ ) {
-        $header->{-content_disposition} = shift;
-        delete $header->{-attachment};
-        return;
-    }
-    elsif ( my $attachment = $header->{-attachment} ) {
-        return qq{attachment; filename="$attachment"};
-    }
-
-    $header->{-content_disposition};
-}
-
-sub attachment {
+sub SCALAR {
     my $self = shift;
-    return $self->header->{-attachment} = shift if @_;
-    $self->header->{-attachment};
-}
-
-sub nph {
-    my $self = shift;
-    return $self->header->{-nph} = shift if @_;
-    $self->header->{-nph};
+    my $scalar = $self->FIRSTKEY;
+    keys %{ $self->{header} || $self->header } if $scalar;
+    $scalar;
 }
 
 1;

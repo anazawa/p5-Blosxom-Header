@@ -4,7 +4,7 @@ use Test::Base;
 
 plan tests => blocks() + 4;
 
-my $proxy = Blosxom::Header::Proxy->new;
+my $proxy = Blosxom::Header::Proxy->TIEHASH;
 isa_ok $proxy, 'Blosxom::Header::Proxy';
 #can_ok $proxy, qw( normalize is_normalized denormalize );
 can_ok $proxy, qw( normalize is_normalized );
