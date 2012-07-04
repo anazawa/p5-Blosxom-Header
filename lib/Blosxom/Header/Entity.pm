@@ -3,18 +3,6 @@ use strict;
 use warnings;
 use Carp qw/croak/;
 
-sub is_initialized {
-    my $self = shift;
-    return unless ref $blosxom::header eq 'HASH';
-    $self->{header} = $blosxom::header;
-}
-
-sub header {
-    my $self = shift;
-    return $self->{header} if $self->is_initialized;
-    croak( q{$blosxom::header hasn't been initialized yet.} );
-}
-
 sub new {
     my $self = bless {}, shift;
 
@@ -45,8 +33,8 @@ sub new {
         -attachment => 'Content-Disposition',
         -cookie     => 'Set-Cookie',
         -target     => 'Window-Target',
+        -type       => 'Content-Type',
         -p3p        => 'P3P',
-        -type => 'Content-Type',
     );
 
     $self->{denormalize} = sub {
@@ -70,6 +58,18 @@ sub new {
     $self;
 }
 
+sub header {
+    my $self = shift;
+    return $self->{header} if $self->is_initialized;
+    croak( q{$blosxom::header hasn't been initialized yet.} );
+}
+
+sub is_initialized {
+    my $self = shift;
+    return unless ref $blosxom::header eq 'HASH';
+    $self->{header} = $blosxom::header;
+}
+
 sub normalize {
     my ( $self, $field ) = @_;
     $self->{normalize}->( $field );
@@ -83,66 +83,6 @@ sub is_normalized {
 sub denormalize {
     my ( $self, $norm ) = @_;
     $self->{denormalize}->( $norm );
-}
-
-#sub content_type {
-#    my $self   = shift;
-#    my $header = $self->header;
-
-#    if ( @_ ) {
-#        my $content_type = shift;
-#        my $has_charset = $content_type =~ /\bcharset\b/;
-#        delete $header->{-charset} if $has_charset;
-#        $header->{-charset} = q{} unless $has_charset;
-#        return $header->{-type} = $content_type;
-#    }
-
-#    my ( $type, $charset ) = @{ $header }{ '-type', '-charset' };
-
-#    if ( defined $type and $type eq q{} ) {
-#        undef $charset;
-#        undef $type;
-#    }
-#    elsif ( !defined $type ) {
-#        $type    = 'text/html';
-#        $charset = 'ISO-8859-1' unless defined $charset;
-#    }
-#    elsif ( $type =~ /\bcharset\b/ ) {
-#        undef $charset;
-#    }
-#    elsif ( !defined $charset ) {
-#        $charset = 'ISO-8859-1';
-#    }
-
-#    $charset ? "$type; charset=$charset" : $type;
-#}
-
-#sub content_disposition {
-#    my $self   = shift;
-#    my $header = $self->header;
-
-#    if ( @_ ) {
-#        $header->{-content_disposition} = shift;
-#        delete $header->{-attachment};
-#        return;
-#    }
-#    elsif ( my $attachment = $header->{-attachment} ) {
-#        return qq{attachment; filename="$attachment"};
-#    }
-
-#    $header->{-content_disposition};
-#}
-
-sub attachment {
-    my $self = shift;
-    return $self->header->{-attachment} = shift if @_;
-    $self->header->{-attachment};
-}
-
-sub nph {
-    my $self = shift;
-    return $self->header->{-nph} = shift if @_;
-    $self->header->{-nph};
 }
 
 sub reset_iterator { keys %{ shift->header } }

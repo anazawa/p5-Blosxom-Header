@@ -1,4 +1,4 @@
-package Blosxom::Header::Proxy;
+package Blosxom::Header::Adapter;
 use strict;
 use warnings;
 use base 'Blosxom::Header::Entity';
@@ -115,6 +115,18 @@ sub SCALAR {
     my $scalar = $self->FIRSTKEY;
     keys %{ $self->{header} || $self->header } if $scalar;
     $scalar;
+}
+
+sub attachment {
+    my $self = shift;
+    return $self->header->{-attachment} = shift if @_;
+    $self->header->{-attachment};
+}
+
+sub nph {
+    my $self = shift;
+    return $self->header->{-nph} = shift if @_;
+    $self->header->{-nph};
 }
 
 1;

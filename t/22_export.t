@@ -2,12 +2,12 @@ use strict;
 use Test::More tests => 6;
 
 BEGIN {
-    my @methods = qw(
+    my @functions = qw(
         header_get    header_set  header_exists
         header_delete push_cookie push_p3p
     );
-    use_ok 'Blosxom::Header', ( '$Header', @methods );
-    can_ok __PACKAGE__, @methods;
+    use_ok 'Blosxom::Header', ( '$Header', @functions );
+    can_ok __PACKAGE__, @functions;
 }
 
 ok( $Header );

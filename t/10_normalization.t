@@ -1,21 +1,20 @@
 use strict;
-use Blosxom::Header::Proxy;
+use Blosxom::Header::Adapter;
 use Test::Base;
 
 plan tests => blocks() + 4;
 
-my $proxy = Blosxom::Header::Proxy->TIEHASH;
-isa_ok $proxy, 'Blosxom::Header::Proxy';
-#can_ok $proxy, qw( normalize is_normalized denormalize );
-can_ok $proxy, qw( normalize is_normalized );
+my $adapter = Blosxom::Header::Adapter->TIEHASH;
+isa_ok $adapter, 'Blosxom::Header::Adapter';
+can_ok $adapter, qw( normalize is_normalized );
 
 run {
     my $block = shift;
-    is $proxy->normalize( $block->input ), $block->expected;
+    is $adapter->normalize( $block->input ), $block->expected;
 };
 
-ok $proxy->is_normalized( '-foo_bar' );
-ok !$proxy->is_normalized( 'Foo-Bar' );
+ok $adapter->is_normalized( '-foo_bar' );
+ok !$adapter->is_normalized( 'Foo-Bar' );
 
 #is $proxy->denormalize( '-foo_bar' ), 'Foo-bar';
 

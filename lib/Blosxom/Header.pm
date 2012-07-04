@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use base qw/Exporter/;
 use constant USELESS => 'Useless use of %s with no values';
-use Blosxom::Header::Proxy;
+use Blosxom::Header::Adapter;
 use Carp qw/carp/;
 use HTTP::Status qw/status_message/;
 
@@ -15,9 +15,6 @@ our @EXPORT_OK = qw(
     header_exists header_delete header_push push_cookie push_p3p
 );
 
-
-# Variable to export
-
 our $Header;
 
 sub import {
@@ -25,9 +22,6 @@ sub import {
     $Header = $class->instance if $export and $export eq '$Header';
     $class->export_to_level( 1, @_ );
 }
-
-
-# Functions
 
 sub header_get    { __PACKAGE__->instance->get( @_ )    }
 sub header_set    { __PACKAGE__->instance->set( @_ )    }
@@ -45,28 +39,19 @@ sub _carp {
 {
     my $instance;
 
-    # Class methods
-
     sub instance {
         my $class = shift;
         return $class if ref $class;
         return $instance if defined $instance;
-        $instance = $class->_new_instance;
-    }
-
-    sub _new_instance {
-        my $class = shift;
-        tie my %proxy => 'Blosxom::Header::Proxy';
-        bless \%proxy => $class;
+        tie my %adapter => 'Blosxom::Header::Adapter';
+        $instance = bless \%adapter => $class;
     }
 
     sub has_instance { $instance }
 
-    #sub is_initialized { Blosxom::Header::Proxy->is_initialized }
-    sub is_initialized { shift->_proxy->is_initialized }
+    sub is_initialized { shift->_adapter->is_initialized }
 
-
-    # Instance methods
+    sub _adapter { tied %{ $_[0] } }
 
     sub get {
         my ( $self, @fields ) = @_;
@@ -115,9 +100,6 @@ sub _carp {
 
         scalar @values;
     }
-
-
-    # Convenience methods
 
     sub expires {
         my $self = shift;
@@ -190,10 +172,9 @@ sub _carp {
         return;
     }
 
-    sub attachment { shift->_proxy->attachment( @_ ) }
-    sub nph        { shift->_proxy->nph( @_ )        }
+    sub attachment { shift->_adapter->attachment( @_ ) }
+    sub nph        { shift->_adapter->nph( @_ )        }
 
-    sub _proxy { tied %{ $_[0] } }
 }
 
 1;
