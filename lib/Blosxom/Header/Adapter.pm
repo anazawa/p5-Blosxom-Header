@@ -1,22 +1,76 @@
 package Blosxom::Header::Adapter;
 use strict;
 use warnings;
-use base 'Blosxom::Header::Entity';
 
 {
     no strict 'refs';
-    *TIEHASH = __PACKAGE__->can( 'new' );
     *EXISTS = \&FETCH;
 }
 
+sub TIEHASH {
+    my $self = bless {}, shift;
+    $self->{adaptee} = shift;
+
+    my %norm_of = (
+        -attachment    => q{},
+        -charset       => q{},
+        -cookie        => q{},
+        -nph           => q{},
+        -set_cookie    => q{-cookie},
+        -target        => q{},
+        -type          => q{},
+        -window_target => q{-target},
+    );
+
+    $self->{normalize} = sub {
+        my $field = lc shift;
+
+        # add an initial dash if not exists
+        $field = "-$field" unless $field =~ /^-/;
+
+        # transliterate dashes into underscores in field names
+        substr( $field, 1 ) =~ tr{-}{_};
+
+        exists $norm_of{ $field } ? $norm_of{ $field } : $field;
+    };
+
+    my %field_name_of = (
+        -attachment => 'Content-Disposition',
+        -cookie     => 'Set-Cookie',
+        -target     => 'Window-Target',
+        -type       => 'Content-Type',
+        -p3p        => 'P3P',
+    );
+
+    $self->{denormalize} = sub {
+        my $norm  = shift;
+        my $field = $field_name_of{ $norm };
+        
+        if ( !$field ) {
+            # get rid of an initial dash if exists
+            $norm =~ s/^-//;
+
+            # transliterate underscores into dashes
+            $norm =~ tr/_/-/;
+
+            # uppercase the first character
+            $field = ucfirst $norm;
+        }
+
+        $field;
+    };
+
+    $self;
+}
+
 sub FETCH {
-    my $self   = shift;
-    my $norm   = $self->{normalize}->( shift );
-    my $header = $self->{header} || $self->header;
+    my $self    = shift;
+    my $norm    = $self->{normalize}->( shift );
+    my $adaptee = $self->{adaptee};
 
     if ( $norm eq '-content_type' ) {
-        my $type    = $header->{-type};
-        my $charset = $header->{-charset};
+        my $type    = $adaptee->{-type};
+        my $charset = $adaptee->{-charset};
 
         if ( defined $type and $type eq q{} ) {
             undef $charset;
@@ -36,72 +90,70 @@ sub FETCH {
         return $charset ? "$type; charset=$charset" : $type;
     }
     elsif ( $norm eq '-content_disposition' ) {
-        my $attachment = $header->{-attachment};
+        my $attachment = $adaptee->{-attachment};
         return qq{attachment; filename="$attachment"} if $attachment;
     }
 
-    $header->{ $norm };
+    $adaptee->{ $norm };
 }
 
 sub STORE {
-    my $self   = shift;
-    my $norm   = $self->{normalize}->( shift );
-    my $value  = shift;
-    my $header = $self->{header} || $self->header;
+    my $self    = shift;
+    my $norm    = $self->{normalize}->( shift );
+    my $value   = shift;
+    my $adaptee = $self->{adaptee};
 
     if ( $norm eq '-content_type' ) {
         my $has_charset = $value =~ /\bcharset\b/;
-        delete $header->{-charset} if $has_charset;
-        $header->{-charset} = q{} unless $has_charset;
+        delete $adaptee->{-charset} if $has_charset;
+        $adaptee->{-charset} = q{} unless $has_charset;
         $norm = '-type';
     }
     elsif ( $norm eq '-content_disposition' ) {
-        delete $header->{-attachment};
+        delete $adaptee->{-attachment};
     }
 
-    $header->{ $norm } = $value;
+    $adaptee->{ $norm } = $value;
 
     return;
 }
 
 sub DELETE {
-    my $self   = shift;
-    my $norm   = $self->{normalize}->( shift );
-    my $header = $self->{header} || $self->header;
+    my $self    = shift;
+    my $norm    = $self->{normalize}->( shift );
+    my $adaptee = $self->{adaptee};
 
     if ( $norm eq '-content_type' ) {
         my $deleted = $self->FETCH( $norm );
-        delete $header->{-charset};
-        $header->{-type} = q{};
+        delete $adaptee->{-charset};
+        $adaptee->{-type} = q{};
         return $deleted;
     }
     elsif ( $norm eq '-content_disposition' ) {
         my $deleted = $self->FETCH( $norm );
-        delete @{ $header }{ '-attachment', $norm };
+        delete @{ $adaptee }{ $norm, '-attachment' };
         return $deleted;
     }
 
-    delete $header->{ $norm };
+    delete $adaptee->{ $norm };
 }
 
 sub CLEAR {
     my $self = shift;
-    %{ $self->{header} || $self->header } = ( -type => q{} );
+    %{ $self->{adaptee} } = ( -type => q{} );
 }
 
 sub FIRSTKEY {
     my $self = shift;
-    my $header = $self->{header} || $self->header;
-    keys %{ $header };
-    exists $header->{-type} ? $self->NEXTKEY : 'Content-Type';
+    keys %{ $self->{adaptee} };
+    exists $self->{adaptee}{-type} ? $self->NEXTKEY : 'Content-Type';
 };
 
 sub NEXTKEY {
-    my $self   = shift;
-    my $header = $self->{header} || $self->header;
+    my $self = shift;
 
     my $nextkey;
-    while ( my ( $norm, $value ) = each %{ $header } ) {
+    while ( my ( $norm, $value ) = each %{ $self->{adaptee} } ) {
         next if !$value or $norm eq '-charset' or $norm eq '-nph';
         $nextkey = $self->{denormalize}->( $norm );
         last;
@@ -113,20 +165,20 @@ sub NEXTKEY {
 sub SCALAR {
     my $self = shift;
     my $scalar = $self->FIRSTKEY;
-    keys %{ $self->{header} || $self->header } if $scalar;
+    keys %{ $self->{adaptee} } if $scalar;
     $scalar;
 }
 
 sub attachment {
-    my $self = shift;
-    return $self->header->{-attachment} = shift if @_;
-    $self->header->{-attachment};
+    my $adaptee = shift->{adaptee};
+    return $adaptee->{-attachment} = shift if @_;
+    $adaptee->{-attachment};
 }
 
 sub nph {
-    my $self = shift;
-    return $self->header->{-nph} = shift if @_;
-    $self->header->{-nph};
+    my $adaptee = shift->{adaptee};
+    return $adaptee->{-nph} = shift if @_;
+    $adaptee->{-nph};
 }
 
 1;

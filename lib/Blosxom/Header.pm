@@ -5,23 +5,15 @@ use warnings;
 use base qw/Exporter/;
 use constant USELESS => 'Useless use of %s with no values';
 use Blosxom::Header::Adapter;
-use Carp qw/carp/;
+use Carp qw/carp croak/;
 use HTTP::Status qw/status_message/;
 
 our $VERSION = '0.05005';
 
 our @EXPORT_OK = qw(
-    $Header       header_get    header_set  header
-    header_exists header_delete header_push push_cookie push_p3p
+    header_get  header_set  header_exists header_delete
+    header_push push_cookie push_p3p
 );
-
-our $Header;
-
-sub import {
-    my ( $class, $export ) = @_;
-    $Header = $class->instance if $export and $export eq '$Header';
-    $class->export_to_level( 1, @_ );
-}
 
 sub header_get    { __PACKAGE__->instance->get( @_ )    }
 sub header_set    { __PACKAGE__->instance->set( @_ )    }
@@ -43,15 +35,11 @@ sub _carp {
         my $class = shift;
         return $class if ref $class;
         return $instance if defined $instance;
-        tie my %adapter => 'Blosxom::Header::Adapter';
-        $instance = bless \%adapter => $class;
+        tie my %self => 'Blosxom::Header::Adapter' => $blosxom::header;
+        $instance = bless \%self => $class;
     }
 
     sub has_instance { $instance }
-
-    sub is_initialized { shift->_adapter->is_initialized }
-
-    sub _adapter { tied %{ $_[0] } }
 
     sub get {
         my ( $self, @fields ) = @_;
@@ -175,6 +163,7 @@ sub _carp {
     sub attachment { shift->_adapter->attachment( @_ ) }
     sub nph        { shift->_adapter->nph( @_ )        }
 
+    sub _adapter { tied %{ $_[0] } }
 }
 
 1;

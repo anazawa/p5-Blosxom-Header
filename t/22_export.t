@@ -1,18 +1,18 @@
 use strict;
-use Test::More tests => 6;
+use Test::More tests => 3;
 
 BEGIN {
     my @functions = qw(
         header_get    header_set  header_exists
         header_delete push_cookie push_p3p
     );
-    use_ok 'Blosxom::Header', ( '$Header', @functions );
+    use_ok 'Blosxom::Header', @functions;
     can_ok __PACKAGE__, @functions;
 }
 
-ok( $Header );
-ok( Blosxom::Header->has_instance );
-is $Header, Blosxom::Header->instance;
+#ok( $Header );
+#ok( Blosxom::Header->has_instance );
+#is $Header, Blosxom::Header->instance;
 
 {
     package blosxom;

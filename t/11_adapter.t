@@ -3,12 +3,8 @@ use Blosxom::Header::Adapter;
 use Test::Exception;
 use Test::More tests => 13;
 
-{
-    package blosxom;
-    our $header = {};
-}
-
-my $adapter = tie my %adapter => 'Blosxom::Header::Adapter';
+my %adaptee;
+my $adapter = tie my %adapter => 'Blosxom::Header::Adapter' => \%adaptee;
 isa_ok $adapter, 'Blosxom::Header::Adapter';
 can_ok $adapter, qw(
     FETCH STORE DELETE EXISTS CLEAR FIRSTKEY NEXTKEY SCALAR
@@ -16,74 +12,74 @@ can_ok $adapter, qw(
 );
 
 subtest 'SCALAR()' => sub {
-    %{ $blosxom::header } = ( -type => q{} );
+    %adaptee = ( -type => q{} );
     ok !%adapter;
 
-    %{ $blosxom::header } = ( -type => q{}, -charset => 'utf-8' );
+    %adaptee = ( -type => q{}, -charset => 'utf-8' );
     ok !%adapter;
 
-    %{ $blosxom::header } = ( -type => q{}, -foo => q{} );
+    %adaptee = ( -type => q{}, -foo => q{} );
     ok !%adapter;
 
-    %{ $blosxom::header } = ( -type => q{}, -foo => 'bar' );
+    %adaptee = ( -type => q{}, -foo => 'bar' );
     ok %adapter;
 
-    %{ $blosxom::header } = ( -foo => 'bar' );
+    %adaptee = ( -foo => 'bar' );
     ok %adapter;
 };
 
 subtest 'CLEAR()' => sub {
-    %{ $blosxom::header } = ( -foo => 'bar' );
+    %adaptee = ( -foo => 'bar' );
     %adapter = ();
-    is_deeply $blosxom::header, { -type => q{} };
+    is_deeply \%adaptee, { -type => q{} };
 };
 
 subtest 'EXISTS()' => sub {
-    %{ $blosxom::header } = ( -foo => 'bar', -bar => q{} );
+    %adaptee = ( -foo => 'bar', -bar => q{} );
     ok exists $adapter{Foo};
     ok !exists $adapter{Bar};
     ok !exists $adapter{Baz};
 };
 
 subtest 'DELETE()' => sub {
-    %{ $blosxom::header } = ( -foo => 'bar', -bar => 'baz' );
+    %adaptee = ( -foo => 'bar', -bar => 'baz' );
     is delete $adapter{Foo}, 'bar';
-    is_deeply $blosxom::header, { -bar => 'baz' };
+    is_deeply \%adaptee, { -bar => 'baz' };
 };
 
 subtest 'FETCH()' => sub {
-    %{ $blosxom::header } = ( -foo => 'bar' );
+    %adaptee = ( -foo => 'bar' );
     is $adapter{Foo}, 'bar';
     is $adapter{Bar}, undef;
 };
 
 subtest 'STORE()' => sub {
-    %{ $blosxom::header } = ();
+    %adaptee = ();
     $adapter{Foo} = 'bar';
-    is_deeply $blosxom::header, { -foo => 'bar' };
+    is_deeply \%adaptee, { -foo => 'bar' };
 };
 
 subtest 'each()' => sub {
-    %{ $blosxom::header } = ();
+    %adaptee = ();
     is_deeply [ each %adapter ], [ 'Content-Type', 'text/html; charset=ISO-8859-1' ];
     is_deeply [ each %adapter ], [];
 
-    %{ $blosxom::header } = ( -type => q{} );
+    %adaptee = ( -type => q{} );
     is_deeply [ each %adapter ], [];
 
-    %{ $blosxom::header } = ( -charset => 'foo', -nph => 1 );
+    %adaptee = ( -charset => 'foo', -nph => 1 );
     is_deeply [ each %adapter ], [ 'Content-Type', 'text/html; charset=foo' ];
     is_deeply [ each %adapter ], [];
 
-    %{ $blosxom::header } = ( -type => q{}, -charset => 'foo', -nph => 1 );
+    %adaptee = ( -type => q{}, -charset => 'foo', -nph => 1 );
     is_deeply [ each %adapter ], [];
 
-    %{ $blosxom::header } = ( -foo => 'bar' );
+    %adaptee = ( -foo => 'bar' );
     is_deeply [ each %adapter ], [ 'Content-Type', 'text/html; charset=ISO-8859-1' ];
     is_deeply [ each %adapter ], [ 'Foo', 'bar' ];
     is_deeply [ each %adapter ], [];
 
-    %{ $blosxom::header } = (
+    %adaptee = (
         -nph        => 'foo',
         -charset    => 'foo',
         -status     => 'foo',
@@ -123,7 +119,7 @@ subtest 'each()' => sub {
 
 #subtest 'header()' => sub {
 #    undef $Header;
-#    my $expected = qr/\$blosxom::header hasn't been initialized yet/; 
+#    my $expected = qr/\adaptee hasn't been initialized yet/; 
 #    throws_ok { $adapter->header } $expected;
 
 #    $Header = {};
@@ -131,120 +127,120 @@ subtest 'each()' => sub {
 #};
 
 subtest 'Content-Type' => sub {
-    %{ $blosxom::header } = ( -type => q{} );
+    %adaptee = ( -type => q{} );
     is $adapter{Content_Type}, undef;
     ok !exists $adapter{Content_Type};
     ok !%adapter;
 
-    %{ $blosxom::header } = ();
+    %adaptee = ();
     is $adapter{Content_Type}, 'text/html; charset=ISO-8859-1';
     ok exists $adapter{Content_Type};
     ok %adapter;
 
-    %{ $blosxom::header } = ( -type => 'text/plain' );
+    %adaptee = ( -type => 'text/plain' );
     is $adapter{Content_Type}, 'text/plain; charset=ISO-8859-1';
 
-    %{ $blosxom::header } = ( -charset => 'utf-8' );
+    %adaptee = ( -charset => 'utf-8' );
     is $adapter{Content_Type}, 'text/html; charset=utf-8';
 
-    %{ $blosxom::header } = ( -type => 'text/plain', -charset => 'utf-8' );
+    %adaptee = ( -type => 'text/plain', -charset => 'utf-8' );
     is $adapter{Content_Type}, 'text/plain; charset=utf-8';
 
-    %{ $blosxom::header } = ( -type => q{} );
+    %adaptee = ( -type => q{} );
     is $adapter{Content_Type}, undef;
 
-    %{ $blosxom::header } = ( -type => q{}, -charset => 'utf-8' );
+    %adaptee = ( -type => q{}, -charset => 'utf-8' );
     is $adapter{Content_Type}, undef;
 
-    %{ $blosxom::header } = ( -type => 'text/plain; charset=EUC-JP' );
+    %adaptee = ( -type => 'text/plain; charset=EUC-JP' );
     is $adapter{Content_Type}, 'text/plain; charset=EUC-JP';
 
-    %{ $blosxom::header } = (
+    %adaptee = (
         -type    => 'text/plain; charset=euc-jp',
         -charset => 'utf-8',
     );
     is $adapter{Content_Type}, 'text/plain; charset=euc-jp';
 
-    %{ $blosxom::header } = ( -charset => q{} );
+    %adaptee = ( -charset => q{} );
     is $adapter{Content_Type}, 'text/html';
 
-    %{ $blosxom::header } = ();
+    %adaptee = ();
     $adapter{Content_Type} = 'text/plain; charset=utf-8';
-    is_deeply $blosxom::header, { -type => 'text/plain; charset=utf-8' };
+    is_deeply \%adaptee, { -type => 'text/plain; charset=utf-8' };
 
-    %{ $blosxom::header } = ();
+    %adaptee = ();
     $adapter{Content_Type} = 'text/plain';
-    is_deeply $blosxom::header, { -type => 'text/plain', -charset => q{} };
+    is_deeply \%adaptee, { -type => 'text/plain', -charset => q{} };
 
-    %{ $blosxom::header } = ( -charset => 'euc-jp' );
+    %adaptee = ( -charset => 'euc-jp' );
     $adapter{Content_Type} = 'text/plain; charset=utf-8';
-    is_deeply $blosxom::header, { -type => 'text/plain; charset=utf-8' };
+    is_deeply \%adaptee, { -type => 'text/plain; charset=utf-8' };
 
-    %{ $blosxom::header } = ( -type => 'foo' );
+    %adaptee = ( -type => 'foo' );
     ok exists $adapter{Content_Type};
 
-    %{ $blosxom::header } = ( -type => undef );
+    %adaptee = ( -type => undef );
     ok exists $adapter{Content_Type};
 
-    #%{ $blosxom::header } = ();
+    #%{ adaptee } = ();
     #undef $adapter{Content_Type};
-    #is_deeply $blosxom::header, { -type => q{} };
+    #is_deeply adaptee, { -type => q{} };
 
-    %{ $blosxom::header } = ();
+    %adaptee = ();
     is delete $adapter{Content_Type}, 'text/html; charset=ISO-8859-1';
-    is_deeply $blosxom::header, { -type => q{} };
+    is_deeply \%adaptee, { -type => q{} };
 
-    %{ $blosxom::header } = ( -type => q{} );
+    %adaptee = ( -type => q{} );
     is delete $adapter{Content_Type}, undef;
-    is_deeply $blosxom::header, { -type => q{} };
+    is_deeply \%adaptee, { -type => q{} };
 
-    %{ $blosxom::header } = ( -type => 'text/plain', -charset => 'utf-8' );
+    %adaptee = ( -type => 'text/plain', -charset => 'utf-8' );
     is delete $adapter{Content_Type}, 'text/plain; charset=utf-8';
-    is_deeply $blosxom::header, { -type => q{} };
+    is_deeply \%adaptee, { -type => q{} };
 };
 
 subtest 'Content-Disposition' => sub {
-    %{ $blosxom::header } = ( -attachment => 'genome.jpg' );
+    %adaptee = ( -attachment => 'genome.jpg' );
     is $adapter{Content_Disposition}, 'attachment; filename="genome.jpg"';
     ok exists $adapter{Content_Disposition};
 
-    %{ $blosxom::header } = ( -attachment => q{} );
+    %adaptee = ( -attachment => q{} );
     ok !exists $adapter{Content_Disposition};
 
-    %{ $blosxom::header } = ( -attachment => undef );
+    %adaptee = ( -attachment => undef );
     ok !exists $adapter{Content_Disposition};
 
-    %{ $blosxom::header } = ();
+    %adaptee = ();
     ok !exists $adapter{Content_Disposition};
 
-    %{ $blosxom::header } = ( -content_disposition => 'inline' );
+    %adaptee = ( -content_disposition => 'inline' );
     is $adapter{Content_Disposition}, 'inline';
 
-    %{ $blosxom::header } = ( -attachment => 'foo' );
+    %adaptee = ( -attachment => 'foo' );
     $adapter{Content_Disposition} = 'inline';
-    is_deeply $blosxom::header, { -content_disposition => 'inline' };
+    is_deeply \%adaptee, { -content_disposition => 'inline' };
 
-    %{ $blosxom::header } = ( -attachment => 'foo' );
+    %adaptee = ( -attachment => 'foo' );
     is delete $adapter{Content_Disposition}, 'attachment; filename="foo"';
-    is_deeply $blosxom::header, {};
+    is_deeply \%adaptee, {};
 
-    %{ $blosxom::header } = ( -content_disposition => 'inline' );
+    %adaptee = ( -content_disposition => 'inline' );
     is delete $adapter{Content_Disposition}, 'inline';
-    is_deeply $blosxom::header, {};
+    is_deeply \%adaptee, {};
 };
 
 subtest 'attachment()' => sub {
-    %{ $blosxom::header } = ();
+    %adaptee = ();
     is $adapter->attachment, undef;
     $adapter->attachment( 'genome.jpg' );
     is $adapter->attachment, 'genome.jpg';
-    is $adapter->header->{-attachment}, 'genome.jpg';
+    is $adaptee{-attachment}, 'genome.jpg';
 };
 
 subtest 'nph()' => sub {
-    %{ $blosxom::header } = ();
+    %adaptee = ();
     ok !$adapter->nph;
     $adapter->nph( 1 );
     ok $adapter->nph;
-    is $adapter->header->{-nph}, 1;
+    is $adaptee{-nph}, 1;
 };
