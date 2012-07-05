@@ -12,33 +12,27 @@ sub TIEHASH {
     $self->{adaptee} = shift;
 
     my %norm_of = (
-        -attachment    => q{},
-        -charset       => q{},
-        -cookie        => q{},
-        -nph           => q{},
-        -set_cookie    => q{-cookie},
-        -target        => q{},
-        -type          => q{},
-        -window_target => q{-target},
+        -attachment => q{},        -charset       => q{},
+        -cookie     => q{},        -nph           => q{},
+        -set_cookie => q{-cookie}, -target        => q{},
+        -type       => q{},        -window_target => q{-target},
     );
 
     $self->{normalize} = sub {
         my $field = lc shift;
 
-        # add an initial dash if not exists
-        $field = "-$field" unless $field =~ /^-/;
+        # transliterate dashes into underscores
+        $field =~ tr{-}{_};
 
-        # transliterate dashes into underscores in field names
-        substr( $field, 1 ) =~ tr{-}{_};
+        # add an initial dash
+        $field = "-$field";
 
         exists $norm_of{ $field } ? $norm_of{ $field } : $field;
     };
 
     my %field_name_of = (
-        -attachment => 'Content-Disposition',
-        -cookie     => 'Set-Cookie',
-        -target     => 'Window-Target',
-        -type       => 'Content-Type',
+        -attachment => 'Content-Disposition', -cookie => 'Set-Cookie',
+        -target     => 'Window-Target',       -type   => 'Content-Type',
         -p3p        => 'P3P',
     );
 
@@ -124,13 +118,13 @@ sub DELETE {
     my $adaptee = $self->{adaptee};
 
     if ( $norm eq '-content_type' ) {
-        my $deleted = $self->FETCH( $norm );
+        my $deleted = $self->FETCH( 'Content-Type' );
         delete $adaptee->{-charset};
         $adaptee->{-type} = q{};
         return $deleted;
     }
     elsif ( $norm eq '-content_disposition' ) {
-        my $deleted = $self->FETCH( $norm );
+        my $deleted = $self->FETCH( 'Content-Disposition' );
         delete @{ $adaptee }{ $norm, '-attachment' };
         return $deleted;
     }

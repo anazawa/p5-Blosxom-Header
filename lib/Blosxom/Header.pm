@@ -3,10 +3,14 @@ use 5.008_009;
 use strict;
 use warnings;
 use base qw/Exporter/;
-use constant USELESS => 'Useless use of %s with no values';
 use Blosxom::Header::Adapter;
 use Carp qw/carp croak/;
 use HTTP::Status qw/status_message/;
+
+use constant {
+    NOT_INITIALIZED => q{$blosxom::header hasn't been initialized yet},
+    USELESS         => q{Useless use of %s with no values},
+};
 
 our $VERSION = '0.05005';
 
@@ -35,6 +39,7 @@ sub _carp {
         my $class = shift;
         return $class if ref $class;
         return $instance if defined $instance;
+        croak( NOT_INITIALIZED ) unless ref $blosxom::header eq 'HASH';
         tie my %self => 'Blosxom::Header::Adapter' => $blosxom::header;
         $instance = bless \%self => $class;
     }
@@ -105,7 +110,6 @@ sub _carp {
         my $self = shift;
         return $self->{Set_Cookie} = @_ > 1 ? [ @_ ] : shift if @_;
         my $cookies = $self->{Set_Cookie};
-        return unless $cookies;
         return $cookies unless ref $cookies eq 'ARRAY';
         wantarray ? @{ $cookies } : $cookies->[0];
     }
@@ -116,7 +120,6 @@ sub _carp {
         if ( @_ ) {
             my @tags = @_ > 1 ? @_ : split / /, shift;
             $self->{P3P} = @tags > 1 ? \@tags : $tags[0];
-            return;
         }
         elsif ( my $tags = $self->{P3P} ) {
             my @tags = ref $tags eq 'ARRAY' ? @{ $tags } : ( $tags );
@@ -140,8 +143,8 @@ sub _carp {
         my $self = shift;
         my $type = $self->{Content_Type};
         my ( $charset ) = $type =~ /charset=([^;]+)/ if $type;
-        $charset = uc $charset if $charset;
-        $charset;
+        return unless $charset;
+        uc $charset;
     }
 
     sub status {
@@ -204,8 +207,8 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
 =head1 DESCRIPTION
 
-Provides Blosxom plugin developers
-with an interface to handle HTTP response headers.
+This module provides Blosxom plugin developers
+with an interface to handle L<CGI> response headers.
 
 =head2 BACKGROUND
 
@@ -583,8 +586,14 @@ L<Blosxom 2.0.0|http://blosxom.sourceforge.net/> or higher.
 =head1 SEE ALSO
 
 L<Blosxom::Header::Proxy>,
-L<CGI>,
 L<Class::Singleton>
+
+=over 4
+
+=item D. Robinson and K.Coar, "The Common Gateway Interface (CGI) Version 1.1",
+L<RFC 3875|http://tools.ietf.org/html/rfc3875#section-6>, October 2004
+
+=back
 
 =head1 ACKNOWLEDGEMENT
 

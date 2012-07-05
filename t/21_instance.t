@@ -1,14 +1,23 @@
 use strict;
 use Blosxom::Header;
-use Test::More tests => 18;
+use Test::More tests => 19;
 use Test::Warn;
+use Test::Exception;
 
-my %header;
 
 {
     package blosxom;
-    our $header = \%header;
+    our $header;
 }
+
+{
+    my $expected = qr{^\$blosxom::header hasn't been initialized yet};
+    throws_ok { Blosxom::Header->instance } $expected;
+}
+
+# Initialize
+my %header;
+$blosxom::header = \%header;
 
 my $header = Blosxom::Header->instance;
 isa_ok $header, 'Blosxom::Header';

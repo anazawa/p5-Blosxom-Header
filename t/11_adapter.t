@@ -80,6 +80,7 @@ subtest 'each()' => sub {
     is_deeply [ each %adapter ], [];
 
     %adaptee = (
+        -type       => 'foo',
         -nph        => 'foo',
         -charset    => 'foo',
         -status     => 'foo',
@@ -97,7 +98,7 @@ subtest 'each()' => sub {
 
     my %expected = (
         'Content-Disposition' => 'attachment; filename="foo"',
-        'Content-Type'        => 'text/html; charset=foo',
+        'Content-Type'        => 'foo; charset=foo',
         'Expires'             => 'foo',
         'Foo-bar'             => 'foo',
         'P3P'                 => 'foo',
