@@ -3,14 +3,10 @@ use 5.008_009;
 use strict;
 use warnings;
 use base qw/Exporter/;
+use constant USELESS => q{Useless use of %s with no values};
 use Blosxom::Header::Adapter;
 use Carp qw/carp croak/;
 use HTTP::Status qw/status_message/;
-
-use constant {
-    NOT_INITIALIZED => q{$blosxom::header hasn't been initialized yet},
-    USELESS         => q{Useless use of %s with no values},
-};
 
 our $VERSION = '0.05005';
 
@@ -37,11 +33,17 @@ sub _carp {
 
     sub instance {
         my $class = shift;
+
         return $class if ref $class;
         return $instance if defined $instance;
-        croak( NOT_INITIALIZED ) unless ref $blosxom::header eq 'HASH';
+
+        unless ( ref $blosxom::header eq 'HASH' ) {
+            croak( q{$blosxom::header hasn't been initialized yet} );
+        }
+
         tie my %self => 'Blosxom::Header::Adapter' => $blosxom::header;
-        $instance = bless \%self => $class;
+
+        $instance = bless \%self, $class;
     }
 
     sub has_instance { $instance }
@@ -65,9 +67,10 @@ sub _carp {
         delete @{ $self }{ @fields };
     }
 
-    sub exists      { exists $_[0]->{ $_[1] } }
-    sub clear       { %{ $_[0] } = ()         }
-    sub field_names { keys %{ $_[0] }         }
+    sub exists { exists $_[0]->{ $_[1] } }
+    sub clear  { %{ $_[0] } = ()         }
+
+    sub field_names { keys %{ $_[0] } }
 
     sub push_cookie {
         my $self = ref $_[0] ? shift : __PACKAGE__->instance;
@@ -94,16 +97,17 @@ sub _carp {
         scalar @values;
     }
 
-    sub expires {
-        my $self = shift;
-        return $self->{Expires} = shift if @_;
-        $self->{Expires};
-    }
+    sub attachment { shift->_adapter->attachment( @_ ) }
+    sub nph        { shift->_adapter->nph( @_ )        }
 
-    sub target {
+    sub _adapter { tied %{ $_[0] } }
+
+    sub charset {
         my $self = shift;
-        return $self->{Window_Target} = shift if @_;
-        $self->{Window_Target};
+        my $type = $self->{Content_Type};
+        my ( $charset ) = $type =~ /charset=([^;]+)/ if $type;
+        return unless $charset;
+        uc $charset;
     }
 
     sub cookie {
@@ -112,6 +116,12 @@ sub _carp {
         my $cookies = $self->{Set_Cookie};
         return $cookies unless ref $cookies eq 'ARRAY';
         wantarray ? @{ $cookies } : $cookies->[0];
+    }
+
+    sub expires {
+        my $self = shift;
+        return $self->{Expires} = shift if @_;
+        $self->{Expires};
     }
 
     sub p3p {
@@ -139,14 +149,6 @@ sub _carp {
         wantarray ? ( lc $type, $rest ) : lc $type;
     }
 
-    sub charset {
-        my $self = shift;
-        my $type = $self->{Content_Type};
-        my ( $charset ) = $type =~ /charset=([^;]+)/ if $type;
-        return unless $charset;
-        uc $charset;
-    }
-
     sub status {
         my $self = shift;
 
@@ -163,10 +165,11 @@ sub _carp {
         return;
     }
 
-    sub attachment { shift->_adapter->attachment( @_ ) }
-    sub nph        { shift->_adapter->nph( @_ )        }
-
-    sub _adapter { tied %{ $_[0] } }
+    sub target {
+        my $self = shift;
+        return $self->{Window_Target} = shift if @_;
+        $self->{Window_Target};
+    }
 }
 
 1;

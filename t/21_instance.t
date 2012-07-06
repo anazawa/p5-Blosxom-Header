@@ -1,6 +1,6 @@
 use strict;
 use Blosxom::Header;
-use Test::More tests => 19;
+use Test::More tests => 20;
 use Test::Warn;
 use Test::Exception;
 
@@ -296,4 +296,16 @@ subtest 'target()' => sub {
     $header->target( 'ResultsWindow' );
     is $header->target, 'ResultsWindow';
     is_deeply \%header, { -target => 'ResultsWindow' };
+};
+
+subtest 'each()' => sub {
+    plan skip_all => 'not implemented yet';
+
+    %header = ( -foo => 'bar' );
+
+    while ( my $field = $header->each ) {
+        $header->delete( $field );
+    }
+
+    is_deeply \%header, { -type => q{} };
 };

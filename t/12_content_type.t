@@ -3,7 +3,7 @@ use Blosxom::Header::Adapter;
 use Test::More tests => 25;
 
 my %adaptee;
-tie my %adapter => 'Blosxom::Header::Adapter' => \%adaptee;
+tie my %adapter, 'Blosxom::Header::Adapter', \%adaptee;
 
 %adaptee = ( -type => q{} );
 is $adapter{Content_Type}, undef;
