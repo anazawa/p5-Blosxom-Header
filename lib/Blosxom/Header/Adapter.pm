@@ -183,13 +183,20 @@ __END__
 
 =head1 NAME
 
-Blosxom::Header::Proxy
+Blosxom::Header::Adapter
 
 =head1 SYNOPSIS
 
-  use Blosxom::Header::Proxy;
+  use CGI qw/header/;
+  use Blosxom::Header::Adapter;
 
-  my $proxy = tie my %proxy => 'Blosxom::Header::Proxy';
+  my %adaptee = ( -type => 'text/plain' );
+
+  tie my %adapter => 'Blosxom::Header::Adapter' => \%adaptee;
+
+  $adapter{Status} = '304 Not Modified';
+
+  print header( %adaptee );
 
 =head1 DESCRIPTION
 
@@ -197,29 +204,29 @@ Blosxom::Header::Proxy
 
 =over 4
 
-=item $proxy = tie %proxy => 'Blosxom::Header::Proxy'
+=item $adapter = tie %adapter, 'Blosxom::Header::Adapter', \%adaptee
 
-Associates a new hash instance with Blosxom::Header::Proxy.
+Associates a new hash instance with Blosxom::Header::Adapter.
 
-=item %proxy = ()
+=item $adapter{ $field } = $value
 
-A shortcut for
+=item $value = $adapter{ $field }
 
-  %{ $blosxom::header } = ( -type => q{} );
+=item delete $adapter{ $field }
 
-=item $bool = %proxy
+=item scalar %adapter
 
-  $blosxom::header = { -type => q{} };
-  $bool = %proxy; # false
+=item each %adapter
 
-  $blosxom::header = {};
-  $bool = %proxy; # true
-
-=item $bool = $proxy->is_initialized
+=item %adapter = ()
 
 A shortcut for
 
-  $bool = ref $blosxom::header eq 'HASH';
+  %adaptee = ( -type => q{} );
+
+=item $adapter->nph()
+
+=item $adapter->attachment()
 
 =back
 

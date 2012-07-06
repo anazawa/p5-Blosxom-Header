@@ -48,6 +48,8 @@ sub _carp {
 
     sub has_instance { $instance }
 
+    sub is_initialized { ref $blosxom::header eq 'HASH' }
+
     sub get {
         my ( $self, @fields ) = @_;
         return _carp( USELESS, 'get()' ) unless @fields;
@@ -178,7 +180,7 @@ __END__
 
 =head1 NAME
 
-Blosxom::Header - Missing interface to modify HTTP headers
+Blosxom::Header - Missing interface to modify CGI response headers
 
 =head1 SYNOPSIS
 
@@ -195,6 +197,7 @@ Blosxom::Header - Missing interface to modify HTTP headers
 
   my $status = $header->get( 'Status' );
   my @deleted = $header->delete( qw/Content-Disposition Content-Length/ );
+
 
   # Procedural interface
 
@@ -267,15 +270,11 @@ L<Blosxom::Header::Fast> explains the details.
 
 =head2 VARIABLE
 
-The following variable is exported on demand.
-
 =over 4
 
 =item $Header
 
-The same reference as C<< Blosxom::Header->instance >> returns.
-
-  use Blosxom::Header qw/$Header/;
+This variable isn't exported any more. Sorry for incovenience :(
 
 =back
 
@@ -338,21 +337,21 @@ Returns a current Blosxom::Header object instance or create a new one.
 
 Returns a reference to any existing instance or C<undef> if none is defined.
 
+=item $bool = Blosxom::Header->is_initialized
+
+Returns a Boolean value telling whether C<$blosxom::header> is initialized or
+not. Blosxom initializes the variable just before C<blosxom::generate()> is
+called. If C<$bool> was false, L<instance()> would throw an exception.
+
+Internally, this method is a shortcut for
+
+  $bool = ref $blosxom::header eq 'HASH';
+
 =back
 
 =head2 INSTANCE METHODS
 
 =over 4
-
-=item $bool = $header->is_initialized
-
-Returns a Boolean value telling whether C<$blosxom::header> is initialized or
-not. Blosxom initializes the variable just before C<blosxom::generate()> is
-called. If C<$bool> was false, the following methods would throw exceptions.
-
-Internally, this method is a shortcut for
-
-  $bool = ref $blosxom::header eq 'HASH';
 
 =item $value = $header->get( $field )
 
@@ -361,7 +360,7 @@ Internally, this method is a shortcut for
 Returns the value of one or more header fields.
 Accepts a list of field names.
 C<$field> isn't case-sensitive.
-You can use underscores as a replacement for dashes.
+You can use underscores as a replacement for dashes in header names.
 
 =item $header->set( $field => $value )
 
@@ -427,6 +426,7 @@ Internally, this method is a shortcut for
 =item @fields = $header->field_names
 
 Returns the list of distinct names for the fields present in the header.
+The field names have case as returned by C<CGI::header()>;
 In scalar context return the number of distinct field names.
 
 =back
@@ -566,9 +566,9 @@ This makes it safe to do the following:
 
 =item $blosxom::header hasn't been initialized yet
 
-You attempted to modify C<$blosxom::header>
+You attempted to create a Blosxom::Header instance
 before the variable was initialized.
-See C<< $header->is_initialized >>.
+See C<< Blosxom::Header->is_initialized() >>.
 
 =item Useless use of %s with no values
 
@@ -588,7 +588,7 @@ L<Blosxom 2.0.0|http://blosxom.sourceforge.net/> or higher.
 
 =head1 SEE ALSO
 
-L<Blosxom::Header::Proxy>,
+L<Blosxom::Header::Adapter>,
 L<Class::Singleton>
 
 =over 4
