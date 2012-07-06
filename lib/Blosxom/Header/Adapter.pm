@@ -8,50 +8,21 @@ use warnings;
 }
 
 sub TIEHASH {
-    my $self = bless {}, shift;
-    $self->{adaptee} = shift;
+    my $class   = shift;
+    my $adaptee = ref $_[0] eq 'HASH' ? shift : {};
+    my $self    = bless { adaptee => $adaptee }, $class;
 
-    my %norm_of = (
+    $self->{norm_of} = {
         -attachment => q{},        -charset       => q{},
         -cookie     => q{},        -nph           => q{},
         -set_cookie => q{-cookie}, -target        => q{},
         -type       => q{},        -window_target => q{-target},
-    );
-
-    $self->{normalize} = sub {
-        my $field = lc shift;
-
-        # transliterate dashes into underscores
-        $field =~ tr{-}{_};
-
-        # add an initial dash
-        $field = "-$field";
-
-        exists $norm_of{ $field } ? $norm_of{ $field } : $field;
     };
 
-    my %field_name_of = (
+    $self->{field_name_of} = {
         -attachment => 'Content-Disposition', -cookie => 'Set-Cookie',
         -target     => 'Window-Target',       -type   => 'Content-Type',
         -p3p        => 'P3P',
-    );
-
-    $self->{denormalize} = sub {
-        my $norm  = shift;
-        my $field = $field_name_of{ $norm };
-        
-        if ( !$field ) {
-            # get rid of an initial dash if exists
-            $norm =~ s/^-//;
-
-            # transliterate underscores into dashes
-            $norm =~ tr/_/-/;
-
-            # uppercase the first character
-            $field = ucfirst $norm;
-        }
-
-        $field;
     };
 
     $self;
@@ -59,7 +30,7 @@ sub TIEHASH {
 
 sub FETCH {
     my $self    = shift;
-    my $norm    = $self->{normalize}->( shift );
+    my $norm    = $self->normalize( shift );
     my $adaptee = $self->{adaptee};
 
     if ( $norm eq '-content_type' ) {
@@ -93,7 +64,7 @@ sub FETCH {
 
 sub STORE {
     my $self    = shift;
-    my $norm    = $self->{normalize}->( shift );
+    my $norm    = $self->normalize( shift );
     my $value   = shift;
     my $adaptee = $self->{adaptee};
 
@@ -114,7 +85,7 @@ sub STORE {
 
 sub DELETE {
     my $self    = shift;
-    my $norm    = $self->{normalize}->( shift );
+    my $norm    = $self->normalize( shift );
     my $adaptee = $self->{adaptee};
 
     if ( $norm eq '-content_type' ) {
@@ -149,7 +120,7 @@ sub NEXTKEY {
     my $nextkey;
     while ( my ( $norm, $value ) = each %{ $self->{adaptee} } ) {
         next if !$value or $norm eq '-charset' or $norm eq '-nph';
-        $nextkey = $self->{denormalize}->( $norm );
+        $nextkey = $self->denormalize( $norm );
         last;
     }
 
@@ -161,6 +132,37 @@ sub SCALAR {
     my $scalar = $self->FIRSTKEY;
     keys %{ $self->{adaptee} } if $scalar;
     $scalar;
+}
+
+sub normalize {
+    my $self    = shift;
+    my $field   = lc shift;
+    my $norm_of = $self->{norm_of};
+
+    # transliterate dashes into underscores
+    $field =~ tr{-}{_};
+
+    # add an initial dash
+    $field = "-$field";
+
+    exists $norm_of->{ $field } ? $norm_of->{ $field } : $field;
+}
+
+sub denormalize {
+    my $self = shift;
+    my $norm = shift;
+    my $field_name_of = $self->{field_name_of};
+
+    return $field_name_of->{ $norm } if exists $field_name_of->{ $norm };
+        
+    # get rid of an initial dash
+    ( my $field = $norm ) =~ s/^-//;
+
+    # transliterate underscores into dashes
+    $field =~ tr/_/-/;
+
+    # uppercase the first character
+    $field_name_of->{ $norm } = ucfirst $field;
 }
 
 sub attachment {

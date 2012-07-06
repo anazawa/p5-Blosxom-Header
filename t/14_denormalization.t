@@ -8,7 +8,7 @@ my $adapter = Blosxom::Header::Adapter->TIEHASH;
 
 run {
     my $block = shift;
-    is $adapter->{denormalize}->( $block->input ), $block->expected;
+    is $adapter->denormalize( $block->input ), $block->expected;
 };
 
 __DATA__
