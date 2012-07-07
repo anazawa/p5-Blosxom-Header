@@ -1,5 +1,6 @@
 Revision history for Perl extension Blosxom::Header.
 
+0.05006 Jul 7, 2012
   - add each() method
   - requires HTTP::Date and CGI::Util
   - expires() always converts its value to machine time
