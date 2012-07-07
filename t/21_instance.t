@@ -85,9 +85,16 @@ subtest 'delete()' => sub {
 subtest 'expires()' => sub {
     %header = ();
     is $header->expires, undef;
-    $header->expires( 'now' );
-    is $header->expires, 'now', 'get expires()';
-    is $header{-expires}, 'now';
+
+    my $now = 1341637509;
+    $header->expires( $now );
+    is $header->expires, $now, 'get expires()';
+    is $header{-expires}, $now;
+
+    $now++;
+    $header->expires( 'Sat, 07 Jul 2012 05:05:10 GMT' );
+    is $header->expires, $now, 'get expires()';
+    is $header{-expires}, 'Sat, 07 Jul 2012 05:05:10 GMT';
 };
 
 subtest 'push_cookie()' => sub {
@@ -299,7 +306,7 @@ subtest 'target()' => sub {
 };
 
 subtest 'each()' => sub {
-    plan skip_all => 'not implemented yet';
+    #plan skip_all => 'not implemented yet';
 
     %header = ( -foo => 'bar' );
 
@@ -308,4 +315,16 @@ subtest 'each()' => sub {
     }
 
     is_deeply \%header, { -type => q{} };
+
+    %header = ( -foo => 'bar' );
+
+    my @got;
+    $header->each( sub { push @got, @_ } );
+
+    my @expected = (
+        'Content-Type' => 'text/html; charset=ISO-8859-1',
+        'Foo'          => 'bar',
+    );
+
+    is_deeply \@got, \@expected;
 };

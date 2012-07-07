@@ -1,6 +1,7 @@
 package Blosxom::Header::Adapter;
 use strict;
 use warnings;
+use CGI::Util qw/expires/;
 
 {
     no strict 'refs';
@@ -57,6 +58,10 @@ sub FETCH {
     elsif ( $norm eq '-content_disposition' ) {
         my $attachment = $adaptee->{-attachment};
         return qq{attachment; filename="$attachment"} if $attachment;
+    }
+    elsif ( $norm eq '-expires' ) {
+        my $expires = $adaptee->{ $norm };
+        return $expires ? expires( $expires ) : undef;
     }
 
     $adaptee->{ $norm };
@@ -212,11 +217,13 @@ Associates a new hash instance with Blosxom::Header::Adapter.
 
 =item $value = $adapter{ $field }
 
-=item delete $adapter{ $field }
+=item $deleted = delete $adapter{ $field }
 
-=item scalar %adapter
+=item $bool = exists $adapter{ $field }
 
-=item each %adapter
+=item $bool %adapter
+
+=item ( $field, $value ) = each %adapter
 
 =item %adapter = ()
 

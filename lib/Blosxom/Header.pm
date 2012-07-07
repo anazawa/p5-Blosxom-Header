@@ -6,7 +6,6 @@ use base qw/Exporter/;
 use constant USELESS => q{Useless use of %s with no values};
 use Blosxom::Header::Adapter;
 use Carp qw/carp croak/;
-use HTTP::Status qw/status_message/;
 
 our $VERSION = '0.05005';
 
@@ -74,6 +73,13 @@ sub _carp {
 
     sub field_names { keys %{ $_[0] } }
 
+    sub each {
+        my ( $self, $code ) = @_;
+        return each %{ $self } unless ref $code eq 'CODE';
+        my %header = %{ $self }; # copy
+        while ( my ( $k, $v ) = each %header ) { $code->( $k, $v ) }
+    }
+
     sub push_cookie {
         my $self = ref $_[0] ? shift : __PACKAGE__->instance;
         $self->_push( Set_Cookie => @_ );
@@ -123,7 +129,10 @@ sub _carp {
     sub expires {
         my $self = shift;
         return $self->{Expires} = shift if @_;
-        $self->{Expires};
+        my $expires = $self->{Expires};
+        return unless $expires;
+        require HTTP::Date;
+        HTTP::Date::str2time( $expires );
     }
 
     sub p3p {
@@ -155,8 +164,9 @@ sub _carp {
         my $self = shift;
 
         if ( @_ ) {
+            require HTTP::Status;
             my $code = shift;
-            my $message = status_message( $code );
+            my $message = HTTP::Status::status_message( $code );
             return $self->{Status} = "$code $message" if $message;
             carp( qq{Unknown status code "$code" passed to status()} );
         }
@@ -310,9 +320,7 @@ A synonym for C<< Blosxom::Header->instance->push_cookie() >>.
 
 A synonym for C<< Blosxom::Header->instance->push_p3p() >>.
 
-=item header_push( Set_Cookie => @cookies )
-
-=item header_push( P3P => @tags )
+=item header_push()
 
 This function is obsolete and will be removed in 0.06.
 Use C<push_cookie()> or C<push_p3p()> instead.
@@ -341,7 +349,7 @@ Returns a reference to any existing instance or C<undef> if none is defined.
 
 Returns a Boolean value telling whether C<$blosxom::header> is initialized or
 not. Blosxom initializes the variable just before C<blosxom::generate()> is
-called. If C<$bool> was false, L<instance()> would throw an exception.
+called. If C<$bool> was false, C<instance()> would throw an exception.
 
 Internally, this method is a shortcut for
 
@@ -358,8 +366,7 @@ Internally, this method is a shortcut for
 =item @values = $header->get( @fields )
 
 Returns the value of one or more header fields.
-Accepts a list of field names.
-C<$field> isn't case-sensitive.
+Accepts a list of field names case-insensitive.
 You can use underscores as a replacement for dashes in header names.
 
 =item $header->set( $field => $value )
@@ -426,8 +433,19 @@ Internally, this method is a shortcut for
 =item @fields = $header->field_names
 
 Returns the list of distinct names for the fields present in the header.
-The field names have case as returned by C<CGI::header()>;
+The field names have case as returned by C<CGI::header()>.
 In scalar context return the number of distinct field names.
+
+=item $header->each( CodeRef )
+
+Apply a subroutine to each header field in turn.
+The callback routine is called with two parameters;
+the name of the field and a value.
+
+=item ( $field, $value ) = $header->each
+
+Works like C<CORE::each>.
+You can reset the iterator by using C<< $header->field_names >>.
 
 =back
 
@@ -435,9 +453,12 @@ In scalar context return the number of distinct field names.
 
 The following methods were named after parameters recognized by
 C<CGI::header()>.
-They can both be used to read and to set the value of an attribute.
+They can both be used to read and to set the value of a header.
 The value is set if you pass an argument to the method.
-If the given attribute wasn't defined then C<undef> is returned.
+If the given header wasn't defined then C<undef> would be returned.
+
+If either of expires(), nph() or cookie() was set,
+C<CGI::header()> would add the Date header automatically.
 
 =over 4
 
@@ -484,6 +505,15 @@ The following forms are all valid for this field:
   # at the indicated time & date
   $header->expires( 'Thu, 25 Apr 1999 00:40:33 GMT' );
 
+  # another representation of 'now'
+  $header->expires( time );
+
+This method always converts its value to system time
+(seconds since Jan 1, 1970).
+
+  $header->expires( 'Sat, 07 Jul 2012 05:05:09 GMT' );
+  my $expires = $header->expires; # 1341637509
+
 =item $header->nph
 
 If set to a true value,
@@ -502,7 +532,7 @@ The parameter can be an array or a space-delimited string.
 
   my @tags = $header->p3p; # ( 'CAO', 'DSP', 'LAW', 'CURa' )
 
-In either case, the outgoing header will be formatted as:
+In this case, the outgoing header will be formatted as:
 
   P3P: policyref="/w3c/p3p.xml" CP="CAO DSP LAW CURa"
 

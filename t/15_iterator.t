@@ -1,6 +1,6 @@
 use strict;
 use Blosxom::Header::Adapter;
-use Test::More tests => 11;
+use Test::More tests => 15;
 
 my %adaptee;
 tie my %adapter, 'Blosxom::Header::Adapter', \%adaptee;
@@ -31,3 +31,12 @@ is_deeply \%adaptee, { -type => q{} };
 %adaptee = ();
 for ( values %adapter ) { tr/A-Z/a-z/ }
 is_deeply \%adaptee, { -type => 'text/html; charset=iso-8859-1' };
+
+# feature
+%adaptee = ( -foo => 'bar' );
+is each %adapter, 'Content-Type';
+my %copy = %adapter;
+is each %adapter, 'Content-Type';
+is each %adapter, 'Foo';
+is each %adapter, undef;
+

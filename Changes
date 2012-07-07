@@ -1,5 +1,8 @@
 Revision history for Perl extension Blosxom::Header.
 
+  - add each() method
+  - requires HTTP::Date and CGI::Util
+  - expires() always converts its value to machine time
   - $Header isn't exported any more. Sorry for incovenience :(
 
 0.05005 Jun 30, 2012
