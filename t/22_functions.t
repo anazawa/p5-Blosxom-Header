@@ -1,10 +1,10 @@
 use strict;
-use Test::More tests => 13;
+use Test::More tests => 14;
 
 BEGIN {
     my @functions = qw(
         header_get    header_set  header_exists
-        header_delete push_cookie push_p3p
+        header_delete push_cookie push_p3p each_header
     );
     use_ok 'Blosxom::Header', @functions;
     can_ok __PACKAGE__, @functions;
@@ -34,3 +34,10 @@ is $header{-p3p}, 'CAO';
 
 is push_cookie( 'foo' ), 1;
 is $header{-cookie}, 'foo';
+
+each_header sub {
+    my $field = shift;    
+    header_delete( $field );
+};
+
+is_deeply \%header, { -type => q{} };

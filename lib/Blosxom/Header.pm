@@ -3,7 +3,7 @@ use 5.008_009;
 use strict;
 use warnings;
 use base qw/Exporter/;
-use constant USELESS => q{Useless use of %s with no values};
+use constant USELESS => 'Useless use of %s with no values';
 use Blosxom::Header::Adapter;
 use Carp qw/carp croak/;
 
@@ -11,13 +11,15 @@ our $VERSION = '0.05006';
 
 our @EXPORT_OK = qw(
     header_get  header_set  header_exists header_delete
-    header_push push_cookie push_p3p
+    header_push push_cookie push_p3p each_header
 );
 
 sub header_get    { __PACKAGE__->instance->get( @_ )    }
 sub header_set    { __PACKAGE__->instance->set( @_ )    }
 sub header_exists { __PACKAGE__->instance->exists( @_ ) }
 sub header_delete { __PACKAGE__->instance->delete( @_ ) }
+
+sub each_header { __PACKAGE__->instance->each( @_ ) }
 
 # The following function is obsolete and will be removed in 0.06
 sub header_push { __PACKAGE__->instance->_push( @_ ) }
@@ -36,18 +38,19 @@ sub _carp {
         return $class if ref $class;
         return $instance if defined $instance;
 
-        unless ( ref $blosxom::header eq 'HASH' ) {
-            croak( q{$blosxom::header hasn't been initialized yet} );
+        if ( $class->is_ready ) {
+            tie my %self => 'Blosxom::Header::Adapter' => $blosxom::header;
+            return $instance = bless \%self, $class;
         }
 
-        tie my %self => 'Blosxom::Header::Adapter' => $blosxom::header;
-
-        $instance = bless \%self, $class;
+        croak( q{$blosxom::header hasn't been initialized yet} );
     }
 
     sub has_instance { $instance }
 
-    sub is_initialized { ref $blosxom::header eq 'HASH' }
+    sub is_ready { ref $blosxom::header eq 'HASH' }
+
+    BEGIN { *is_initialized = \&is_ready }
 
     sub get {
         my ( $self, @fields ) = @_;
@@ -77,7 +80,7 @@ sub _carp {
         my ( $self, $code ) = @_;
         return each %{ $self } unless ref $code eq 'CODE';
         my %header = %{ $self }; # copy
-        while ( my ( $k, $v ) = each %header ) { $code->( $k, $v ) }
+        while ( my @args = each %header ) { $code->( @args ) }
     }
 
     sub push_cookie {
@@ -442,6 +445,7 @@ Apply a subroutine to each header field in turn.
 The callback routine is called with two parameters;
 the name of the field and a value.
 
+=item $field = $header->each
 =item ( $field, $value ) = $header->each
 
 Works like C<CORE::each>.

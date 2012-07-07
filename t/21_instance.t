@@ -327,4 +327,11 @@ subtest 'each()' => sub {
     );
 
     is_deeply \@got, \@expected;
+
+    $header->each( sub {
+        my $f = shift;
+        $header->delete( $f );
+    });
+
+    is_deeply \%header, { -type => q{} };
 };
