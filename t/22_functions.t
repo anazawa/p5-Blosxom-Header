@@ -1,5 +1,5 @@
 use strict;
-use Test::More tests => 14;
+use Test::More tests => 16;
 
 BEGIN {
     my @functions = qw(
@@ -35,9 +35,13 @@ is $header{-p3p}, 'CAO';
 is push_cookie( 'foo' ), 1;
 is $header{-cookie}, 'foo';
 
+my @field_names;
 each_header sub {
-    my $field = shift;    
-    header_delete( $field );
+    my $field = shift;
+    push @field_names, $field;
 };
+is_deeply [ sort @field_names ], [ qw/Content-Type P3P Set-Cookie/ ];
 
-is_deeply \%header, { -type => q{} };
+%header = ();
+is each_header(), 'Content-Type';
+is each_header(), undef;

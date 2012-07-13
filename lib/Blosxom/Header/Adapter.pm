@@ -3,10 +3,10 @@ use strict;
 use warnings;
 use CGI::Util qw/expires/;
 
-{
-    no strict 'refs';
-    *EXISTS = \&FETCH;
-}
+#{
+#    no strict 'refs';
+#*EXISTS = \&FETCH;
+#}
 
 sub TIEHASH {
     my $class   = shift;
@@ -66,6 +66,8 @@ sub FETCH {
 
     $adaptee->{ $norm };
 }
+
+*EXISTS = \&FETCH;
 
 sub STORE {
     my $self    = shift;
@@ -188,7 +190,7 @@ __END__
 
 =head1 NAME
 
-Blosxom::Header::Adapter
+Blosxom::Header::Adapter - Creates a case-insensitive hash
 
 =head1 SYNOPSIS
 
@@ -199,11 +201,67 @@ Blosxom::Header::Adapter
 
   tie my %adapter => 'Blosxom::Header::Adapter' => \%adaptee;
 
-  $adapter{Status} = '304 Not Modified';
+  $adapter{Content_Length} = 1234;
 
   print header( %adaptee );
+  # Content-length: 1234
+  # Content-Type: text/plain; charset=ISO-8859-1
+  #
 
 =head1 DESCRIPTION
+
+Creates a case-insensitive hash.
+
+=head2 BACKGROUNG
+
+Blosxom, an weblog application, globalizes C<$header> which is a reference to
+a hash. This application passes C<$header> to C<CGI::header()> to generate HTTP
+headers.
+
+  package blosxom;
+  use strict;
+  use warnings;
+  use CGI qw/header/;
+
+  our $header = { -type => 'text/html' };
+
+  # Loads plugins
+
+  print header( $header );
+
+Plugins may modify C<$header> directly because the variable is global.
+On the other hand, C<header()> doesn't care whether C<keys> of C<$header> are
+lowercased nor start with a dash.
+There is no agreement with how to normalize C<keys> of C<$header>.
+
+=head2 HOW THIS MODULE NORMALIZES FIELD NAMES
+
+To specify field names consistently, we need to normalize them.
+If you follow one of normalization rules, you can modify C<$header>
+consistently. This module normalizes them as follows.
+
+Remember how Blosxom initializes C<$header>:
+
+  $header = { -type => 'text/html' };
+
+A key C<-type> is starting with a dash and lowercased, and so this module
+follows the same rules:
+
+  'Status'  # not normalized
+  'status'  # not normalized
+  '-status' # normalized
+
+How about C<Content-Length>? It contains a dash.
+To avoid quoting when specifying hash keys, this module transliterates dashes
+into underscores in field names:
+
+  'Content-Length'  # not normalized
+  '-content-length' # not normalized
+  '-content_length' # normalized
+
+If you follow the above normalization rule, you can modify C<$header> directly.
+In other words, this module is compatible with the way modifying C<$header>
+directly when you follow the above rule.
 
 =head2 METHODS
 
