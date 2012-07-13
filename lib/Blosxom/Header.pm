@@ -532,8 +532,6 @@ created.
   my $name = $cookie->name; # ID
   my $id = $cookie->value; # 123456
 
-C<< $header->push_cookie >> works as well.
-
 =item $header->date
 
 This header represents the date and time at which the message
@@ -675,12 +673,6 @@ like C<< $header->push_cookie() >> or C<< $header->push_p3p() >>.
 =item Unknown status code "%d%d%d" passed to status()
 
 The given status code is unknown to L<HTTP::Status>.
-
-=item The Date header is fixed
-
-You attempted to modify the Date header when any of C<cookie()>,
-C<nph()> or C<expires()> was set.
-See C<< $header->date() >>.
 
 =back
 

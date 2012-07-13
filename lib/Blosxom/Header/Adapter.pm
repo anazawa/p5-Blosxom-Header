@@ -306,7 +306,9 @@ Associates a new hash instance with Blosxom::Header::Adapter.
 
 =item $bool = exists $adapter{ $field }
 
-=item $bool %adapter
+=item $bool = %adapter
+
+=item $field = each %adapter
 
 =item ( $field, $value ) = each %adapter
 
@@ -320,7 +322,19 @@ A shortcut for
 
 =item $adapter->attachment()
 
+=item $adapter->has_date_header()
+
 =back
+
+=head1 DIAGONOSTICS
+
+=over 4
+
+=item The Date header is fixed
+
+You attempted to modify the Date header when any of
+<-cookie>, C<-nph> or C<-expires> was set.
+See C<Blosxom::Header::date()>.
 
 =head1 SEE ALSO
 
