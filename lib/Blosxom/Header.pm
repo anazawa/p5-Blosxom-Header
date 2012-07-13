@@ -7,7 +7,7 @@ use constant USELESS => 'Useless use of %s with no values';
 use Blosxom::Header::Adapter;
 use Carp qw/carp croak/;
 
-our $VERSION = '0.05006';
+our $VERSION = '0.05007';
 
 our @EXPORT_OK = qw(
     header_get  header_set  header_exists header_delete

@@ -336,6 +336,8 @@ You attempted to modify the Date header when any of
 <-cookie>, C<-nph> or C<-expires> was set.
 See C<Blosxom::Header::date()>.
 
+=back
+
 =head1 SEE ALSO
 
 L<Blosxom::Header>,
