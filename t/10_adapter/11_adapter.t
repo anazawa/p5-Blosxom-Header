@@ -1,6 +1,6 @@
 use strict;
 use Blosxom::Header::Adapter;
-use Test::More tests => 22;
+use Test::More tests => 16;
 
 my %adaptee;
 my $adapter = tie my %adapter, 'Blosxom::Header::Adapter', \%adaptee;
@@ -37,25 +37,10 @@ is_deeply \%adaptee, { -bar => 'baz' };
 is $adapter{Foo}, 'bar';
 is $adapter{Bar}, undef;
 
-%adaptee = ( -expires => 1341637509 );
-is $adapter{Expires}, 'Sat, 07 Jul 2012 05:05:09 GMT';
-%adaptee = ( -expires => q{} );
-is $adapter{Expires}, undef;
-
-%adaptee = ( -nph => 1 );
-ok $adapter{Date};
-
 # STORE
 %adaptee = ();
 $adapter{Foo} = 'bar';
 is_deeply \%adaptee, { -foo => 'bar' };
-
-# attachment()
-%adaptee = ();
-is $adapter->attachment, undef;
-$adapter->attachment( 'genome.jpg' );
-is $adapter->attachment, 'genome.jpg';
-is $adaptee{-attachment}, 'genome.jpg';
 
 # nph()
 %adaptee = ();

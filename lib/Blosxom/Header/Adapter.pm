@@ -90,7 +90,7 @@ sub STORE {
         delete $adaptee->{-attachment};
     }
     elsif ( $norm eq '-date' and $self->has_date_header ) {
-        carp( 'The Date header has been already set' );
+        carp( 'The Date header is fixed' );
         return;
     }
 
@@ -114,6 +114,10 @@ sub DELETE {
         my $deleted = $self->FETCH( 'Content-Disposition' );
         delete @{ $adaptee }{ $norm, '-attachment' };
         return $deleted;
+    }
+    elsif ( $norm eq '-date' and $self->has_date_header ) {
+        carp( 'The Date header is fixed' );
+        return
     }
 
     delete $adaptee->{ $norm };

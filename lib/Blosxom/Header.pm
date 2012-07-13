@@ -223,7 +223,7 @@ __END__
 
 =head1 NAME
 
-Blosxom::Header - Missing interface to modify CGI response headers
+Blosxom::Header - Class encapsulating CGI response headers
 
 =head1 SYNOPSIS
 
@@ -495,8 +495,10 @@ was originated.
 
   $header->date( time ); # set current date
 
-NOTE: If either of expires(), nph() or cookie() was set,
-the Date header would be added automatically.
+NOTE: If any of expires(), nph() or cookie() was set,
+the Date header would be added automatically
+and you couldn't modify the value.
+In other words, the Date header would be fixed.
 
 =item $header->expires
 
@@ -632,6 +634,12 @@ like C<< $header->push_cookie() >> or C<< $header->push_p3p() >>.
 =item Unknown status code "%d%d%d" passed to status()
 
 The given status code is unknown to L<HTTP::Status>.
+
+=item The Date header is fixed
+
+You attempted to modify the Date header when any of C<cookie()>,
+C<nph()> or C<expires()> was set.
+See C<< $header->date() >>.
 
 =back
 
