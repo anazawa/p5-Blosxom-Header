@@ -223,7 +223,7 @@ __END__
 
 =head1 NAME
 
-Blosxom::Header - Class encapsulating CGI response headers
+Blosxom::Header - Object representing CGI response headers
 
 =head1 SYNOPSIS
 
@@ -259,7 +259,8 @@ Blosxom::Header - Class encapsulating CGI response headers
 This module provides Blosxom plugin developers
 with an interface to handle L<CGI> response headers.
 
-L<Blosxom::Header::Adapter> explains how this module normalizes field names.
+L<Blosxom::Header::Adapter> tells about why this module was written
+and how this module normalizes field names.
 
 =head2 VARIABLE
 
@@ -400,7 +401,26 @@ push_cookie().
 
   @cookies = $header->cookie; # ( 'foo', 'bar', 'baz' )
 
-=item $header->push_p3p( @p3p )
+If you pass a hash reference to this method,
+a L<CGI::Cookie> object is created.
+
+  $header->push_cookie({
+      -name  => 'ID',
+      -value => 123456,
+  });
+
+cf.
+
+  use CGI::Cookie;
+
+  my $cookie = CGI::Cookie->new(
+      -name  => 'ID',
+      -value => 123456,
+  );
+
+  $header->push_cookie( $cookie );
+
+=item $header->push_p3p( @tags )
 
 Adds P3P tags to the P3P header.
 Accepts a list of P3P tags.
@@ -432,23 +452,46 @@ In scalar context return the number of distinct field names.
 Apply a subroutine to each header field in turn.
 The callback routine is called with two parameters;
 the name of the field and a value.
+Any return values of the callback routine are ignored.
+
+  $header->each(sub {
+      my ( $field, $value ) = @_;
+      ...
+  });
 
 =item $field = $header->each
 
 =item ( $field, $value ) = $header->each
 
-Works like C<CORE::each>.
+Works like C<CORE::each> basically.
+
+When called in list context, returns two parameters;
+the name of the field and a value, so that you can iterate over it.
+When called in scalar context, returns only the field name
+for the next header field.
+
 You can reset the iterator by calling C<< $header->field_names >>.
+
+It is always safe to delete the field recently returned by
+C<< $header->each >>, which mean the following code will work:
+
+  while ( my $field = $header->each ) {
+      $header->delete( $field ); # This is safe
+  }
+
 
 =back
 
 =head2 CONVENIENCE METHODS
 
-The following methods were named after parameters recognized by
+Most of these methods were named after parameters recognized by
 C<CGI::header()>.
 They can both be used to read and to set the value of a header.
 The value is set if you pass an argument to the method.
 If the given header wasn't defined then C<undef> would be returned.
+
+Methods that deal with dates/times  always convert their value to
+system time (seconds since Jan 1, 1970).
 
 =over 4
 
@@ -477,7 +520,8 @@ The parameter can be an array.
   $header->cookie( 'foo', 'bar' );
   my @cookies = $header->cookie; # ( 'foo', 'bar' )
 
-If you pass a hash reference to this method, creates a L<CGI::Cookie> object.
+If you pass a hash reference to this method, a L<CGI::Cookie> object is
+created.
 
   $header->cookie({
       -name  => 'ID',
@@ -488,10 +532,13 @@ If you pass a hash reference to this method, creates a L<CGI::Cookie> object.
   my $name = $cookie->name; # ID
   my $id = $cookie->value; # 123456
 
+C<< $header->push_cookie >> works as well.
+
 =item $header->date
 
 This header represents the date and time at which the message
-was originated.
+was originated. This method expects machine time when the header
+value is set.
 
   $header->date( time ); # set current date
 
@@ -520,12 +567,6 @@ The following forms are all valid for this field:
 
   # another representation of 'now'
   $header->expires( time );
-
-This method always converts its value to system time
-(seconds since Jan 1, 1970).
-
-  $header->expires( 'Sat, 07 Jul 2012 05:05:09 GMT' );
-  my $expires = $header->expires; # 1341637509
 
 =item $header->last_modified
 
@@ -621,7 +662,7 @@ This makes it safe to do the following:
 
 =item $blosxom::header hasn't been initialized yet
 
-You attempted to create a Blosxom::Header instance
+You attempted to create a Blosxom::Header object
 before the variable was initialized.
 See C<< Blosxom::Header->is_initialized() >>.
 
@@ -650,6 +691,8 @@ L<Blosxom 2.0.0|http://blosxom.sourceforge.net/> or higher.
 =head1 SEE ALSO
 
 L<Blosxom::Header::Adapter>,
+L<HTTP::Headers>,
+L<Plack::Util>,
 L<Class::Singleton>
 
 =over 4
@@ -661,9 +704,9 @@ L<RFC 3875|http://tools.ietf.org/html/rfc3875#section-6>, October 2004
 
 =head1 ACKNOWLEDGEMENT
 
-Blosxom was written by Rael Dornfest.
+Blosxom was originally written by Rael Dornfest.
 L<The Blosxom Development Team|http://sourceforge.net/projects/blosxom/>
-succeeded the maintenance.
+succeeded to the maintenance.
 
 =head1 BUGS AND LIMITATIONS
 

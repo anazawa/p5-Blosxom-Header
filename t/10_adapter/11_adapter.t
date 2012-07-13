@@ -7,7 +7,7 @@ my $adapter = tie my %adapter, 'Blosxom::Header::Adapter', \%adaptee;
 isa_ok $adapter, 'Blosxom::Header::Adapter';
 can_ok $adapter, qw(
     FETCH STORE DELETE EXISTS CLEAR FIRSTKEY NEXTKEY SCALAR
-    attachment nph normalize denormalize
+    attachment nph normalize denormalize has_date_header
 );
 
 # SCALAR

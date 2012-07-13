@@ -24,7 +24,7 @@ isa_ok $header, 'Blosxom::Header';
 can_ok $header, qw(
     clear delete exists field_names get set push_cookie push_p3p
     attachment charset cookie expires nph p3p status target type
-    last_modified
+    last_modified date
 );
 
 subtest 'exists()' => sub {
