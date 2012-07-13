@@ -1,6 +1,6 @@
 use strict;
 use Blosxom::Header::Adapter;
-use Test::More tests => 21;
+use Test::More tests => 22;
 
 my %adaptee;
 my $adapter = tie my %adapter, 'Blosxom::Header::Adapter', \%adaptee;
@@ -41,6 +41,9 @@ is $adapter{Bar}, undef;
 is $adapter{Expires}, 'Sat, 07 Jul 2012 05:05:09 GMT';
 %adaptee = ( -expires => q{} );
 is $adapter{Expires}, undef;
+
+%adaptee = ( -nph => 1 );
+ok $adapter{Date};
 
 # STORE
 %adaptee = ();

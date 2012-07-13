@@ -40,7 +40,7 @@ each_header sub {
     my $field = shift;
     push @field_names, $field;
 };
-is_deeply [ sort @field_names ], [ qw/Content-Type P3P Set-Cookie/ ];
+is_deeply [ sort @field_names ], [ qw/Content-Type Date P3P Set-Cookie/ ];
 
 %header = ();
 is each_header(), 'Content-Type';

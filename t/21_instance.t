@@ -245,6 +245,7 @@ subtest 'field_names()' => sub {
     my @expected = qw(
         Content-Disposition
         Content-Type
+        Date
         Expires
         Foo-bar
         P3P

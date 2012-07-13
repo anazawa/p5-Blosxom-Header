@@ -81,6 +81,7 @@ sub each {
 
 sub push_cookie {
     require CGI::Cookie;
+
     my $self = ref $_[0] ? shift : __PACKAGE__->instance;
 
     my @cookies;
@@ -126,24 +127,18 @@ sub charset {
 }
 
 sub cookie {
-    require CGI::Cookie;
     my $self = shift;
 
     if ( @_ ) {
-        my @cookies;
-        for my $cookie ( @_ ) {
-            $cookie = CGI::Cookie->new( $cookie ) if ref $cookie eq 'HASH';
-            push @cookies, $cookie;
-        }
-
-        $self->{Set_Cookie} = @cookies > 1 ? \@cookies : $cookies[0];
-
-        return;
+        delete $self->{Set_Cookie};
+        $self->push_cookie( @_ );
+    }
+    elsif ( my $cookie = $self->{Set_Cookie} ) {
+        my @cookies = ref $cookie eq 'ARRAY' ? @{ $cookie } : ( $cookie );
+        return wantarray ? @cookies : $cookies[0];
     }
 
-    my $cookies = $self->{Set_Cookie};
-    return $cookies unless ref $cookies eq 'ARRAY';
-    wantarray ? @{ $cookies } : $cookies->[0];
+    return;
 }
 
 sub last_modified { shift->_date_header( Last_modified => $_[0] ) }
@@ -174,23 +169,6 @@ sub expires {
     HTTP::Date::str2time( $expires );
 }
 
-#sub last_modified {
-#    require HTTP::Date;
-
-#    my ( $self, $time ) = @_;
-
-#    if ( defined $time ) {
-#        $self->{Last_modified} = HTTP::Date::time2str( $time );
-#        return;
-#    }
-#    elsif ( my $date = $self->{Last_modified} ) {
-#        return HTTP::Date::str2time( $date );
-#    }
-
-#    return;
-#}
-
-
 sub p3p {
     my $self = shift;
 
@@ -217,10 +195,10 @@ sub type {
 }
 
 sub status {
-    require HTTP::Status;
     my $self = shift;
 
     if ( @_ ) {
+        require HTTP::Status;
         my $code = shift;
         my $message = HTTP::Status::status_message( $code );
         return $self->{Status} = "$code $message" if $message;

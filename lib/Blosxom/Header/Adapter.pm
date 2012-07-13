@@ -1,12 +1,8 @@
 package Blosxom::Header::Adapter;
 use strict;
 use warnings;
+use Carp qw/carp/;
 use CGI::Util qw/expires/;
-
-#{
-#    no strict 'refs';
-#*EXISTS = \&FETCH;
-#}
 
 sub TIEHASH {
     my $class   = shift;
@@ -24,6 +20,12 @@ sub TIEHASH {
         -attachment => 'Content-Disposition', -cookie => 'Set-Cookie',
         -target     => 'Window-Target',       -type   => 'Content-Type',
         -p3p        => 'P3P',
+    };
+
+    $self->{iterator} = {
+        collection => [],
+        current    => 0,
+        size       => 0,
     };
 
     $self;
@@ -63,6 +65,9 @@ sub FETCH {
         my $expires = $adaptee->{ $norm };
         return $expires ? expires( $expires ) : undef;
     }
+    elsif ( $norm eq '-date' and $self->has_date_header ) {
+        return expires( 0, 'http' );
+    }
 
     $adaptee->{ $norm };
 }
@@ -83,6 +88,10 @@ sub STORE {
     }
     elsif ( $norm eq '-content_disposition' ) {
         delete $adaptee->{-attachment};
+    }
+    elsif ( $norm eq '-date' and $self->has_date_header ) {
+        carp( 'The Date header has been already set' );
+        return;
     }
 
     $adaptee->{ $norm } = $value;
@@ -116,28 +125,37 @@ sub CLEAR {
 }
 
 sub FIRSTKEY {
-    my $self = shift;
-    keys %{ $self->{adaptee} };
-    exists $self->{adaptee}{-type} ? $self->NEXTKEY : 'Content-Type';
-};
+    my $self    = shift;
+    my $adaptee = $self->{adaptee};
 
-sub NEXTKEY {
-    my $self = shift;
-
-    my $nextkey;
-    while ( my ( $norm, $value ) = each %{ $self->{adaptee} } ) {
-        next if !$value or $norm eq '-charset' or $norm eq '-nph';
-        $nextkey = $self->denormalize( $norm );
-        last;
+    my @field_names;
+    push @field_names, 'Content-Type' unless exists $adaptee->{-type};
+    push @field_names, 'Date' if $self->has_date_header;
+    for my $norm ( keys %{ $adaptee } ) {
+        next unless $adaptee->{ $norm };
+        next if $norm eq '-charset' or $norm eq '-nph';
+        push @field_names, $self->denormalize( $norm );
     }
 
-    $nextkey;
+    %{ $self->{iterator} } = (
+        collection => \@field_names,
+        size       => scalar @field_names,
+        current    => 0,
+    );
+
+    $self->NEXTKEY;
+}
+
+sub NEXTKEY {
+    my $iterator = shift->{iterator};
+    return if $iterator->{current} >= $iterator->{size};
+    $iterator->{collection}->[ $iterator->{current}++ ];
 }
 
 sub SCALAR {
     my $self = shift;
     my $scalar = $self->FIRSTKEY;
-    keys %{ $self->{adaptee} } if $scalar;
+    $self->{iterator}->{current}-- if $scalar;
     $scalar;
 }
 
@@ -184,6 +202,11 @@ sub nph {
     $adaptee->{-nph};
 }
 
+sub has_date_header {
+    my $adaptee = shift->{adaptee};
+    $adaptee->{-expires} || $adaptee->{-cookie} || $adaptee->{-nph};
+}
+
 1;
 
 __END__
@@ -212,7 +235,7 @@ Blosxom::Header::Adapter - Creates a case-insensitive hash
 
 Creates a case-insensitive hash.
 
-=head2 BACKGROUNG
+=head2 BACKGROUND
 
 Blosxom, an weblog application, globalizes C<$header> which is a reference to
 a hash. This application passes C<$header> to C<CGI::header()> to generate HTTP
