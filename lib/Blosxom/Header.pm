@@ -83,32 +83,14 @@ sub push_cookie {
     require CGI::Cookie;
 
     my $self = ref $_[0] ? shift : __PACKAGE__->instance;
-    my %cookies = @_;
 
     my @cookies;
-    while ( my ( $name, $value ) = CORE::each %cookies ) {
-        push @cookies, $self->_new_cookie( $name, $value );
+    for my $cookie ( @_ ) {
+        $cookie = CGI::Cookie->new( $cookie ) if ref $cookie eq 'HASH';
+        push @cookies, $cookie; 
     }
 
     $self->_push( Set_Cookie => @cookies );
-}
-
-sub _new_cookie {
-    require CGI::Cookie;
-
-    my ( $self, $name, $value ) = @_;
-    my @cookie = ( -name => $name );
-
-    if ( ref $value eq 'HASH' ) {
-        while ( my ( $k, $v ) = CORE::each %$value ) {
-            push @cookie, ( "-$k" => $v );
-        }
-    }
-    else {
-        push @cookie, ( -value => $value );
-    }
-
-    CGI::Cookie->new( @cookie );
 }
 
 sub push_p3p {
@@ -145,41 +127,18 @@ sub charset {
 }
 
 sub cookie {
-    require CGI::Cookie;
-
     my $self = shift;
 
-    if ( @_ == 1 ) {
-        my $name = shift;
-        my $cookies = $self->{Set_Cookie};
-        my @cookies = ref $cookies eq 'ARRAY' ? @$cookies : $cookies;
-        my @values;
-        for my $cookie ( @cookies ) {
-            next unless $cookie->name eq $name;
-            push @values, $cookie;
-        }
-        return wantarray ? @values : $values[0];
-    }
-    elsif ( @_ % 2 == 0 and my %cookies = @_ ) {
+    if ( @_ ) {
         delete $self->{Set_Cookie};
-        $self->push_cookie( %cookies );
-
-        return;
+        $self->push_cookie( @_ );
     }
-    elsif ( !@_ ) {
-        my $cookies = $self->{Set_Cookie};
-        my @cookies = ref $cookies eq 'ARRAY' ? @$cookies : $cookies;
-        my %names;
-        for my $cookie ( @cookies ) {
-            next unless ref $cookie eq 'CGI::Cookie';
-            $names{ $cookie->name }++;
-        }
-        return keys %names;
-    }
-    else {
-        croak( 'Odd number of elements were passed to cookie()' );
+    elsif ( my $cookie = $self->{Set_Cookie} ) {
+        my @cookies = ref $cookie eq 'ARRAY' ? @{ $cookie } : ( $cookie );
+        return wantarray ? @cookies : $cookies[0];
     }
 
+    return;
 }
 
 sub last_modified { shift->_date_header( Last_modified => $_[0] ) }

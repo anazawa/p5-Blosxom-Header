@@ -32,10 +32,8 @@ is_deeply \%header, {};
 is push_p3p( 'CAO' ), 1;
 is $header{-p3p}, 'CAO';
 
-#is push_cookie( 'foo' ), 1;
-#is $header{-cookie}, 'foo';
-ok 1;
-ok 1;
+is push_cookie( 'foo' ), 1;
+is $header{-cookie}, 'foo';
 
 my @field_names;
 each_header sub {

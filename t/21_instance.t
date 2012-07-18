@@ -119,25 +119,24 @@ subtest 'last_modified()' => sub {
 };
 
 subtest 'push_cookie()' => sub {
-    ok 1;
-    #%header = ();
+    %header = ();
 
-    #my $expected = 'Useless use of _push() with no values';
-    #warning_is { $header->push_cookie } $expected;
+    my $expected = 'Useless use of _push() with no values';
+    warning_is { $header->push_cookie } $expected;
 
-    #is $header->push_cookie( 'foo' ), 1, '_push()';
-    #is $header{-cookie}, 'foo';
-    
-    #is $header->push_cookie( 'bar' ), 2, '_push()';
-    #is_deeply $header{-cookie}, [ 'foo', 'bar' ];
+    is $header->push_cookie( 'foo' ), 1, '_push()';
+    is $header{-cookie}, 'foo';
 
-    #is $header->push_cookie( 'baz' ), 3, '_push()';
-    #is_deeply $header{-cookie}, [ 'foo', 'bar', 'baz' ];
+    is $header->push_cookie( 'bar' ), 2, '_push()';
+    is_deeply $header{-cookie}, [ 'foo', 'bar' ];
 
-    #%header = ();
-    #$header->push_cookie({ -name => 'ID', -value => 123456 });
-    #my $got = $header->cookie;
-    #isa_ok $got, 'CGI::Cookie';
+    is $header->push_cookie( 'baz' ), 3, '_push()';
+    is_deeply $header{-cookie}, [ 'foo', 'bar', 'baz' ];
+
+    %header = ();
+    $header->push_cookie({ -name => 'ID', -value => 123456 });
+    my $got = $header->cookie;
+    isa_ok $got, 'CGI::Cookie';
 };
 
 subtest 'status()' => sub {
@@ -293,43 +292,26 @@ subtest 'p3p()' => sub {
     is_deeply \@got, \@expected;
 };
 
-#subtest 'cookie()' => sub {
-#    %header = ();
-#    $header->cookie( foo => 'bar' );
-#    my $got = $header{-cookie};
-#    isa_ok $got, 'CGI::Cookie';
-#    is $got->value, 'bar';
+subtest 'cookie()' => sub {
+    %header = ();
+    $header->cookie( 'foo' );
+    is_deeply \%header, { -cookie => 'foo' };
 
-#    %header = ();
-#    $header->cookie( foo => { value => 'bar' } );
-#    $got = $header{-cookie};
-#    isa_ok $got, 'CGI::Cookie';
-#    is $got->value, 'bar';
+    %header = ();
+    $header->cookie( 'foo', 'bar' );
+    is_deeply \%header, { -cookie => [qw/foo bar/] };
 
-#    use CGI::Cookie;
+    %header = ( -cookie => [qw/foo bar/] );
+    is $header->cookie, 'foo';
+    my @got = $header->cookie;
+    my @expected = qw( foo bar );
+    is_deeply \@got, \@expected;
 
-#    my $cookie1 = CGI::Cookie->new(
-#        -name  => 'foo',
-#        -value => 'bar',
-#    );
-
-#    my $cookie2 = CGI::Cookie->new(
-#        -name  => 'bar',
-#        -value => 'baz',
-#    );
-
-#    %header = ( -cookie => $cookie1 );
-#    $got = $header->cookie( 'foo' );
-#    isa_ok $got, 'CGI::Cookie';
-#    is $got->value, 'bar';
-#    is_deeply [ $header->cookie ], [ 'foo' ];
-
-#    %header = ( -cookie => [ $cookie1, $cookie2 ] );
-#    $got = $header->cookie( 'bar' );
-#    isa_ok $got, 'CGI::Cookie';
-#    is $got->value, 'baz';
-#    is_deeply [ sort $header->cookie ], [ 'bar', 'foo' ];
-#};
+    %header = ();
+    $header->cookie({ -name => 'ID', -value => 123456 });
+    my $got = $header->cookie;
+    isa_ok $got, 'CGI::Cookie';
+};
 
 subtest 'nph()' => sub {
     %header = ();
