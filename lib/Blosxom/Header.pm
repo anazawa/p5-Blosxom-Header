@@ -79,6 +79,59 @@ sub each {
     while ( my @args = each %header ) { $code->( @args ) }
 }
 
+sub get_cookie {
+    my ( $self, $name ) = @_;
+
+    my @cookies;
+    for my $cookie ( $self->cookie ) {
+        next unless ref $cookie eq 'CGI::Cookie';
+        next unless $cookie->name eq $name;
+        push @cookies, $cookie;
+    }
+
+    wantarray ? @cookies : $cookies[0];
+}
+
+sub set_cookie {
+    my ( $self, $name, $value ) = @_;
+
+    my $set;
+    for my $cookie ( $self->cookie ) {
+        next unless ref $cookie eq 'CGI::Cookie';
+        next unless $cookie->name eq $name;
+
+        if ( ref $value eq 'HASH' ) {
+            while ( my ( $k, $v ) = CORE::each %{ $value } ) {
+                next unless $cookie->can( $k );
+                $cookie->$k( $v );
+            }
+        }
+        else {
+            $cookie->value( $value );
+        }
+
+        $set++;
+        last;
+    }
+
+    unless ( $set ) {
+        require CGI::Cookie;
+        my %cookie = ( -name => $name );
+
+        if ( ref $value eq 'HASH' ) {
+            my @keys = map { '-' . $_ } keys %{ $value };
+            @cookie{ @keys } = values %{ $value };
+        }
+        else {
+            $cookie{-value} = $value;
+        }
+
+        $self->_push( Set_Cookie => CGI::Cookie->new( %cookie ) );
+    }
+
+    return;
+}
+
 sub push_cookie {
     require CGI::Cookie;
 
@@ -298,7 +351,8 @@ A synonym for C<< Blosxom::Header->instance->delete() >>.
 
 =item push_cookie( @cookies )
 
-A synonym for C<< Blosxom::Header->instance->push_cookie() >>.
+This function is obsolete and will be removed in 0.06.
+See L<"HANDLING COOKIES">.
 
 =item push_p3p( @tags )
 
@@ -388,37 +442,8 @@ Returns values of deleted fields.
 
 =item $header->push_cookie( @cookies )
 
-Pushes the Set-Cookie headers onto HTTP headers.
-Accepts a list of cookies.
-Returns the number of the elements following the completed
-push_cookie().  
-
-  # get values of Set-Cookie headers
-  my @cookies = $header->cookie; # ( 'foo', 'bar' )
-
-  # add Set-Cookie header
-  $header->push_cookie( 'baz' );
-
-  @cookies = $header->cookie; # ( 'foo', 'bar', 'baz' )
-
-If you pass a hash reference to this method,
-a L<CGI::Cookie> object is created.
-
-  $header->push_cookie({
-      -name  => 'ID',
-      -value => 123456,
-  });
-
-cf.
-
-  use CGI::Cookie;
-
-  my $cookie = CGI::Cookie->new(
-      -name  => 'ID',
-      -value => 123456,
-  );
-
-  $header->push_cookie( $cookie );
+This method is obsolete and will be removed in 0.06.
+Use C<< $header->set_cookie >> instead.
 
 =item $header->push_p3p( @tags )
 
@@ -479,6 +504,38 @@ C<< $header->each >>, which mean the following code will work:
       $header->delete( $field ); # This is safe
   }
 
+=back
+
+=head2 HANDLING COOKIES
+
+C<cookie()> and C<push_cookie()> are obsolete and will be removed in 0.06.
+These methods will be replaced with C<set_cookie()> and C<get_cookie()>.
+
+=over 4
+
+=item $header->set_cookie( $name => $value )
+
+=item $header->set_cookie( $name => { value => $value, ... } )
+
+Overwrites existent cookie.
+
+  $header->set_cookie( ID => 123456 );
+
+  $header->set_cookie(
+     ID => {
+         value   => '123456',
+         path    => '/',
+         domain  => '.example.com',
+         expires => '+3M',
+      }
+  );
+
+=item $cookie = $header->get_cookie( $name )
+
+Returns a L<CGI::Cookie> object whose C<name()> is equal to C<$name>.
+
+  my $id = $header->get_cookie( 'ID' ); # CGI::Cookie object
+  my $value = $id->value; # 123456
 
 =back
 
@@ -514,23 +571,8 @@ Returns the upper-cased character set specified in the Content-Type header.
 
 =item $header->cookie
 
-Represents the Set-Cookie headers.
-The parameter can be an array.
-
-  $header->cookie( 'foo', 'bar' );
-  my @cookies = $header->cookie; # ( 'foo', 'bar' )
-
-If you pass a hash reference to this method, a L<CGI::Cookie> object is
-created.
-
-  $header->cookie({
-      -name  => 'ID',
-      -value => 123456,
-  });
-
-  my $cookie = $header->cookie; # CGI::Cookie object
-  my $name = $cookie->name; # ID
-  my $id = $cookie->value; # 123456
+This method is obsolete and will be removed in 0.06.
+Use C<< $header->get_cookie >> or C<< $header->set_cookie >> instead.
 
 =item $header->date
 
