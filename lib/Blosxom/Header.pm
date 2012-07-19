@@ -79,59 +79,50 @@ sub each {
     while ( my @args = each %header ) { $code->( @args ) }
 }
 
-sub get_cookie {
-    my ( $self, $name ) = @_;
-
-    my @cookies;
-    for my $cookie ( $self->cookie ) {
-        next unless ref $cookie eq 'CGI::Cookie';
-        next unless $cookie->name eq $name;
-        push @cookies, $cookie;
-    }
-
-    wantarray ? @cookies : $cookies[0];
-}
-
 sub set_cookie {
-    my ( $self, $name, $value ) = @_;
+    require CGI::Cookie;
 
-    my $set;
-    for my $cookie ( $self->cookie ) {
-        next unless ref $cookie eq 'CGI::Cookie';
-        next unless $cookie->name eq $name;
+    my $self  = shift;
+    my $name  = shift;
+    my $value = ref $_[0] eq 'HASH' ? shift : { value => shift };
 
-        if ( ref $value eq 'HASH' ) {
-            while ( my ( $k, $v ) = CORE::each %{ $value } ) {
-                next unless $cookie->can( $k );
-                $cookie->$k( $v );
-            }
-        }
-        else {
-            $cookie->value( $value );
-        }
-
-        $set++;
-        last;
+    my @old_cookies;
+    if ( my $cookies = $self->{Set_Cookie} ) {
+        @old_cookies = ref $cookies eq 'ARRAY' ? @{ $cookies } : $cookies;
     }
 
-    unless ( $set ) {
-        require CGI::Cookie;
-        my %cookie = ( -name => $name );
-
-        if ( ref $value eq 'HASH' ) {
-            my @keys = map { '-' . $_ } keys %{ $value };
-            @cookie{ @keys } = values %{ $value };
-        }
-        else {
-            $cookie{-value} = $value;
-        }
-
-        $self->_push( Set_Cookie => CGI::Cookie->new( %cookie ) );
+    my @new_cookies;
+    for my $cookie ( @old_cookies ) {
+        next if ref $cookie eq 'CGI::Cookie' and $cookie->name eq $name;
+        push @new_cookies, $cookie;
     }
+
+    push @new_cookies, CGI::Cookie->new({ name => $name, %$value });
+
+    $self->{Set_Cookie} = @new_cookies > 1 ? \@new_cookies : $new_cookies[0];
 
     return;
 }
 
+sub get_cookie {
+    my ( $self, $name ) = @_;
+
+    my @cookies;
+    if ( my $cookies = $self->{Set_Cookie} ) {
+        @cookies = ref $cookies eq 'ARRAY' ? @{ $cookies } : $cookies;
+    }
+
+    my @values;
+    for my $cookie ( @cookies ) {
+        next unless ref $cookie eq 'CGI::Cookie';
+        next unless $cookie->name eq $name;
+        push @values, $cookie;
+    }
+
+    wantarray ? @values : $values[0];
+}
+
+# This method/function is obsolete and will be removed in 0.06
 sub push_cookie {
     require CGI::Cookie;
 
@@ -179,6 +170,7 @@ sub charset {
     uc $charset;
 }
 
+# This method is obsolete and will be removed in 0.06
 sub cookie {
     my $self = shift;
 
@@ -369,13 +361,6 @@ A synonym for C<< Blosxom::Header->instance->each() >>.
 =item header_push()
 
 This function is obsolete and will be removed in 0.06.
-Use C<push_cookie()> or C<push_p3p()> instead.
-
-  header_push( Set_Cookie => @cookies );
-  header_push( P3P => @tags );
-  # become
-  push_cookie( @cookies );
-  push_p3p( @tags );
 
 =back
 
@@ -532,7 +517,7 @@ Overwrites existent cookie.
 
 =item $cookie = $header->get_cookie( $name )
 
-Returns a L<CGI::Cookie> object whose C<name()> is equal to C<$name>.
+Returns a L<CGI::Cookie> object whose C<name()> is stringwise equal to C<$name>.
 
   my $id = $header->get_cookie( 'ID' ); # CGI::Cookie object
   my $value = $id->value; # 123456

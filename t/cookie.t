@@ -17,13 +17,13 @@ my $header = Blosxom::Header->instance;
 
 %header = ();
 $header->set_cookie( foo => 'bar' );
-my $got = $header->cookie;
+my $got = $header{-cookie};
 isa_ok $got, 'CGI::Cookie';
 is $got->value, 'bar';
 
 %header = ();
 $header->set_cookie( foo => { value => 'bar' } );
-$got = $header->cookie;
+$got = $header{-cookie};
 isa_ok $got, 'CGI::Cookie';
 is $got->value, 'bar';
 
