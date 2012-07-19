@@ -23,7 +23,7 @@ isa_ok $header, 'Blosxom::Header';
 can_ok $header, qw(
     clear delete exists field_names get set push_cookie push_p3p
     attachment charset cookie expires nph p3p status target type
-    last_modified date is_empty
+    last_modified date is_empty flatten
 );
 
 subtest 'exists()' => sub {
@@ -117,6 +117,7 @@ subtest 'last_modified()' => sub {
     is $header{-last_modified}, 'Sat, 07 Jul 2012 05:05:09 GMT';
 };
 
+# OBSOLETE
 subtest 'push_cookie()' => sub {
     %header = ();
 
@@ -291,6 +292,7 @@ subtest 'p3p()' => sub {
     is_deeply \@got, \@expected;
 };
 
+# OBSOLETE
 subtest 'cookie()' => sub {
     %header = ();
     $header->cookie( 'foo' );
@@ -342,7 +344,7 @@ subtest 'each()' => sub {
     %header = ( -foo => 'bar' );
 
     while ( my $field = $header->each ) {
-        $header->delete( $field );
+        $header->delete( $field ); # not supported
     }
 
     is_deeply \%header, { -type => q{} };
@@ -373,4 +375,19 @@ subtest 'is_empty()' => sub {
 
     %header = ( -type => q{} );
     ok $header->is_empty;
+};
+
+subtest 'flatten()' => sub {
+    %header = ();
+    my @got = $header->flatten;
+    my @expected = ( 'Content-Type', 'text/html; charset=ISO-8859-1' );
+    is_deeply \@got, \@expected;
+
+    %header = ( -p3p => [ 'foo', 'bar' ] );
+    @got = $header->flatten;
+    @expected = (
+        'P3P',          [ 'foo', 'bar' ],
+        'Content-Type', 'text/html; charset=ISO-8859-1',
+    );
+    is_deeply \@got, \@expected;
 };

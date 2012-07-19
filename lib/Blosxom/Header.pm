@@ -80,6 +80,7 @@ sub each {
 }
 
 sub is_empty { not %{ $_[0] } }
+sub flatten  { ( %{ $_[0] } ) }
 
 sub set_cookie {
     require CGI::Cookie;
@@ -456,7 +457,7 @@ Returns the list of distinct names for the fields present in the header.
 The field names have case as returned by C<CGI::header()>.
 In scalar context return the number of distinct field names.
 
-=item $header->each( CodeRef )
+=item $header->each( \&callback )
 
 Apply a subroutine to each header field in turn.
 The callback routine is called with two parameters;
@@ -472,21 +473,38 @@ Any return values of the callback routine are ignored.
 
 =item ( $field, $value ) = $header->each
 
-Works like C<CORE::each> basically.
-
 When called in list context, returns two parameters;
 the name of the field and a value, so that you can iterate over it.
 When called in scalar context, returns only the field name
 for the next header field.
+When the header is entirely read, a null array is returned in list context,
+and C<undef> in scalar context.
+
+  while ( my ( $field, $value ) = $header->each ) {
+      print "$field: $value\n";
+  }
 
 You can reset the iterator by calling C<< $header->field_names >>.
 
-It is always safe to delete the field recently returned by
-C<< $header->each >>, which mean the following code will work:
+If you C<set()> or C<delete()> header fields while you're iterating
+over it, you may get entries skipped or duplicated, so don't.
 
-  while ( my $field = $header->each ) {
-      $header->delete( $field ); # This is safe
-  }
+=item $bool = $header->is_empty
+
+Returns a Boolean value telling whether C<< $header->field_names >>
+returns an null array or not.
+
+  $header->clear;
+  my $is_empty = $header->is_empty; # true
+
+=item @headers = $header->flatten
+
+Returns a new array that is a one-dimensional flattening of header fields.
+
+  my @headers = $header->flatten;
+  # => ( 'P3P', [ 'CAO', 'DSP' ], 'Content-Type', 'text/plain' )
+
+NOTE: This method does not flatten recursively.
 
 =back
 
