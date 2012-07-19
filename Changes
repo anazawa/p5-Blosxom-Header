@@ -1,6 +1,6 @@
 Revision history for Perl extension Blosxom::Header.
 
-  - Add is_empty()
+  - Add is_empty() and flatten()
   - cookie() and push_cookie() is obsolete and will be removed in 0.06.
     These method was replaced with set_cookie() and get_cookie()
 

@@ -492,7 +492,7 @@ over it, you may get entries skipped or duplicated, so don't.
 =item $bool = $header->is_empty
 
 Returns a Boolean value telling whether C<< $header->field_names >>
-returns an null array or not.
+returns a null array or not.
 
   $header->clear;
   my $is_empty = $header->is_empty; # true

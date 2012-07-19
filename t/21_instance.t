@@ -1,6 +1,6 @@
 use strict;
 use Blosxom::Header;
-use Test::More tests => 23;
+use Test::More tests => 24;
 use Test::Warn;
 use Test::Exception;
 
