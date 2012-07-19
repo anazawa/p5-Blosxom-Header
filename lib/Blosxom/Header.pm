@@ -73,11 +73,13 @@ sub clear  { %{ $_[0] } = ()         }
 sub field_names { keys %{ $_[0] } }
 
 sub each {
-    my ( $self, $code ) = @_;
-    return each %{ $self } unless ref $code eq 'CODE';
+    my ( $self, $callback ) = @_;
+    return each %{ $self } unless ref $callback eq 'CODE';
     my %header = %{ $self }; # copy
-    while ( my @args = each %header ) { $code->( @args ) }
+    while ( my @args = each %header ) { $callback->( @args ) }
 }
+
+sub is_empty { not %{ $_[0] } }
 
 sub set_cookie {
     require CGI::Cookie;
@@ -304,9 +306,6 @@ Blosxom::Header - Object representing CGI response headers
 This module provides Blosxom plugin developers
 with an interface to handle L<CGI> response headers.
 
-L<Blosxom::Header::Adapter> tells about why this module was written
-and how this module normalizes field names.
-
 =head2 VARIABLE
 
 =over 4
@@ -494,7 +493,7 @@ C<< $header->each >>, which mean the following code will work:
 =head2 HANDLING COOKIES
 
 C<cookie()> and C<push_cookie()> are obsolete and will be removed in 0.06.
-These methods will be replaced with C<set_cookie()> and C<get_cookie()>.
+These methods was replaced with C<set_cookie()> and C<get_cookie()>.
 
 =over 4
 
@@ -528,7 +527,7 @@ Returns a L<CGI::Cookie> object whose C<name()> is stringwise equal to C<$name>.
 
 Most of these methods were named after parameters recognized by
 C<CGI::header()>.
-They can both be used to read and to set the value of a header.
+These can both be used to read and to set the value of a header.
 The value is set if you pass an argument to the method.
 If the given header wasn't defined then C<undef> would be returned.
 

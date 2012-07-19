@@ -1,9 +1,8 @@
 use strict;
 use Blosxom::Header;
-use Test::More tests => 22;
+use Test::More tests => 23;
 use Test::Warn;
 use Test::Exception;
-
 
 {
     package blosxom;
@@ -24,7 +23,7 @@ isa_ok $header, 'Blosxom::Header';
 can_ok $header, qw(
     clear delete exists field_names get set push_cookie push_p3p
     attachment charset cookie expires nph p3p status target type
-    last_modified date
+    last_modified date is_empty
 );
 
 subtest 'exists()' => sub {
@@ -362,8 +361,16 @@ subtest 'each()' => sub {
 
     $header->each( sub {
         my $f = shift;
-        $header->delete( $f );
+        $header->delete( $f ); # not supported
     });
 
     is_deeply \%header, { -type => q{} };
+};
+
+subtest 'is_empty()' => sub {
+    %header = ();
+    ok !$header->is_empty;
+
+    %header = ( -type => q{} );
+    ok $header->is_empty;
 };
