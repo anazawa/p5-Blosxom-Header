@@ -233,7 +233,7 @@ sub p3p {
     return;
 }
 
-sub type {
+sub content_type {
     my $self = shift;
     return $self->{Content_Type} = shift if @_;
     my $content_type = $self->{Content_Type};
@@ -241,6 +241,8 @@ sub type {
     my ( $type, $rest ) = split /;\s*/, $content_type, 2;
     wantarray ? ( lc $type, $rest ) : lc $type;
 }
+
+*type = \&content_type;
 
 sub status {
     my $self = shift;
@@ -306,16 +308,6 @@ Blosxom::Header - Object representing CGI response headers
 
 This module provides Blosxom plugin developers
 with an interface to handle L<CGI> response headers.
-
-=head2 VARIABLE
-
-=over 4
-
-=item $Header
-
-This variable isn't exported any more. Sorry for incovenience :(
-
-=back
 
 =head2 FUNCTIONS
 
@@ -411,6 +403,11 @@ The $value argument must be a plain string, except for when the Set-Cookie
 or P3P header is specified.
 In exceptional cases, $value may be a reference to an array.
 
+  use CGI::Cookie;
+
+  my $cookie1 = CGI::Cookie->new( -name => 'foo' );
+  my $cookie2 = CGI::Cookie->new( -name => 'bar' );
+
   $header->set(
       Set_Cookie => [ $cookie1, $cookie2 ],
       P3P        => [ 'CAO', 'DSP', 'LAW', 'CURa' ],
@@ -429,6 +426,19 @@ Returns values of deleted fields.
 
 This method is obsolete and will be removed in 0.06.
 Use C<< $header->set_cookie >> instead.
+
+  use CGI::Cookie;
+
+  my $cookie = CGI::Cookie->new(
+      -name  => 'ID',
+      -value => 123456,
+  );
+
+  $header->push_cookie( $cookie );
+
+  # become
+
+  $header->set_cookie( ID => 123456 );
 
 =item $header->push_p3p( @tags )
 
@@ -480,7 +490,7 @@ for the next header field.
 When the header is entirely read, a null array is returned in list context,
 and C<undef> in scalar context.
 
-  while ( my ( $field, $value ) = $header->each ) {
+  while ( my ($field, $value) = $header->each ) {
       print "$field: $value\n";
   }
 
@@ -511,7 +521,7 @@ NOTE: This method does not flatten recursively.
 =head2 HANDLING COOKIES
 
 C<cookie()> and C<push_cookie()> are obsolete and will be removed in 0.06.
-These methods was replaced with C<set_cookie()> and C<get_cookie()>.
+These methods were replaced with C<set_cookie()> and C<get_cookie()>.
 
 =over 4
 
@@ -524,7 +534,7 @@ Overwrites existent cookie.
   $header->set_cookie( ID => 123456 );
 
   $header->set_cookie(
-     ID => {
+      ID => {
          value   => '123456',
          path    => '/',
          domain  => '.example.com',
@@ -569,7 +579,8 @@ Represents suggested name for the saved file.
 
 Returns the upper-cased character set specified in the Content-Type header.
 
-  $charset = $header->charset; # UTF-8 (Readonly)
+  $header->content_type( 'text/plain; charset=utf-8' );
+  my $charset = $header->charset; # UTF-8 (Readonly)
 
 =item $header->cookie
 
@@ -668,35 +679,65 @@ cf.
   $header->set( Window_Target => 'ResultsWindow' );
   $target = $header->get( 'Window-Target' ); # ResultsWindow
 
-=item $header->type
+=item $header->content_type
 
-The Content-Type header indicates the media type of the message content.
+Represents the Content-Type header which indicates the media type of
+the message content. C<type()> is an alias.
 
-  $header->type( 'text/plain; charset=utf-8' );
-
-The above is a shortcut for
-
-  $header->set( Content_Type => 'text/plain; charset=utf-8' );
+  $header->content_type( 'text/plain; charset=utf-8' );
 
 The value returned will be converted to lower case, and potential parameters
 will be chopped off and returned as a separate value if in an array context.
 
-  my $type = $header->type; # 'text/html'
-  my @type = $header->type; # ( 'text/html', 'charset=ISO-8859-1' )
-
-cf.
-
-  my $content_type = $header->get( 'Content-Type' );
-  # => 'text/html; charset=ISO-8859-1'
+  my $type = $header->content_type; # 'text/html'
+  my @type = $header->content_type; # ( 'text/html', 'charset=ISO-8859-1' )
 
 If there is no such header field, then the empty string is returned.
 This makes it safe to do the following:
 
-  if ( $header->type eq 'text/html' ) {
+  if ( $header->content_type eq 'text/html' ) {
       ...
   }
 
 =back
+
+=head1 LIMITATIONS
+
+Each header field is restricted to appear only once,
+except for the Set-Cookie header.
+That's why C<$header> can't C<push()> header fields unlike L<HTTP::Headers>
+objects. This feature originates from how C<CGI::header()> behaves.
+
+=head2 THE P3P HEADER
+
+C<CGI::header()> restricts where the policy-reference file is located
+and so you can't modify the location (C</w3c/p3p.xml>).
+
+  P3P: policyref="/w3c/p3p.xml" CP="%s"
+
+You're allowed to set or add P3P tags by using C<< $header->p3p >>
+or C<< $header->push_p3p >>.
+That's why the following codes don't work correctly:
+
+  # wrong
+  $header->set( P3P => q{policyref="/path/to/p3p.xml"} );
+  $header->p3p( q{policyref="/path/to/p3p.xml"} );
+
+=head2 THE DATE HEADER
+
+C<CGI::header()> fixes the Date header when any of
+C<< $header->get( 'Set-Cookie' ) >>,
+C<< $header->expires >> or C<< $header->nph >> returns true. 
+When the Date header is fixed, you can't modify the value:
+
+  $header->set_cookie( ID => 123456 );
+  # => CGI::header() fixes the Date header
+
+  my $bool = $header->date == CORE::time(); # true
+
+  # wrong
+  $header->date( $time );
+  $header->set( Date => $date );
 
 =head1 DIAGNOSTICS
 
@@ -744,7 +785,7 @@ Blosxom was originally written by Rael Dornfest.
 L<The Blosxom Development Team|http://sourceforge.net/projects/blosxom/>
 succeeded to the maintenance.
 
-=head1 BUGS AND LIMITATIONS
+=head1 BUGS
 
 There are no known bugs in this module.
 Please report problems to ANAZAWA (anazawa@cpan.org).
