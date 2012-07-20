@@ -1,6 +1,7 @@
 package Blosxom::Header::Adapter;
 use strict;
 use warnings;
+use Blosxom::Header::Iterator;
 use Carp qw/carp/;
 use CGI::Util qw/expires/;
 
@@ -16,11 +17,9 @@ sub TIEHASH {
         -type       => q{},        -window_target => q{-target},
     };
 
-    $self->{field_name_of} = {
-        -attachment => 'Content-Disposition', -cookie => 'Set-Cookie',
-        -target     => 'Window-Target',       -type   => 'Content-Type',
-        -p3p        => 'P3P',
-    };
+    $self->{iterator} = Blosxom::Header::Iterator->new(
+        collection => $adaptee,
+    );
 
     $self;
 }
@@ -122,59 +121,13 @@ sub CLEAR {
     %{ $self->{adaptee} } = ( -type => q{} );
 }
 
-sub FIRSTKEY {
-    my $self    = shift;
-    my %adaptee = %{ $self->{adaptee} };
-    my $expires = delete $adaptee{-expires};
-    my $cookie  = delete $adaptee{-cookie};
-    my $nph     = delete $adaptee{-nph};
-    my $type    = !exists $adaptee{-type} || delete $adaptee{-type};
-
-    my @field_names;
-
-    push @field_names, 'Status'              if delete $adaptee{-status};
-    push @field_names, 'Window-Target'       if delete $adaptee{-target};
-    push @field_names, 'P3P'                 if delete $adaptee{-p3p};
-    push @field_names, 'Set-Cookie'          if $cookie;
-    push @field_names, 'Expires'             if $expires;
-    push @field_names, 'Date'                if $expires || $cookie || $nph;
-    push @field_names, 'Content-Disposition' if delete $adaptee{-attachment};
-
-    while ( my ( $norm, $value ) = each %adaptee ) {
-        next if !$value or $norm eq '-charset';
-        $norm =~ s/^-//;
-        $norm =~ tr/_/-/;
-        push @field_names, ucfirst $norm;
-    }
-
-    push @field_names, 'Content-Type' if $type;
-
-    $self->{iterator} = {
-        collection => \@field_names,
-        size       => scalar @field_names,
-        current    => 0,
-    };
-
-    $self->NEXTKEY;
-}
-
-sub NEXTKEY {
-    my $iterator = shift->{iterator};
-    return if $iterator->{current} >= $iterator->{size};
-    $iterator->{collection}->[ $iterator->{current}++ ];
-}
-
-sub SCALAR {
-    my $self = shift;
-    my $scalar = $self->FIRSTKEY;
-    $self->{iterator}->{current}-- if $scalar;
-    $scalar;
-}
+sub FIRSTKEY { shift->{iterator}->initialize->next     }
+sub NEXTKEY  { shift->{iterator}->next                 }
+sub SCALAR   { shift->{iterator}->initialize->has_next }
 
 sub normalize {
-    my $self    = shift;
-    my $field   = lc shift;
-    my $norm_of = $self->{norm_of};
+    my $self  = shift;
+    my $field = lc shift;
 
     # transliterate dashes into underscores
     $field =~ tr{-}{_};
@@ -182,24 +135,9 @@ sub normalize {
     # add an initial dash
     $field = "-$field";
 
-    exists $norm_of->{ $field } ? $norm_of->{ $field } : $field;
-}
+    return $self->{norm_of}{$field} if exists $self->{norm_of}{$field};
 
-sub denormalize {
-    my $self = shift;
-    my $norm = shift;
-    my $field_name_of = $self->{field_name_of};
-
-    return $field_name_of->{ $norm } if exists $field_name_of->{ $norm };
-        
-    # get rid of an initial dash
-    ( my $field = $norm ) =~ s/^-//;
-
-    # transliterate underscores into dashes
-    $field =~ tr/_/-/;
-
-    # uppercase the first character
-    $field_name_of->{ $norm } = ucfirst $field;
+    $field;
 }
 
 sub attachment {

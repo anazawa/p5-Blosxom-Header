@@ -277,8 +277,6 @@ Blosxom::Header - Object representing CGI response headers
 
 =head1 SYNOPSIS
 
-  # Object-oriented interface
-
   use Blosxom::Header;
 
   my $header = Blosxom::Header->instance;
@@ -288,73 +286,12 @@ Blosxom::Header - Object representing CGI response headers
       Last_Modified => 'Wed, 23 Sep 2009 13:36:33 GMT',
   );
 
-  my $status = $header->get( 'Status' );
-  my @deleted = $header->delete( qw/Content-Disposition Content-Length/ );
-
-
-  # Procedural interface
-
-  use Blosxom::Header qw/header_set header_get header_delete/;
-
-  header_set(
-      Status        => '304 Not Modified',
-      Last_Modified => 'Wed, 23 Sep 2009 13:36:33 GMT',
-  );
-
-  my $status = header_get( 'Status' );
-  my @deleted = header_delete( qw/Content-Disposition Content-Length/ );
+  my $status = $header->get( 'Status' ); # 304 Not Modified
 
 =head1 DESCRIPTION
 
 This module provides Blosxom plugin developers
 with an interface to handle L<CGI> response headers.
-
-=head2 FUNCTIONS
-
-The following functions are exported on demand.
-
-=over 4
-
-=item @values = header_get( @fields )
-
-A synonym for C<< Blosxom::Header->instance->get() >>.
-
-=item header_set( $field => $value )
-
-=item header_set( $f1 => $v2, $f2 => $v2, ... )
-
-A synonym for C<< Blosxom::Header->instance->set() >>.
-
-=item $bool = header_exists( $field )
-
-A synonym for C<< Blosxom::Header->instance->exists() >>.
-
-=item @deleted = header_delete( @fields )
-
-A synonym for C<< Blosxom::Header->instance->delete() >>.
-
-=item push_cookie( @cookies )
-
-This function is obsolete and will be removed in 0.06.
-See L<"HANDLING COOKIES">.
-
-=item push_p3p( @tags )
-
-A synonym for C<< Blosxom::Header->instance->push_p3p() >>.
-
-=item each_header( CodeRef )
-
-=item $field = each_header()
-
-=item ( $field, $value ) = each_header()
-
-A synonym for C<< Blosxom::Header->instance->each() >>.
-
-=item header_push()
-
-This function is obsolete and will be removed in 0.06.
-
-=back
 
 =head2 CLASS METHODS
 
@@ -422,36 +359,7 @@ Returns a Boolean value telling whether the specified HTTP header exists.
 Deletes the specified fields from HTTP headers.
 Returns values of deleted fields.
 
-=item $header->push_cookie( @cookies )
 
-This method is obsolete and will be removed in 0.06.
-Use C<< $header->set_cookie >> instead.
-
-  use CGI::Cookie;
-
-  my $cookie = CGI::Cookie->new(
-      -name  => 'ID',
-      -value => 123456,
-  );
-
-  $header->push_cookie( $cookie );
-
-  # become
-
-  $header->set_cookie( ID => 123456 );
-
-=item $header->push_p3p( @tags )
-
-Adds P3P tags to the P3P header.
-Accepts a list of P3P tags.
-
-  # get P3P tags
-  my @tags = $header->p3p; # ( 'CAO', 'DSP', 'LAW' )
-
-  # add P3P tags
-  $header->push_p3p( 'CURa' );
-
-  @tags = $header->p3p; # ( 'CAO', 'DSP', 'LAW', 'CURa' )
 
 =item $header->clear
 
@@ -549,6 +457,120 @@ Returns a L<CGI::Cookie> object whose C<name()> is stringwise equal to C<$name>.
   my $id = $header->get_cookie( 'ID' ); # CGI::Cookie object
   my $value = $id->value; # 123456
 
+=item $header->cookie
+
+This method is obsolete and will be removed in 0.06.
+Use C<< $header->get_cookie >> or C<< $header->set_cookie >> instead.
+
+=item $header->push_cookie( @cookies )
+
+This method is obsolete and will be removed in 0.06.
+Use C<< $header->set_cookie >> instead.
+
+  use CGI::Cookie;
+
+  my $cookie = CGI::Cookie->new(
+      -name  => 'ID',
+      -value => 123456,
+  );
+
+  $header->push_cookie( $cookie );
+
+  # become
+
+  $header->set_cookie( ID => 123456 );
+
+=back
+
+=head2 DATE HEADERS
+
+These methods always convert their value to system time
+(seconds since Jan 1, 1970).
+
+=over 4
+
+=item $mtime = $header->date
+
+=item $header->date( $mtime )
+
+This header represents the date and time at which the message
+was originated. This method expects machine time when the header
+value is set.
+
+  $header->date( time ); # set current date
+
+=item $mtime = $header->expires
+
+=item $header->expires( $mtime )
+
+The Expires header gives the date and time after which the entity should be
+considered stale.
+You can specify an absolute or relative expiration interval.
+The following forms are all valid for this field:
+
+  $header->expires( '+30s' ); # 30 seconds from now
+  $header->expires( '+10m' ); # ten minutes from now
+  $header->expires( '+1h'  ); # one hour from now
+  $header->expires( '-1d'  ); # yesterday
+  $header->expires( 'now'  ); # immediately
+  $header->expires( '+3M'  ); # in three months
+  $header->expires( '+10y' ); # in ten years time
+
+  # at the indicated time & date
+  $header->expires( 'Thu, 25 Apr 1999 00:40:33 GMT' );
+
+  # another representation of 'now'
+  $header->expires( time );
+
+=item $mtime = $header->last_modified
+
+=item $header->last_modified( $mtime )
+
+This header indicates the date and time at which the resource was
+last modified. This method expects machine time when the header value is set.
+
+  # check if document is more than 1 hour old
+  if ( my $last_modified = $header->last_modified ) {
+      if ( $last_modified < time - 60 * 60 ) {
+          ...
+      }
+  }
+
+=back
+
+=head2 P3P HEADER
+
+=over 4
+
+=item @tags = $header->p3p
+
+=item $header->p3p( @tags )
+
+Represents the P3P header.
+The parameter can be an array or a space-delimited string.
+
+  $header->p3p( qw/CAO DSP LAW CURa/ );
+  $header->p3p( 'CAO DSP LAW CURa' );
+
+  my @tags = $header->p3p; # ( 'CAO', 'DSP', 'LAW', 'CURa' )
+
+In this case, the outgoing header will be formatted as:
+
+  P3P: policyref="/w3c/p3p.xml" CP="CAO DSP LAW CURa"
+
+=item $header->push_p3p( @tags )
+
+Adds P3P tags to the P3P header.
+Accepts a list of P3P tags.
+
+  # get P3P tags
+  my @tags = $header->p3p; # ( 'CAO', 'DSP', 'LAW' )
+
+  # add P3P tags
+  $header->push_p3p( 'CURa' );
+
+  @tags = $header->p3p; # ( 'CAO', 'DSP', 'LAW', 'CURa' )
+
 =back
 
 =head2 CONVENIENCE METHODS
@@ -558,9 +580,6 @@ C<CGI::header()>.
 These can both be used to read and to set the value of a header.
 The value is set if you pass an argument to the method.
 If the given header wasn't defined then C<undef> would be returned.
-
-Methods that deal with dates/times  always convert their value to
-system time (seconds since Jan 1, 1970).
 
 =over 4
 
@@ -582,57 +601,6 @@ Returns the upper-cased character set specified in the Content-Type header.
   $header->content_type( 'text/plain; charset=utf-8' );
   my $charset = $header->charset; # UTF-8 (Readonly)
 
-=item $header->cookie
-
-This method is obsolete and will be removed in 0.06.
-Use C<< $header->get_cookie >> or C<< $header->set_cookie >> instead.
-
-=item $header->date
-
-This header represents the date and time at which the message
-was originated. This method expects machine time when the header
-value is set.
-
-  $header->date( time ); # set current date
-
-NOTE: If any of expires(), nph() or cookie() was set,
-the Date header would be added automatically
-and you couldn't modify the value.
-In other words, the Date header would be fixed.
-
-=item $header->expires
-
-The Expires header gives the date and time after which the entity should be
-considered stale.
-You can specify an absolute or relative expiration interval.
-The following forms are all valid for this field:
-
-  $header->expires( '+30s' ); # 30 seconds from now
-  $header->expires( '+10m' ); # ten minutes from now
-  $header->expires( '+1h'  ); # one hour from now
-  $header->expires( '-1d'  ); # yesterday
-  $header->expires( 'now'  ); # immediately
-  $header->expires( '+3M'  ); # in three months
-  $header->expires( '+10y' ); # in ten years time
-
-  # at the indicated time & date
-  $header->expires( 'Thu, 25 Apr 1999 00:40:33 GMT' );
-
-  # another representation of 'now'
-  $header->expires( time );
-
-=item $header->last_modified
-
-This header indicates the date and time at which the resource was
-last modified. This method expects machine time when the header value is set.
-
-  # check if document is more than 1 hour old
-  if ( my $last_modified = $header->last_modified ) {
-      if ( $last_modified < time - 60 * 60 ) {
-          ...
-      }
-  }
-
 =item $header->nph
 
 If set to a true value,
@@ -640,20 +608,6 @@ will issue the correct headers to work with
 a NPH (no-parse-header) script:
 
   $header->nph( 1 );
-
-=item $header->p3p
-
-Represents the P3P header.
-The parameter can be an array or a space-delimited string.
-
-  $header->p3p( qw/CAO DSP LAW CURa/ );
-  $header->p3p( 'CAO DSP LAW CURa' );
-
-  my @tags = $header->p3p; # ( 'CAO', 'DSP', 'LAW', 'CURa' )
-
-In this case, the outgoing header will be formatted as:
-
-  P3P: policyref="/w3c/p3p.xml" CP="CAO DSP LAW CURa"
 
 =item $header->status
 
@@ -698,6 +652,53 @@ This makes it safe to do the following:
   if ( $header->content_type eq 'text/html' ) {
       ...
   }
+
+=back
+
+=head2 FUNCTIONS
+
+The following functions are exported on demand.
+
+=over 4
+
+=item @values = header_get( @fields )
+
+A synonym for C<< Blosxom::Header->instance->get() >>.
+
+=item header_set( $field => $value )
+
+=item header_set( $f1 => $v2, $f2 => $v2, ... )
+
+A synonym for C<< Blosxom::Header->instance->set() >>.
+
+=item $bool = header_exists( $field )
+
+A synonym for C<< Blosxom::Header->instance->exists() >>.
+
+=item @deleted = header_delete( @fields )
+
+A synonym for C<< Blosxom::Header->instance->delete() >>.
+
+=item push_cookie( @cookies )
+
+This function is obsolete and will be removed in 0.06.
+See L<"HANDLING COOKIES">.
+
+=item push_p3p( @tags )
+
+A synonym for C<< Blosxom::Header->instance->push_p3p() >>.
+
+=item each_header( CodeRef )
+
+=item $field = each_header()
+
+=item ( $field, $value ) = each_header()
+
+A synonym for C<< Blosxom::Header->instance->each() >>.
+
+=item header_push()
+
+This function is obsolete and will be removed in 0.06.
 
 =back
 
@@ -791,20 +792,14 @@ There are no known bugs in this module.
 Please report problems to ANAZAWA (anazawa@cpan.org).
 Patches are welcome.
 
-=head1 AUTHOR
+=head1 MAINTAINER
 
 Ryo Anazawa (anazawa@cpan.org)
 
-=head1 LICENSE AND COPYRIGHT
-
-Copyright (c) 2011-2012 Ryo Anazawa. All rights reserved.
+=head1 LICENSE
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 =cut
 
