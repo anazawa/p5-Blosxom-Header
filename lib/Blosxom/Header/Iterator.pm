@@ -10,24 +10,26 @@ sub new {
 }
 
 sub initialize {
-    my $self   = shift;
-    my %header = %{ $self->{iteratee} };
+    my $self = shift;
 
     my @fields;
+
+    my %header = %{ $self->{iteratee} };
+    delete $header{-charset};
 
     push @fields, 'Status'        if delete $header{-status};
     push @fields, 'Window-Target' if delete $header{-target};
     push @fields, 'P3P'           if delete $header{-p3p};
 
-    push @fields, 'Set-Cookie' if my $cookie = delete $header{-cookie};
+    push @fields, 'Set-Cookie' if my $cookie  = delete $header{-cookie};
     push @fields, 'Expires'    if my $expires = delete $header{-expires};
-    push @fields, 'Date'       if delete $header{-nph} || $expires || $cookie;
+    push @fields, 'Date' if delete $header{-nph} || $expires || $cookie;
 
     push @fields, 'Content-Disposition' if delete $header{-attachment};
 
     # not ordered
     while ( my ($norm, $value) = each %header ) {
-        next if !$value or $norm eq '-type' or $norm eq '-charset';
+        next if !$value or $norm eq '-type';
         push @fields, $self->denormalize( $norm );
     }
 
@@ -52,6 +54,9 @@ sub has_next {
     my $self = shift;
     $self->{current} < $self->{size};
 }
+
+sub size    { shift->{size}    }
+sub current { shift->{current} }
 
 sub denormalize {
     my ( $self, $norm ) = @_;

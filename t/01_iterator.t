@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 7;
+use Test::More tests => 10;
 
 BEGIN {
     use_ok 'Blosxom::Header::Iterator';
@@ -31,6 +31,9 @@ ok $iterator->denormalize( '-foo_bar' ) eq 'Foo-bar';
 
 $iterator->initialize;
 
+ok $iterator->size    == 9;
+ok $iterator->current == 0;
+
 my @got;
 while ( $iterator->has_next ) {
     push @got, $iterator->next;
@@ -49,3 +52,4 @@ my @expected = qw(
 );
 
 is_deeply \@got, \@expected;
+ok $iterator->current == 9;

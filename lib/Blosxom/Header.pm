@@ -10,7 +10,7 @@ use Carp qw/carp croak/;
 our $VERSION = '0.05008';
 
 our @EXPORT_OK = qw(
-    header_get  header_set  header_exists header_delete
+    header_get  header_set  header_exists header_delete header_iter
     header_push push_cookie push_p3p each_header
 );
 
@@ -18,10 +18,15 @@ sub header_get    { __PACKAGE__->instance->get( @_ )    }
 sub header_set    { __PACKAGE__->instance->set( @_ )    }
 sub header_exists { __PACKAGE__->instance->exists( @_ ) }
 sub header_delete { __PACKAGE__->instance->delete( @_ ) }
-sub each_header   { __PACKAGE__->instance->each( @_ )   }
 
-# The following function is obsolete and will be removed in 0.06
+sub header_iter (&) {
+    my $callback = shift;
+    __PACKAGE__->instance->each( $callback );
+}
+
+# The following functions are obsolete and will be removed in 0.06
 sub header_push { __PACKAGE__->instance->_push( @_ ) }
+sub each_header { __PACKAGE__->instance->each( @_ )  }
 
 sub _carp {
     my ( $format, @args ) = @_;
@@ -74,9 +79,21 @@ sub field_names { keys %{ $_[0] } }
 
 sub each {
     my ( $self, $callback ) = @_;
-    return each %{ $self } unless ref $callback eq 'CODE';
-    my %header = %{ $self }; # copy
-    while ( my @args = each %header ) { $callback->( @args ) }
+
+    if ( ref $callback eq 'CODE' ) {
+        my @headers = $self->flatten;
+        while ( my ($field, $value) = splice @headers, 0, 2 ) {
+            $callback->( $field, $value );
+        }
+    }
+    elsif ( defined wantarray ) {
+        return each %{ $self };
+    }
+    else {
+        carp( 'Useless use of each() in void context' );
+    }
+
+    return;
 }
 
 sub is_empty { not %{ $_[0] } }

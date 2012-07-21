@@ -355,8 +355,8 @@ subtest 'each()' => sub {
     $header->each( sub { push @got, @_ } );
 
     my @expected = (
-        'Content-Type' => 'text/html; charset=ISO-8859-1',
         'Foo'          => 'bar',
+        'Content-Type' => 'text/html; charset=ISO-8859-1',
     );
 
     is_deeply \@got, \@expected;

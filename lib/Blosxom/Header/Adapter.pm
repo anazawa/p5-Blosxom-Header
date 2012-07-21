@@ -118,8 +118,8 @@ sub CLEAR {
 }
 
 sub FIRSTKEY { shift->{iterator}->initialize->next     }
-sub NEXTKEY  { shift->{iterator}->next                 }
-sub SCALAR   { shift->{iterator}->initialize->has_next }
+sub NEXTKEY  { shift->{iterator}->next( @_ )           }
+sub SCALAR   { shift->{iterator}->initialize->size > 0 }
 
 sub normalize {
     my $self  = shift;
