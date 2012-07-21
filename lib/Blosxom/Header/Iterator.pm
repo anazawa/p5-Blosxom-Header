@@ -1,10 +1,11 @@
 package Blosxom::Header::Iterator;
 use strict;
 use warnings;
+use Carp qw/croak/;
 
 sub new {
-    my ( $class, %args ) = @_;
-    my $iteratee = delete $args{collection};
+    my ( $class, $iteratee ) = @_;
+    croak( 'Not a hash reference' ) unless ref $iteratee eq 'HASH';
     bless { iteratee => $iteratee }, $class;
 }
 
@@ -18,12 +19,13 @@ sub initialize {
     push @fields, 'Window-Target' if delete $header{-target};
     push @fields, 'P3P'           if delete $header{-p3p};
 
-    push @fields, 'Set-Cookie' if my $cookie  = delete $header{-cookie};
+    push @fields, 'Set-Cookie' if my $cookie = delete $header{-cookie};
     push @fields, 'Expires'    if my $expires = delete $header{-expires};
     push @fields, 'Date'       if delete $header{-nph} || $expires || $cookie;
 
     push @fields, 'Content-Disposition' if delete $header{-attachment};
 
+    # not ordered
     while ( my ($norm, $value) = each %header ) {
         next if !$value or $norm eq '-type' or $norm eq '-charset';
         push @fields, $self->denormalize( $norm );
@@ -51,13 +53,16 @@ sub has_next {
     $self->{current} < $self->{size};
 }
 
-sub reset { shift->{current} = 0 }
-
 sub denormalize {
     my ( $self, $norm ) = @_;
-    $norm =~ s/^-//;
-    $norm =~ tr/_/-/;
-    ucfirst $norm;
+
+    # get rid of an initial dash
+    ( my $field = $norm ) =~ s/^-//;
+
+    # transliterate underbars into dashes
+    $field =~ tr/_/-/;
+
+    ucfirst $field;
 }
 
 1;
@@ -71,14 +76,14 @@ Blosxom::Header::Iterator
 =head1 SYNOPSIS
 
   use Blosxom::Header::Iterator;
-  use CGI qw/header/;
 
   my %header = ( -type => 'text/plain' );
-  my $iterator = Blosxom::Header::Iterator->new( collection => \%header );
+  my $iterator = Blosxom::Header::Iterator->new( \%header );
 
   $header{-cookie} = 'foo';
 
   $iterator->initialize;
+
   while ( $iterator->has_next ) {
       my $field = $iterator->next;
       print "$field\n";
@@ -88,15 +93,19 @@ Blosxom::Header::Iterator
 
 =over 4
 
-=item $iterator = Blosxom::Header::Iterator->new( collection => {} )
+=item $iterator = Blosxom::Header::Iterator->new( HashRef )
+
+Creates a new Blosxom::Header::Iterator object.
 
 =item $iterator->initialize
+
+Executes all startup work required before iteration.
 
 =item $bool = $iterator->has_next
 
 =item $field = $iterator->next
 
-=item $iterator->reset
+Increments the iterator and returns the new value.
 
 =item $field = $iterator->denormalize( $norm )
 

@@ -17,9 +17,7 @@ sub TIEHASH {
         -type       => q{},        -window_target => q{-target},
     };
 
-    $self->{iterator} = Blosxom::Header::Iterator->new(
-        collection => $adaptee,
-    );
+    $self->{iterator} = Blosxom::Header::Iterator->new( $adaptee );
 
     $self;
 }
@@ -58,7 +56,7 @@ sub FETCH {
         my $expires = $adaptee->{ $norm };
         return $expires ? expires( $expires ) : undef;
     }
-    elsif ( $norm eq '-date' and $self->has_date_header ) {
+    elsif ( $norm eq '-date' and $self->date_header_is_fixed ) {
         return expires( 0, 'http' );
     }
 
@@ -82,9 +80,8 @@ sub STORE {
     elsif ( $norm eq '-content_disposition' ) {
         delete $adaptee->{-attachment};
     }
-    elsif ( $norm eq '-date' and $self->has_date_header ) {
-        carp( 'The Date header is fixed' );
-        return;
+    elsif ( $norm eq '-date' and $self->date_header_is_fixed ) {
+        return carp( 'The Date header is fixed' );
     }
 
     $adaptee->{ $norm } = $value;
@@ -108,9 +105,8 @@ sub DELETE {
         delete @{ $adaptee }{ $norm, '-attachment' };
         return $deleted;
     }
-    elsif ( $norm eq '-date' and $self->has_date_header ) {
-        carp( 'The Date header is fixed' );
-        return
+    elsif ( $norm eq '-date' and $self->date_header_is_fixed ) {
+        return carp( 'The Date header is fixed' );
     }
 
     delete $adaptee->{ $norm };
@@ -152,10 +148,12 @@ sub nph {
     $adaptee->{-nph};
 }
 
-sub has_date_header {
+sub date_header_is_fixed {
     my $adaptee = shift->{adaptee};
     $adaptee->{-expires} || $adaptee->{-cookie} || $adaptee->{-nph};
 }
+
+*has_date_header = \&date_header_is_fixed;
 
 1;
 
