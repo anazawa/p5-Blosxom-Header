@@ -1,5 +1,6 @@
 use strict;
-use Test::More tests => 12;
+use Test::Exception;
+use Test::More tests => 13;
 
 BEGIN {
     my @functions = qw(
@@ -32,10 +33,14 @@ is_deeply \%header, {};
 is push_p3p( 'CAO' ), 1;
 is $header{-p3p}, 'CAO';
 
+my $expected = qr/^Must provide a code reference to header_iter\(\)/;
+throws_ok { header_iter() } $expected;
+
 my @got;
-header_iter {
+header_iter sub {
     my $field = shift;
     push @got, $field;
 };
 
 is_deeply \@got, [ qw/P3P Content-Type/ ];
+

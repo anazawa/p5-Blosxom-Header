@@ -28,10 +28,8 @@ sub initialize {
     push @fields, 'Content-Disposition' if delete $header{-attachment};
 
     # not ordered
-    while ( my ($norm, $value) = each %header ) {
-        next if !$value or $norm eq '-type';
-        push @fields, $self->denormalize( $norm );
-    }
+    my @others = grep { $header{ $_ } and $_ ne '-type' } keys %header;
+    push @fields, map { $self->denormalize( $_ ) } @others if @others;
 
     if ( !exists $header{-type} or delete $header{-type} ) {
         push @fields, 'Content-Type';
@@ -58,8 +56,12 @@ sub has_next {
 sub size    { shift->{size}    }
 sub current { shift->{current} }
 
+my %field_name_of;
+
 sub denormalize {
     my ( $self, $norm ) = @_;
+
+    return $field_name_of{ $norm } if exists $field_name_of{ $norm };
 
     # get rid of an initial dash
     ( my $field = $norm ) =~ s/^-//;
@@ -67,7 +69,7 @@ sub denormalize {
     # transliterate underbars into dashes
     $field =~ tr/_/-/;
 
-    ucfirst $field;
+    $field_name_of{ $norm } = ucfirst $field;
 }
 
 1;
