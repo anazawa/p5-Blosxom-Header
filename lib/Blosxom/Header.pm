@@ -311,6 +311,7 @@ Blosxom::Header - Object representing CGI response headers
 
 This module provides Blosxom plugin developers
 with an interface to handle L<CGI> response headers.
+Blosxom starts speeking HTTP at last.
 
 =head2 CLASS METHODS
 
@@ -409,7 +410,7 @@ The field names have case as returned by C<CGI::header()>.
 
 In scalar context return the number of distinct field names.
 
-  if ( $header->field_name == 0 ) {
+  if ( $header->field_names == 0 ) {
       # no header fields
   }
 
@@ -464,7 +465,7 @@ NOTE: This method does not flatten recursively.
 
 =back
 
-=head2 HANDLING COOKIES
+=head3 HANDLING COOKIES
 
 C<cookie()> and C<push_cookie()> are obsolete and will be removed in 0.06.
 These methods were replaced with C<set_cookie()> and C<get_cookie()>.
@@ -520,7 +521,7 @@ Use C<< $header->set_cookie >> instead.
 
 =back
 
-=head2 DATE HEADERS
+=head3 DATE HEADERS
 
 These methods always convert their value to system time
 (seconds since Jan 1, 1970).
@@ -576,7 +577,7 @@ last modified. This method expects machine time when the header value is set.
 
 =back
 
-=head2 CONVENIENCE METHODS
+=head3 CONVENIENCE METHODS
 
 The following methods were named after parameters recognized by
 C<CGI::header()>.
@@ -609,7 +610,11 @@ This method doesn't receive any arguments.
   # wrong
   $header->charset( 'euc-jp' );
 
-=item $header->content_type
+=item $media_type = $header->content_type
+
+=item ( $media_type, $rest ) = $header->content_type
+
+=item $header->content_type( 'text/html; charset=ISO-88591' )
 
 Represents the Content-Type header which indicates the media type of
 the message content. C<type()> is an alias.
@@ -619,8 +624,8 @@ the message content. C<type()> is an alias.
 The value returned will be converted to lower case, and potential parameters
 will be chopped off and returned as a separate value if in an array context.
 
-  my $type = $header->content_type; # 'text/html'
-  my @type = $header->content_type; # ( 'text/html', 'charset=ISO-8859-1' )
+  my $type = $header->content_type; # 'text/plain'
+  my @type = $header->content_type; # ( 'text/plain', 'charset=utf-8' )
 
 If there is no such header field, then the empty string is returned.
 This makes it safe to do the following:
@@ -653,6 +658,7 @@ In this case, the outgoing header will be formatted as:
 
   P3P: policyref="/w3c/p3p.xml" CP="CAO DSP LAW CURa"
 
+=item @tags = $header->push_p3p
 =item $header->push_p3p( @tags )
 
 Adds P3P tags to the P3P header.

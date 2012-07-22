@@ -31,13 +31,11 @@ sub initialize {
     my @others = grep { $header{ $_ } and $_ ne '-type' } keys %header;
     push @fields, map { $self->denormalize( $_ ) } @others if @others;
 
-    if ( !exists $header{-type} or delete $header{-type} ) {
-        push @fields, 'Content-Type';
-    }
+    push @fields, 'Content-Type' if !exists $header{-type} or $header{-type};
 
     $self->{collection} = \@fields;
-    $self->{size}       = scalar @fields;
-    $self->{current}    = 0;
+    $self->{size}    = scalar @fields;
+    $self->{current} = 0;
 
     $self;
 }
