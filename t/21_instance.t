@@ -156,26 +156,17 @@ subtest 'charset()' => sub {
     %header = ( -charset => q{} );
     is $header->charset, undef;
 
-    %header = ( -charset => 'utf-8' );
-    is $header->charset, 'UTF-8';
-
-    %header = ( -type => q{}, -charset => 'utf-8' );
+    %header = ( -type => q{} );
     is $header->charset, undef;
 
     %header = ( -type => 'text/html; charset=euc-jp' );
     is $header->charset, 'EUC-JP';
 
-    %header = ( -type => 'text/html; charset=euc-jp', -charset => q{} );
-    is $header->charset, 'EUC-JP';
-
     %header = ( -type => 'text/html; charset=iso-8859-1; Foo=1' );
     is $header->charset, 'ISO-8859-1';
 
-    %header = (
-        -type    => 'text/html; charset=euc-jp',
-        -charset => 'utf-8',
-    );
-    is $header->charset, 'EUC-JP';
+    %header = ( -type => 'text/html; charset="iso-8859-1"; Foo=1' );
+    is $header->charset, 'ISO-8859-1';
 };
 
 subtest 'type()' => sub {

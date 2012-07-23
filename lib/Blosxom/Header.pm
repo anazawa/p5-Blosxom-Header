@@ -105,11 +105,11 @@ sub set_cookie {
 
     require CGI::Cookie;
 
-    my $new_cookie = do {
+    my $new_cookie = CGI::Cookie->new(do {
         my %args = ref $value eq 'HASH' ? %{ $value } : ( value => $value );
         $args{name} = $name;
-        CGI::Cookie->new( \%args );
-    };
+        \%args;
+    });
 
     my @cookies;
     my $offset = 0;
@@ -212,13 +212,12 @@ sub last_modified { shift->_date_header( Last_modified => $_[0] ) }
 sub date          { shift->_date_header( Date => $_[0] )          }
 
 sub _date_header {
+    my ( $self, $field, $time ) = @_;
+
     require HTTP::Date;
 
-    my ( $self, $field, $mtime ) = @_;
-
-    if ( defined $mtime ) {
-        $self->{ $field } = HTTP::Date::time2str( $mtime );
-        return;
+    if ( defined $time ) {
+        return $self->{ $field } = HTTP::Date::time2str( $time );
     }
     elsif ( my $date = $self->{ $field } ) {
         return HTTP::Date::str2time( $date );
@@ -311,7 +310,20 @@ Blosxom::Header - Object representing CGI response headers
 
 This module provides Blosxom plugin developers
 with an interface to handle L<CGI> response headers.
-Blosxom starts speeking HTTP at last.
+Blosxom starts speaking HTTP at last.
+
+=head2 BACKGROUND
+
+Blosxom, an weblog application, globalizes C<$header> which is a hash reference.
+This application passes C<$header> to C<CGI::header()> to generate
+CGI response headers.
+
+Blosxom plugins may modify C<$header> directly because the variable is
+global.
+The problem is that there is no agreement with how to normalize C<keys>
+of C<$header>.
+This module standardizes this process and also provides some convenience
+methods.
 
 =head2 CLASS METHODS
 
