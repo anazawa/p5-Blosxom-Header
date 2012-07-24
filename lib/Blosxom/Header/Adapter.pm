@@ -1,7 +1,6 @@
 package Blosxom::Header::Adapter;
 use strict;
 use warnings;
-use Blosxom::Header::Iterator;
 use Carp qw/carp/;
 use CGI::Util qw/expires/;
 
@@ -16,8 +15,6 @@ sub TIEHASH {
         -set_cookie => q{-cookie}, -target        => q{},
         -type       => q{},        -window_target => q{-target},
     };
-
-    $self->{iterator} = Blosxom::Header::Iterator->new( $adaptee );
 
     $self;
 }
@@ -117,9 +114,40 @@ sub CLEAR {
     %{ $self->{adaptee} } = ( -type => q{} );
 }
 
-sub FIRSTKEY { shift->{iterator}->initialize->next     }
-sub NEXTKEY  { shift->{iterator}->next( @_ )           }
-sub SCALAR   { shift->{iterator}->initialize->size > 0 }
+sub SCALAR { shift->field_names }
+
+sub field_names {
+    my $self   = shift;
+    my %header = %{ $self->{adaptee} };
+
+    my @fields;
+
+    push @fields, 'Status'        if delete $header{-status};
+    push @fields, 'Window-Target' if delete $header{-target};
+    push @fields, 'P3P'           if delete $header{-p3p};
+
+    push @fields, 'Set-Cookie' if my $cookie  = delete $header{-cookie};
+    push @fields, 'Expires'    if my $expires = delete $header{-expires};
+    push @fields, 'Date' if delete $header{-nph} || $expires || $cookie;
+
+    push @fields, 'Content-Disposition' if delete $header{-attachment};
+
+    # not ordered
+    delete $header{-charset};
+    my @others = grep { $header{ $_ } and $_ ne '-type' } keys %header;
+    push @fields, map { $self->denormalize( $_ ) } @others;
+
+    push @fields, 'Content-Type' if !exists $header{-type} or $header{-type};
+
+    @fields;
+}
+
+sub denormalize {
+    my ( $self, $norm ) = @_;
+    $norm =~ s/^-//;
+    $norm =~ tr/_/-/;
+    ucfirst $norm;
+}
 
 sub normalize {
     my $self  = shift;
@@ -161,78 +189,28 @@ __END__
 
 =head1 NAME
 
-Blosxom::Header::Adapter - Creates a case-insensitive hash
+Blosxom::Header::Adapter - Adapter for CGI::header()
 
 =head1 SYNOPSIS
 
-  use CGI qw/header/;
   use Blosxom::Header::Adapter;
 
   my %adaptee = ( -type => 'text/plain' );
 
   tie my %adapter => 'Blosxom::Header::Adapter' => \%adaptee;
 
-  $adapter{Content_Length} = 1234;
+  # field names are case-insensitive
+  my $length = $adapter{'Content-Length'}; # 1234
+  $adapter{'Content_length'} = 4321;
 
   print header( %adaptee );
-  # Content-length: 1234
+  # Content-length: 4321
   # Content-Type: text/plain; charset=ISO-8859-1
   #
 
 =head1 DESCRIPTION
 
-Creates a case-insensitive hash.
-
-=head2 BACKGROUND
-
-Blosxom, an weblog application, globalizes C<$header> which is a reference to
-a hash. This application passes C<$header> to C<CGI::header()> to generate HTTP
-headers.
-
-  package blosxom;
-  use strict;
-  use warnings;
-  use CGI qw/header/;
-
-  our $header = { -type => 'text/html' };
-
-  # Loads plugins
-
-  print header( $header );
-
-Plugins may modify C<$header> directly because the variable is global.
-On the other hand, C<header()> doesn't care whether C<keys> of C<$header> are
-lowercased nor start with a dash.
-There is no agreement with how to normalize C<keys> of C<$header>.
-
-=head2 HOW THIS MODULE NORMALIZES FIELD NAMES
-
-To specify field names consistently, we need to normalize them.
-If you follow one of normalization rules, you can modify C<$header>
-consistently. This module normalizes them as follows.
-
-Remember how Blosxom initializes C<$header>:
-
-  $header = { -type => 'text/html' };
-
-A key C<-type> is starting with a dash and lowercased, and so this module
-follows the same rules:
-
-  'Status'  # not normalized
-  'status'  # not normalized
-  '-status' # normalized
-
-How about C<Content-Length>? It contains a dash.
-To avoid quoting when specifying hash keys, this module transliterates dashes
-into underscores in field names:
-
-  'Content-Length'  # not normalized
-  '-content-length' # not normalized
-  '-content_length' # normalized
-
-If you follow the above normalization rule, you can modify C<$header> directly.
-In other words, this module is compatible with the way modifying C<$header>
-directly when you follow the above rule.
+Adapter for L<CGI>::header().
 
 =head2 METHODS
 
@@ -240,21 +218,17 @@ directly when you follow the above rule.
 
 =item $adapter = tie %adapter, 'Blosxom::Header::Adapter', \%adaptee
 
-Associates a new hash instance with Blosxom::Header::Adapter.
+=item $value = $adapter{ $field }
 
 =item $adapter{ $field } = $value
 
-=item $value = $adapter{ $field }
-
 =item $deleted = delete $adapter{ $field }
-
-=item $bool = exists $adapter{ $field }
-
-=item $bool = %adapter
 
 =item $field = each %adapter
 
 =item ( $field, $value ) = each %adapter
+
+=item $bool = scalar %adapter
 
 =item %adapter = ()
 
@@ -262,11 +236,15 @@ A shortcut for
 
   %adaptee = ( -type => q{} );
 
-=item $adapter->nph()
+=item $bool = exists %adapter{ $field }
 
-=item $adapter->attachment()
+=item $norm = $adapter->normalize( $field )
 
-=item $adapter->has_date_header()
+=item $adapter->nph
+
+=item $adapter->attachment
+
+=item $bool = $adapter->date_header_is_fixed
 
 =back
 
@@ -277,15 +255,14 @@ A shortcut for
 =item The Date header is fixed
 
 You attempted to modify the Date header when any of
-<-cookie>, C<-nph> or C<-expires> was set.
-See C<Blosxom::Header::date()>.
+C<-cookie>, C<-nph> or C<-expires> was set.
 
 =back
 
 =head1 SEE ALSO
 
-L<Blosxom::Header>,
-L<perltie>
+L<Blosxom::Header::Iterator>,
+L<Tie::Hash>
 
 =head1 AUTHOR
 
@@ -293,13 +270,7 @@ Ryo Anazawa (anazawa@cpan.org)
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2011-2012 Ryo Anazawa. All rights reserved.
-
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 =cut

@@ -1,6 +1,6 @@
 use strict;
 use Test::Exception;
-use Test::More tests => 13;
+use Test::More tests => 12;
 
 BEGIN {
     my @functions = qw(
@@ -32,9 +32,6 @@ is_deeply \%header, {};
 
 is push_p3p( 'CAO' ), 1;
 is $header{-p3p}, 'CAO';
-
-my $expected = qr/^Must provide a code reference to header_iter\(\)/;
-throws_ok { header_iter() } $expected;
 
 my @got;
 header_iter sub {

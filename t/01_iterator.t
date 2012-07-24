@@ -1,23 +1,18 @@
 use strict;
 use warnings;
-use Test::More tests => 10;
+#use Test::More tests => 10;
+use Test::More skip_all => 'deprecated';
 
 BEGIN {
     use_ok 'Blosxom::Header::Iterator';
 }
 
 my $class = 'Blosxom::Header::Iterator';
-ok $class->can( 'new' );
+can_ok $class, qw( new denormalize );
+#ok $class->denormalize( '-foo' ) eq 'Foo';
+#ok $class->denormalize( '-foo_bar' ) eq 'Foo-bar';
 
-my %iteratee;
-my $iterator = $class->new( \%iteratee );
-ok $iterator->isa( $class );
-can_ok $iterator, qw( initialize next has_next denormalize );
-
-ok $iterator->denormalize( '-foo' )     eq 'Foo';
-ok $iterator->denormalize( '-foo_bar' ) eq 'Foo-bar';
-
-%iteratee = (
+my %iteratee = (
     -status     => 1,
     -target     => 1,
     -p3p        => 1,
@@ -29,10 +24,50 @@ ok $iterator->denormalize( '-foo_bar' ) eq 'Foo-bar';
     -type       => 1,
 );
 
-$iterator->initialize;
+#my $iterator = $class->new(
+#    -status     => 1,
+#    -target     => 1,
+#    -p3p        => 1,
+#    -cookie     => 1,
+#    -expires    => 1,
+#    -nph        => 1,
+#    -attachment => 1,
+#    -foo        => 1,
+#    -type       => 1,
+#);
+my $iterator = $class->new( \%iteratee );
 
-ok $iterator->size    == 9;
-ok $iterator->current == 0;
+ok $iterator->isa( $class );
+#can_ok $iterator, qw( next has_next size current );
+can_ok $iterator, qw( next has_next );
+#ok $iterator->size == 9;
+#ok $iterator->current == 0;
+
+warn q{};
+#_warn( $iterator->next );
+#_warn( $iterator->next );
+#_warn( $iterator->next );
+#_warn( $iterator->next );
+#_warn( $iterator->next );
+#_warn( $iterator->next );
+#_warn( $iterator->next );
+#_warn( $iterator->next );
+#_warn( $iterator->next );
+#_warn( $iterator->next );
+#_warn( $iterator->next );
+#_warn( $iterator->next );
+
+
+while ( $iterator->has_next ) {
+    _warn( $iterator->next );
+}
+
+die;
+
+sub _warn {
+    my $next = shift || q{};
+    warn "[ $next ]";
+}
 
 my @got;
 while ( $iterator->has_next ) {
