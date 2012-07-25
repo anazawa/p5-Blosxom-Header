@@ -476,7 +476,7 @@ Any return values of the callback routine are ignored.
 
 =item ( $field, $value ) = $header->each
 
-This feature is obsolete will disappear in 0.06.
+This feature is obsolete and will disappear in 0.06.
 
 =item $bool = $header->is_empty
 
@@ -491,9 +491,7 @@ returns a null array or not.
 Returns pairs of fields and values.
 
   my @headers = $header->flatten;
-  # => ( 'P3P', [ 'CAO', 'DSP' ], 'Content-Type', 'text/plain' )
-
-NOTE: This method does not flatten recursively.
+  # => ( 'Status', '304 Not Modified', 'Content-Type', 'text/plain' )
 
 =item $header->as_hashref
 
