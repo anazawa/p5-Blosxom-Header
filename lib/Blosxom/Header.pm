@@ -3,7 +3,7 @@ use 5.008_009;
 use strict;
 use warnings;
 use parent qw/Exporter/;
-use constant USELESS => 'Useless use of %s with no values';
+use overload '%{}' => 'as_hashref', 'bool' => 'boolify', 'fallback' => 1;
 use Blosxom::Header::Adapter;
 use Carp qw/carp croak/;
 use HTTP::Date ();
@@ -31,12 +31,10 @@ sub _str2time { $str2time{ $_[0] } ||= HTTP::Date::str2time( $_[0] ) }
 my %time2str;
 sub _time2str { $time2str{ $_[0] } ||= HTTP::Date::time2str( $_[0] ) }
 
-sub _carp {
-    my ( $format, @args ) = @_;
-    carp( sprintf $format, @args );
-}
-
 my $instance;
+
+my %header;
+my $adapter;
 
 sub instance {
     my $class = shift;
@@ -45,9 +43,8 @@ sub instance {
     return $instance if defined $instance;
 
     if ( $class->is_initialized ) {
-        tie my %header, 'Blosxom::Header::Adapter', $blosxom::header;
-        my %self = ( adapter => tied %header, header => \%header );
-        return $instance = bless \%self, $class;
+        $adapter = tie %header, 'Blosxom::Header::Adapter', $blosxom::header;
+        return $instance = bless \do { my $anon_scalar }, $class;
     }
 
     croak( q{$blosxom::header hasn't been initialized yet} );
@@ -57,40 +54,40 @@ sub has_instance { $instance }
 
 sub is_initialized { ref $blosxom::header eq 'HASH' }
 
+sub as_hashref { \%header }
+sub boolify { 1 }
+
 sub get {
     my ( $self, @fields ) = @_;
-    @{ $self->{header} }{ @fields };
+    @header{ @fields };
 }
 
 sub set {
-    my ( $self, %header ) = @_;
-    @{ $self->{header} }{ keys %header } = values %header; # merge!
+    my ( $self, %new_header ) = @_;
+    @header{ keys %new_header } = values %new_header; # merge!
     return;
 }
 
 sub delete {
     my ( $self, @fields ) = @_;
-    delete @{ $self->{header} }{ @fields };
+    delete @header{ @fields };
 }
 
 sub exists {
     my ( $self, $field ) = @_;
-    exists $self->{header}{$field};
+    exists $header{ $field };
 }
 
-sub clear {
-    my $self = shift;
-    %{ $self->{header} } = ();
-}
+sub clear { %header = () }
 
-sub field_names { shift->{adapter}->field_names }
+sub field_names { $adapter->field_names }
 
 sub each {
     my ( $self, $callback ) = @_;
 
     if ( ref $callback eq 'CODE' ) {
-        for my $field ( $self->{adapter}->field_names ) {
-            $callback->( $field, $self->{header}{$field} );
+        for my $field ( $adapter->field_names ) {
+            $callback->( $field, $header{ $field } );
         }
     }
     elsif ( defined wantarray ) {
@@ -104,44 +101,39 @@ sub each {
 }
 
 # This method is deprecated and will be remove in 0.06
+my %iterator;
 sub _each {
     my $self = shift;
 
-    if ( $self->{iterated} or !$self->{iterator} ) {
-        my @fields = $self->{adapter}->field_names;
-        my ( $size, $current ) = ( scalar @fields, 0 );
-        $self->{iterated} = 0;
-        $self->{iterator} = sub {
-            return if $current >= $size;
-            $fields[ $current++ ];
-        };
+    if ( $iterator{is_exhausted} or !%iterator ) {
+        my @fields = $adapter->field_names;
+        %iterator = (
+            collection => \@fields,
+            size       => scalar @fields,
+            current    => 0,
+        );
     }
 
-    if ( my $field = $self->{iterator}->() ) {
-        return wantarray ? ( $field, $self->{header}{$field} ) : $field;
+    if ( $iterator{current} < $iterator{size} ) {
+        my $field = $iterator{collection}[ $iterator{current}++ ];
+        return wantarray ? ( $field, $header{ $field } ) : $field;
     }
     else {
-        $self->{iterated}++;
+        $iterator{is_exhausted}++;
     }
 
     return;
 }
 
-sub is_empty {
-    my $self = shift;
-    not %{ $self->{header} };
-}
+sub is_empty { not %header }
 
 sub flatten {
     my $self = shift;
-    map { $_, $self->{header}{$_} } $self->{adapter}->field_names;
+    map { $_, $header{$_} } $adapter->field_names;
 }
 
 sub set_cookie {
-    my $self   = shift;
-    my $name   = shift;
-    my $value  = shift;
-    my $header = $self->{header};
+    my ( $self, $name, $value ) = @_;
 
     require CGI::Cookie;
 
@@ -153,7 +145,7 @@ sub set_cookie {
 
     my @cookies;
     my $offset = 0;
-    if ( my $cookies = $header->{Set_Cookie} ) {
+    if ( my $cookies = $header{Set_Cookie} ) {
         @cookies = ref $cookies eq 'ARRAY' ? @{ $cookies } : $cookies;
         for my $cookie ( @cookies ) {
             last if ref $cookie eq 'CGI::Cookie' and $cookie->name eq $name;
@@ -164,18 +156,16 @@ sub set_cookie {
     # add/overwrite CGI::Cookie object
     splice @cookies, $offset, 1, $new_cookie;
 
-    $header->{Set_Cookie} = @cookies > 1 ? \@cookies : $cookies[0];
+    $header{Set_Cookie} = @cookies > 1 ? \@cookies : $cookies[0];
 
     return;
 }
 
 sub get_cookie {
-    my $self   = shift;
-    my $name   = shift;
-    my $header = $self->{header};
+    my ( $self, $name ) = @_;
 
     my @values;
-    if ( my $cookies = $header->{Set_Cookie} ) {
+    if ( my $cookies = $header{Set_Cookie} ) {
         @values = grep {
             ref $_ eq 'CGI::Cookie' and $_->name eq $name
         } (
@@ -211,24 +201,31 @@ sub push_p3p_tags {
 sub _push {
     my ( $self, $field, @values ) = @_;
 
-    return _carp( USELESS, '_push()' ) unless @values;
+    return carp( 'Useless use of _push() with no values' ) unless @values;
 
-    if ( my $value = $self->{header}{$field} ) {
+    if ( my $value = $header{ $field } ) {
         return push @{ $value }, @values if ref $value eq 'ARRAY';
         unshift @values, $value;
     }
 
-    $self->{header}{$field} = @values > 1 ? \@values : $values[0];
+    $header{ $field } = @values > 1 ? \@values : $values[0];
 
     scalar @values;
 }
 
-sub attachment { shift->{adapter}->attachment( @_ ) }
-sub nph        { shift->{adapter}->nph( @_ )        }
+sub attachment {
+    my $self = shift;
+    $adapter->attachment( @_ );
+}
+
+sub nph {
+    my $self = shift;
+    $adapter->nph( @_ );
+}
 
 sub charset {
     my $self = shift;
-    my $type = $self->{header}{Content_Type};
+    my $type = $header{Content_Type};
     my ( $charset ) = $type =~ /charset=([^;]+)/ if $type;
     return unless $charset;
     uc $charset;
@@ -239,10 +236,10 @@ sub cookie {
     my $self = shift;
 
     if ( @_ ) {
-        delete $self->{header}{Set_Cookie};
+        delete $header{Set_Cookie};
         $self->push_cookie( @_ );
     }
-    elsif ( my $cookie = $self->{header}{Set_Cookie} ) {
+    elsif ( my $cookie = $header{Set_Cookie} ) {
         my @cookies = ref $cookie eq 'ARRAY' ? @{ $cookie } : ( $cookie );
         return wantarray ? @cookies : $cookies[0];
     }
@@ -257,9 +254,9 @@ sub _date_header {
     my ( $self, $field, $time ) = @_;
 
     if ( defined $time ) {
-        return $self->{header}{$field} = _time2str( $time );
+        return $header{ $field } = _time2str( $time );
     }
-    elsif ( my $date = $self->{header}{$field} ) {
+    elsif ( my $date = $header{ $field } ) {
         return _str2time( $date );
     }
 
@@ -268,8 +265,8 @@ sub _date_header {
 
 sub expires {
     my $self = shift;
-    return $self->{header}{Expires} = shift if @_;
-    my $expires = $self->{header}{Expires};
+    return $header{Expires} = shift if @_;
+    my $expires = $header{Expires};
     return unless $expires;
     _str2time( $expires );
 }
@@ -279,9 +276,9 @@ sub p3p_tags {
 
     if ( @_ ) {
         my @tags = @_ > 1 ? @_ : split / /, shift;
-        $self->{header}{P3P} = @tags > 1 ? \@tags : $tags[0];
+        $header{P3P} = @tags > 1 ? \@tags : $tags[0];
     }
-    elsif ( my $tags = $self->{header}{P3P} ) {
+    elsif ( my $tags = $header{P3P} ) {
         my @tags = ref $tags eq 'ARRAY' ? @{ $tags } : ( $tags );
         @tags = map { split / / } @tags;
         return wantarray ? @tags : $tags[0];
@@ -294,8 +291,8 @@ sub p3p_tags {
 
 sub content_type {
     my $self = shift;
-    return $self->{header}{Content_Type} = shift if @_;
-    my $content_type = $self->{header}{Content_Type};
+    return $header{Content_Type} = shift if @_;
+    my $content_type = $header{Content_Type};
     return q{} unless $content_type;
     my ( $type, $rest ) = split /;\s*/, $content_type, 2;
     wantarray ? ( lc $type, $rest ) : lc $type;
@@ -304,17 +301,16 @@ sub content_type {
 *type = \&content_type;
 
 sub status {
-    my $self   = shift;
-    my $header = $self->{header};
+    my $self = shift;
 
     if ( @_ ) {
         require HTTP::Status;
         my $code = shift;
         my $message = HTTP::Status::status_message( $code );
-        return $header->{Status} = "$code $message" if $message;
+        return $header{Status} = "$code $message" if $message;
         carp( qq{Unknown status code "$code" passed to status()} );
     }
-    elsif ( my $status = $header->{Status} ) {
+    elsif ( my $status = $header{Status} ) {
         return substr( $status, 0, 3 );
     }
 
@@ -323,8 +319,8 @@ sub status {
 
 sub target {
     my $self = shift;
-    return $self->{header}{Window_Target} = shift if @_;
-    $self->{header}{Window_Target};
+    return $header{Window_Target} = shift if @_;
+    $header{Window_Target};
 }
 
 1;
@@ -405,8 +401,7 @@ You can use underscores as a replacement for dashes in header names.
 
   # field names are case-insensitive
   $header->get( 'Content-Length' );
-  $header->get( 'Content-length' );
-  $header->get( 'Content_Length' );
+  $header->get( 'Content_length' );
 
 =item $header->set( $field => $value )
 
@@ -416,18 +411,15 @@ Sets the value of one or more header fields.
 Accepts a list of named arguments.
 
 The $value argument must be a plain string, except for when the Set-Cookie
-or P3P header is specified.
-In exceptional cases, $value may be a reference to an array.
+header is specified.
+In an exceptional case, $value may be a reference to an array.
 
   use CGI::Cookie;
 
   my $cookie1 = CGI::Cookie->new( -name => 'foo' );
   my $cookie2 = CGI::Cookie->new( -name => 'bar' );
 
-  $header->set(
-      Set_Cookie => [ $cookie1, $cookie2 ],
-      P3P        => [ 'CAO', 'DSP', 'LAW', 'CURa' ],
-  );
+  $header->set( Set_Cookie => [ $cookie1, $cookie2 ] );
 
 =item $bool = $header->exists( $field )
 
@@ -484,21 +476,7 @@ Any return values of the callback routine are ignored.
 
 =item ( $field, $value ) = $header->each
 
-When called in list context, returns two parameters;
-the name of the field and a value, so that you can iterate over it.
-When called in scalar context, returns only the field name
-for the next header field.
-When the header is entirely read, a null array is returned in list context,
-and C<undef> in scalar context.
-
-  while ( my ($field, $value) = $header->each ) {
-      print "$field: $value\n";
-  }
-
-You can reset the iterator by calling C<< $header->field_names >>.
-
-If you C<set()> or C<delete()> header fields while you're iterating
-over it, you may get entries skipped or duplicated, so don't.
+This feature is obsolete will disappear in 0.06.
 
 =item $bool = $header->is_empty
 
@@ -516,6 +494,8 @@ Returns pairs of fields and values.
   # => ( 'P3P', [ 'CAO', 'DSP' ], 'Content-Type', 'text/plain' )
 
 NOTE: This method does not flatten recursively.
+
+=item $header->as_hashref
 
 =back
 
@@ -696,11 +676,11 @@ a NPH (no-parse-header) script:
 
   $header->nph( 1 );
 
-=item @tags = $header->p3p
+=item @tags = $header->p3p_tags
 
-=item $header->p3p( @tags )
+=item $header->p3p_tags( @tags )
 
-Represents the P3P tags.
+Represents the P3P tags. C<p3p()> is an alias.
 The parameter can be an array or a space-delimited string.
 
   $header->p3p( qw/CAO DSP LAW CURa/ );
@@ -712,10 +692,12 @@ In this case, the outgoing header will be formatted as:
 
   P3P: policyref="/w3c/p3p.xml" CP="CAO DSP LAW CURa"
 
-=item @tags = $header->push_p3p
-=item $header->push_p3p( @tags )
+=item @tags = $header->push_p3p_tags
+
+=item $header->push_p3p_tags( @tags )
 
 Adds P3P tags to the P3P header.
+C<push_p3p()> is an alias.
 Accepts a list of P3P tags.
 
   # get P3P tags
@@ -804,7 +786,7 @@ A shortcut for
 
     Blosxom::Header->instance->each( \&callback );
 
-Unlike C<each()> method, you must pass a code reference to this function.
+E.g.:
 
   header_iter sub {
       my ($field, $value) = @_;
@@ -851,8 +833,8 @@ therefore the following code doesn't work correctly:
   $header->set( P3P => q{policyref="/path/to/p3p.xml"} );
   $header->p3p( q{policyref="/path/to/p3p.xml"} );
 
-You're allowed to set or add P3P tags by using C<< $header->p3p >>
-or C<< $header->push_p3p >>.
+You're allowed to set or add P3P tags by using C<< $header->p3p_tags >>
+or C<< $header->push_p3p_tags >>.
 
 =head2 THE DATE HEADER
 

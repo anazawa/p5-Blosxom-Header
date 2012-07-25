@@ -1,5 +1,7 @@
 Revision history for Perl extension Blosxom::Header.
 
+  - Add as_hashref() method
+  - each() will return nothing in 0.06
   - Exports header_iter() on demand
   - each_header() is obsolete and removed in 0.06.
     Use header_iter() instead

@@ -1,6 +1,6 @@
 use strict;
 use Blosxom::Header;
-use Test::More tests => 24;
+use Test::More tests => 25;
 use Test::Warn;
 use Test::Exception;
 
@@ -338,7 +338,7 @@ subtest 'each()' => sub {
     %header = ( -foo => 'bar' );
 
     while ( my $field = $header->each ) {
-        warn $field;
+        #warn $field;
         $header->delete( $field ); # not supported
     }
 
@@ -385,4 +385,10 @@ subtest 'flatten()' => sub {
         'Content-Type', 'text/html; charset=ISO-8859-1',
     );
     is_deeply \@got, \@expected;
+};
+
+subtest 'as_hashref()' => sub {
+    %header = ();
+    $header->{Foo} = 'bar';
+    is_deeply \%header, { -foo => 'bar' };
 };

@@ -4,9 +4,6 @@ use warnings;
 use Carp qw/carp/;
 use CGI::Util;
 use List::Util qw/first/;
-#use Memoize;
-
-#memoize( 'expires' );
 
 sub TIEHASH {
     my $class   = shift;
@@ -248,10 +245,6 @@ Adapter for L<CGI>::header().
 =item $adapter{ $field } = $value
 
 =item $deleted = delete $adapter{ $field }
-
-=item $field = each %adapter
-
-=item ( $field, $value ) = each %adapter
 
 =item $bool = scalar %adapter
 
