@@ -1,5 +1,6 @@
 Revision history for Perl extension Blosxom::Header.
 
+0.05009 Jul 26th, 2012
   - Add as_hashref() method
   - each() will return nothing in 0.06
   - Exports header_iter() on demand

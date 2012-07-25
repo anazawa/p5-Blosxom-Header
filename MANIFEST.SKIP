@@ -1,5 +1,3 @@
-^benchmark/
-^profile/
 ^plugins/
 ^\.git/
 ^Makefile$
@@ -10,3 +8,5 @@ MYMETA*
 ^\.shipit$
 \.old$
 \.DS_Store$
+^nytprof
+^nytprof/

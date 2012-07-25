@@ -8,7 +8,7 @@ use Blosxom::Header::Adapter;
 use Carp qw/carp croak/;
 use HTTP::Date ();
 
-our $VERSION = '0.05008';
+our $VERSION = '0.05009';
 
 our @EXPORT_OK = qw(
     header_get  header_set  header_exists header_delete header_iter
