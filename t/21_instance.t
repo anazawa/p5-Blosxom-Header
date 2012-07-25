@@ -51,7 +51,7 @@ subtest 'set()' => sub {
     warning_is { $header->set( 'Foo' ) }
         'Odd number of elements in hash assignment';
 
-    warning_is { $header->set } 'Useless use of set() with no values';
+        #warning_is { $header->set } 'Useless use of set() with no values';
 
     $header->set(
         Foo => 'bar',
@@ -75,7 +75,7 @@ subtest 'delete()' => sub {
         -baz => 'qux',
     );
 
-    warning_is { $header->delete } 'Useless use of delete() with no values';
+    #warning_is { $header->delete } 'Useless use of delete() with no values';
 
     my @deleted = $header->delete( qw/foo bar/ );
     is_deeply \@deleted, [ 'bar', 'baz' ], 'delete() multiple elements';
@@ -335,13 +335,14 @@ subtest 'target()' => sub {
 subtest 'each()' => sub {
     #plan skip_all => 'not implemented yet';
 
-    #%header = ( -foo => 'bar' );
+    %header = ( -foo => 'bar' );
 
-    #while ( my $field = $header->each ) {
-    #    $header->delete( $field ); # not supported
-    #}
+    while ( my $field = $header->each ) {
+        warn $field;
+        $header->delete( $field ); # not supported
+    }
 
-    #is_deeply \%header, { -type => q{} };
+    is_deeply \%header, { -type => q{} };
 
     %header = ( -foo => 'bar' );
 

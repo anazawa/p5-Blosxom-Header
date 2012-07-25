@@ -6,6 +6,7 @@ use parent qw/Exporter/;
 use constant USELESS => 'Useless use of %s with no values';
 use Blosxom::Header::Adapter;
 use Carp qw/carp croak/;
+use HTTP::Date ();
 
 our $VERSION = '0.05008';
 
@@ -24,6 +25,12 @@ sub header_iter   { __PACKAGE__->instance->each( @_ )   }
 sub header_push { __PACKAGE__->instance->_push( @_ ) }
 *each_header = \&header_iter;
 
+my %str2time;
+sub _str2time { $str2time{ $_[0] } ||= HTTP::Date::str2time( $_[0] ) }
+
+my %time2str;
+sub _time2str { $time2str{ $_[0] } ||= HTTP::Date::time2str( $_[0] ) }
+
 sub _carp {
     my ( $format, @args ) = @_;
     carp( sprintf $format, @args );
@@ -38,11 +45,9 @@ sub instance {
     return $instance if defined $instance;
 
     if ( $class->is_initialized ) {
-        my $self = bless {}, $class;
-        tie my %header => 'Blosxom::Header::Adapter' => $blosxom::header;
-        $self->{adapter} = tied %header;
-        $self->{header} = \%header;
-        return $instance = $self;
+        tie my %header, 'Blosxom::Header::Adapter', $blosxom::header;
+        my %self = ( adapter => tied %header, header => \%header );
+        return $instance = bless \%self, $class;
     }
 
     croak( q{$blosxom::header hasn't been initialized yet} );
@@ -54,20 +59,17 @@ sub is_initialized { ref $blosxom::header eq 'HASH' }
 
 sub get {
     my ( $self, @fields ) = @_;
-    return _carp( USELESS, 'get()' ) unless @fields;
     @{ $self->{header} }{ @fields };
 }
 
 sub set {
-    my ( $self, %fields ) = @_;
-    return _carp( USELESS, 'set()' ) unless %fields;
-    @{ $self->{header} }{ keys %fields } = values %fields; # merge!
+    my ( $self, %header ) = @_;
+    @{ $self->{header} }{ keys %header } = values %header; # merge!
     return;
 }
 
 sub delete {
     my ( $self, @fields ) = @_;
-    return _carp( USELESS, 'delete()' ) unless @fields;
     delete @{ $self->{header} }{ @fields };
 }
 
@@ -91,8 +93,35 @@ sub each {
             $callback->( $field, $self->{header}{$field} );
         }
     }
+    elsif ( defined wantarray ) {
+        return $self->_each;
+    }
     else {
         croak( 'Must provide a code reference to each()' );
+    }
+
+    return;
+}
+
+# This method is deprecated and will be remove in 0.06
+sub _each {
+    my $self = shift;
+
+    if ( $self->{iterated} or !$self->{iterator} ) {
+        my @fields = $self->{adapter}->field_names;
+        my ( $size, $current ) = ( scalar @fields, 0 );
+        $self->{iterated} = 0;
+        $self->{iterator} = sub {
+            return if $current >= $size;
+            $fields[ $current++ ];
+        };
+    }
+
+    if ( my $field = $self->{iterator}->() ) {
+        return wantarray ? ( $field, $self->{header}{$field} ) : $field;
+    }
+    else {
+        $self->{iterated}++;
     }
 
     return;
@@ -172,12 +201,12 @@ sub push_cookie {
     $self->_push( Set_Cookie => @cookies );
 }
 
-sub push_p3p {
+sub push_p3p_tags {
     my $self = ref $_[0] ? shift : __PACKAGE__->instance;
     $self->_push( P3P => @_ );
 }
 
-*push_p3p_tags = \&push_p3p;
+*push_p3p = \&push_p3p_tags;
 
 sub _push {
     my ( $self, $field, @values ) = @_;
@@ -227,28 +256,25 @@ sub date          { shift->_date_header( Date => $_[0] )          }
 sub _date_header {
     my ( $self, $field, $time ) = @_;
 
-    require HTTP::Date;
-
     if ( defined $time ) {
-        return $self->{header}{$field} = HTTP::Date::time2str( $time );
+        return $self->{header}{$field} = _time2str( $time );
     }
     elsif ( my $date = $self->{header}{$field} ) {
-        return HTTP::Date::str2time( $date );
+        return _str2time( $date );
     }
 
     return;
 }
 
 sub expires {
-    require HTTP::Date;
     my $self = shift;
     return $self->{header}{Expires} = shift if @_;
     my $expires = $self->{header}{Expires};
     return unless $expires;
-    HTTP::Date::str2time( $expires );
+    _str2time( $expires );
 }
 
-sub p3p {
+sub p3p_tags {
     my $self = shift;
 
     if ( @_ ) {
@@ -263,6 +289,8 @@ sub p3p {
 
     return;
 }
+
+*p3p = \&p3p_tags;
 
 sub content_type {
     my $self = shift;

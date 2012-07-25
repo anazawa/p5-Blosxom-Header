@@ -2,7 +2,11 @@ package Blosxom::Header::Adapter;
 use strict;
 use warnings;
 use Carp qw/carp/;
-use CGI::Util qw/expires/;
+use CGI::Util;
+use List::Util qw/first/;
+#use Memoize;
+
+#memoize( 'expires' );
 
 sub TIEHASH {
     my $class   = shift;
@@ -14,6 +18,22 @@ sub TIEHASH {
         -cookie     => q{},        -nph           => q{},
         -set_cookie => q{-cookie}, -target        => q{},
         -type       => q{},        -window_target => q{-target},
+    };
+
+    my %field_name_of = (
+        -attachment => 'Content-Disposition', -cookie => 'Set-Cookie',
+        -type       => 'Content-Type',        -target => 'Window-Target',
+        -p3p        => 'P3P',
+    );
+
+    $self->{denormalize} = sub {
+        my $norm = shift;
+        unless ( exists $field_name_of{ $norm } ) {
+            ( my $field = $norm ) =~ s/^-//;
+            $field =~ tr/_/-/;
+            return $field_name_of{ $norm } = ucfirst $field;
+        }
+        $field_name_of{ $norm };
     };
 
     $self;
@@ -54,13 +74,16 @@ sub FETCH {
         return $expires ? expires( $expires ) : undef;
     }
     elsif ( $norm eq '-date' and $self->date_header_is_fixed ) {
-        return expires( 0, 'http' );
+        return expires( time );
     }
 
     $adaptee->{ $norm };
 }
 
 *EXISTS = \&FETCH;
+
+my %expires;
+sub expires { $expires{ $_[0] } ||= CGI::Util::expires( $_[0] ) }
 
 sub STORE {
     my $self    = shift;
@@ -114,7 +137,12 @@ sub CLEAR {
     %{ $self->{adaptee} } = ( -type => q{} );
 }
 
-sub SCALAR { shift->field_names }
+sub SCALAR {
+    my $self = shift;
+    my $header = $self->{adaptee};
+    return 1 unless exists $header->{-type}; 
+    first { $_ } values %{ $header };
+}
 
 sub field_names {
     my $self   = shift;
@@ -128,26 +156,23 @@ sub field_names {
 
     push @fields, 'Set-Cookie' if my $cookie  = delete $header{-cookie};
     push @fields, 'Expires'    if my $expires = delete $header{-expires};
-    push @fields, 'Date' if delete $header{-nph} || $expires || $cookie;
+    push @fields, 'Date' if delete $header{-nph} or $cookie or $expires;
 
     push @fields, 'Content-Disposition' if delete $header{-attachment};
 
     # not ordered
     delete $header{-charset};
-    my @others = grep { $header{ $_ } and $_ ne '-type' } keys %header;
-    push @fields, map { $self->denormalize( $_ ) } @others;
+    while ( my ($norm, $value) = each %header ) {
+        next if !$value or $norm eq '-type';
+        push @fields, $self->{denormalize}->( $norm );
+    }
 
     push @fields, 'Content-Type' if !exists $header{-type} or $header{-type};
 
     @fields;
 }
 
-sub denormalize {
-    my ( $self, $norm ) = @_;
-    $norm =~ s/^-//;
-    $norm =~ tr/_/-/;
-    ucfirst $norm;
-}
+sub denormalize { shift->{denormalize}->( @_ ) }
 
 sub normalize {
     my $self  = shift;

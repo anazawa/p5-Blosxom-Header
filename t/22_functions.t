@@ -39,5 +39,5 @@ header_iter sub {
     push @got, $field;
 };
 
-is_deeply \@got, [ qw/P3P Content-Type/ ];
+is_deeply \@got, [qw/P3P Content-Type/];
 
