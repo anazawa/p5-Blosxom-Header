@@ -7,6 +7,7 @@ use overload '%{}' => 'as_hashref', 'bool' => 'boolify', 'fallback' => 1;
 use Blosxom::Header::Adapter;
 use Carp qw/carp croak/;
 use HTTP::Date ();
+use Scalar::Util qw/refaddr/;
 
 our $VERSION = '0.05009';
 
@@ -25,303 +26,309 @@ sub header_iter   { __PACKAGE__->instance->each( @_ )   }
 sub header_push { __PACKAGE__->instance->_push( @_ ) }
 *each_header = \&header_iter;
 
+my $instance;
+sub instance { $instance ||= shift->_new_instance }
+sub has_instance { $instance }
+
+sub is_initialized { ref $blosxom::header eq 'HASH' }
+
+{
+    my %header_of;
+    my %adapter_of;
+    my %iterator_of; # deprecated
+
+    sub _new_instance {
+        my $class = shift;
+        my $self  = bless \do { my $anon_scalar }, $class;
+        my $this  = refaddr( $self );
+
+        if ( $class->is_initialized ) {
+            tie my %header => 'Blosxom::Header::Adapter' => $blosxom::header;
+            $header_of{ $this } = \%header;
+            $adapter_of{ $this } = tied %header;
+            $iterator_of{ $this } = {}; # deprecated
+            return $self;
+        }
+
+        croak( q{$blosxom::header hasn't been initialized yet} );
+    }
+
+    sub DESTROY {
+        my $self = shift;
+        my $this = refaddr( $self );
+        delete $header_of{ $this };
+        delete $adapter_of{ $this };
+        delete $iterator_of{ $this };
+    }
+
+    sub as_hashref {
+        my $self = shift;
+        $header_of{ refaddr($self) };
+    }
+
+    sub boolify { 1 }
+
+    sub get {
+        my ( $self, @fields ) = @_;
+        @{ $self }{ @fields };
+    }
+
+    sub set {
+        my ( $self, %header ) = @_;
+        @{ $self }{ keys %header } = values %header; # merge!
+        return;
+    }
+
+    sub delete {
+        my ( $self, @fields ) = @_;
+        delete @{ $self }{ @fields };
+    }
+
+    sub exists { exists $_[0]->{ $_[1] } }
+    sub clear  { %{ $_[0] } = ()         }
+
+    sub field_names {
+        my $self = shift;
+        $adapter_of{ refaddr($self) }->field_names;
+    }
+
+    sub each {
+        my ( $self, $callback ) = @_;
+
+        if ( ref $callback eq 'CODE' ) {
+            for my $field ( $self->field_names ) {
+                $callback->( $field, $self->{ $field } );
+            }
+        }
+        elsif ( defined wantarray ) { # deprecated
+            return $self->_each;
+        }
+        else {
+            croak( 'Must provide a code reference to each()' );
+        }
+
+        return;
+    }
+
+    # This method is deprecated and will be remove in 0.06
+    sub _each {
+        my $self = shift;
+        my $iter = $iterator_of{ refaddr($self) };
+
+        if ( !%{ $iter } or $iter->{is_exhausted} ) {
+            my @fields = $self->field_names;
+            %{ $iter } = (
+                collection => \@fields,
+                size       => scalar @fields,
+                current    => 0,
+            );
+        }
+
+        if ( $iter->{current} < $iter->{size} ) {
+            my $field = $iter->{collection}[ $iter->{current}++ ];
+            return wantarray ? ( $field, $self->{ $field } ) : $field;
+        }
+        else {
+            $iter->{is_exhausted}++;
+        }
+
+        return;
+    }
+
+    sub is_empty { not %{ $_[0] } }
+
+    sub flatten {
+        my $self = shift;
+        map { $_, $self->{$_} } $self->field_names;
+    }
+
+    sub set_cookie {
+        my ( $self, $name, $value ) = @_;
+
+        require CGI::Cookie;
+
+        my $new_cookie = CGI::Cookie->new(do {
+            my %args = ref $value eq 'HASH' ? %{ $value } : ( value => $value );
+            $args{name} = $name;
+            \%args;
+        });
+
+        my @cookies;
+        my $offset = 0;
+        if ( my $cookies = $self->{Set_Cookie} ) {
+            @cookies = ref $cookies eq 'ARRAY' ? @{ $cookies } : $cookies;
+            for my $cookie ( @cookies ) {
+                last if ref $cookie eq 'CGI::Cookie' and $cookie->name eq $name;
+                $offset++;
+            }
+        }
+
+        # add/overwrite CGI::Cookie object
+        splice @cookies, $offset, 1, $new_cookie;
+
+        $self->{Set_Cookie} = @cookies > 1 ? \@cookies : $cookies[0];
+
+        return;
+    }
+
+    sub get_cookie {
+        my ( $self, $name ) = @_;
+
+        my @values;
+        if ( my $cookies = $self->{Set_Cookie} ) {
+            @values = grep {
+                ref $_ eq 'CGI::Cookie' and $_->name eq $name
+            } (
+                ref $cookies eq 'ARRAY' ? @{ $cookies } : $cookies,
+            );
+        }
+
+        wantarray ? @values : $values[0];
+    }
+
+    # This method/function is obsolete and will be removed in 0.06
+    sub push_cookie {
+        require CGI::Cookie;
+
+        my $self = ref $_[0] ? shift : __PACKAGE__->instance;
+
+        my @cookies;
+        for my $cookie ( @_ ) {
+            $cookie = CGI::Cookie->new( $cookie ) if ref $cookie eq 'HASH';
+            push @cookies, $cookie; 
+        }
+
+        $self->_push( Set_Cookie => @cookies );
+    }
+
+    # This method is obsolete and will be removed in 0.06
+    sub _push {
+        my ( $self, $field, @values ) = @_;
+
+        return carp( 'Useless use of _push() with no values' ) unless @values;
+
+        if ( my $value = $self->{ $field } ) {
+            return push @{ $value }, @values if ref $value eq 'ARRAY';
+            unshift @values, $value;
+        }
+
+        $self->{ $field } = @values > 1 ? \@values : $values[0];
+
+        scalar @values;
+    }
+
+    sub push_p3p_tags {
+        my $self = ref $_[0] ? shift : __PACKAGE__->instance;
+        $adapter_of{ refaddr($self) }->push_p3p_tags( @_ );
+    }
+
+    *push_p3p = \&push_p3p_tags;
+
+    sub attachment {
+        my $self = shift;
+        $adapter_of{ refaddr($self) }->attachment( @_ );
+    }
+
+    sub nph {
+        my $self = shift;
+        $adapter_of{ refaddr($self) }->nph( @_ );
+    }
+
+    sub charset {
+        my $self = shift;
+        my $type = $self->{Content_Type};
+        my ( $charset ) = $type =~ /charset=([^;]+)/ if $type;
+        return unless $charset;
+        uc $charset;
+    }
+
+    # This method is obsolete and will be removed in 0.06
+    sub cookie {
+        my $self = shift;
+
+        if ( @_ ) {
+            delete $self->{Set_Cookie};
+            $self->push_cookie( @_ );
+        }
+        elsif ( my $cookie = $self->{Set_Cookie} ) {
+            my @cookies = ref $cookie eq 'ARRAY' ? @{ $cookie } : ( $cookie );
+            return wantarray ? @cookies : $cookies[0];
+        }
+
+        return;
+    }
+
+    sub last_modified { shift->_date_header( Last_modified => $_[0] ) }
+    sub date          { shift->_date_header( Date => $_[0] )          }
+
+    sub _date_header {
+        my ( $self, $field, $time ) = @_;
+
+        if ( defined $time ) {
+            return $self->{ $field } = _time2str( $time );
+        }
+        elsif ( my $date = $self->{ $field } ) {
+            return _str2time( $date );
+        }
+
+        return;
+    }
+
+    sub expires {
+        my $self = shift;
+        return $self->{Expires} = shift if @_;
+        my $expires = $adapter_of{ refaddr($self) }->expires;
+        return unless $expires;
+        _str2time( $expires );
+    }
+
+    sub p3p_tags {
+        my $self = shift;
+        $adapter_of{ refaddr($self) }->p3p_tags( @_ );
+    }
+
+    *p3p = \&p3p_tags;
+
+    sub content_type {
+        my $self = shift;
+        return $self->{Content_Type} = shift if @_;
+        my $content_type = $self->{Content_Type};
+        return q{} unless $content_type;
+        my ( $type, $rest ) = split /;\s*/, $content_type, 2;
+        wantarray ? ( lc $type, $rest ) : lc $type;
+    }
+
+    *type = \&content_type;
+
+    sub status {
+        my $self = shift;
+
+        if ( @_ ) {
+            require HTTP::Status;
+            my $code = shift;
+            my $message = HTTP::Status::status_message( $code );
+            return $self->{Status} = "$code $message" if $message;
+            carp( qq{Unknown status code "$code" passed to status()} );
+        }
+        elsif ( my $status = $self->{Status} ) {
+            return substr( $status, 0, 3 );
+        }
+
+        return;
+    }
+
+    sub target {
+        my $self = shift;
+        return $self->{Window_Target} = shift if @_;
+        $self->{Window_Target};
+    }
+}
+
 my %str2time;
 sub _str2time { $str2time{ $_[0] } ||= HTTP::Date::str2time( $_[0] ) }
 
 my %time2str;
 sub _time2str { $time2str{ $_[0] } ||= HTTP::Date::time2str( $_[0] ) }
-
-my $instance;
-
-my %header;
-my $adapter;
-
-sub instance {
-    my $class = shift;
-
-    return $class if ref $class;
-    return $instance if defined $instance;
-
-    if ( $class->is_initialized ) {
-        $adapter = tie %header, 'Blosxom::Header::Adapter', $blosxom::header;
-        return $instance = bless \do { my $anon_scalar }, $class;
-    }
-
-    croak( q{$blosxom::header hasn't been initialized yet} );
-}
-
-sub has_instance { $instance }
-
-sub is_initialized { ref $blosxom::header eq 'HASH' }
-
-sub as_hashref { \%header }
-sub boolify { 1 }
-
-sub get {
-    my ( $self, @fields ) = @_;
-    @header{ @fields };
-}
-
-sub set {
-    my ( $self, %new_header ) = @_;
-    @header{ keys %new_header } = values %new_header; # merge!
-    return;
-}
-
-sub delete {
-    my ( $self, @fields ) = @_;
-    delete @header{ @fields };
-}
-
-sub exists {
-    my ( $self, $field ) = @_;
-    exists $header{ $field };
-}
-
-sub clear { %header = () }
-
-sub field_names { $adapter->field_names }
-
-sub each {
-    my ( $self, $callback ) = @_;
-
-    if ( ref $callback eq 'CODE' ) {
-        for my $field ( $adapter->field_names ) {
-            $callback->( $field, $header{ $field } );
-        }
-    }
-    elsif ( defined wantarray ) {
-        return $self->_each;
-    }
-    else {
-        croak( 'Must provide a code reference to each()' );
-    }
-
-    return;
-}
-
-# This method is deprecated and will be remove in 0.06
-my %iterator;
-sub _each {
-    my $self = shift;
-
-    if ( $iterator{is_exhausted} or !%iterator ) {
-        my @fields = $adapter->field_names;
-        %iterator = (
-            collection => \@fields,
-            size       => scalar @fields,
-            current    => 0,
-        );
-    }
-
-    if ( $iterator{current} < $iterator{size} ) {
-        my $field = $iterator{collection}[ $iterator{current}++ ];
-        return wantarray ? ( $field, $header{ $field } ) : $field;
-    }
-    else {
-        $iterator{is_exhausted}++;
-    }
-
-    return;
-}
-
-sub is_empty { not %header }
-
-sub flatten {
-    my $self = shift;
-    map { $_, $header{$_} } $adapter->field_names;
-}
-
-sub set_cookie {
-    my ( $self, $name, $value ) = @_;
-
-    require CGI::Cookie;
-
-    my $new_cookie = CGI::Cookie->new(do {
-        my %args = ref $value eq 'HASH' ? %{ $value } : ( value => $value );
-        $args{name} = $name;
-        \%args;
-    });
-
-    my @cookies;
-    my $offset = 0;
-    if ( my $cookies = $header{Set_Cookie} ) {
-        @cookies = ref $cookies eq 'ARRAY' ? @{ $cookies } : $cookies;
-        for my $cookie ( @cookies ) {
-            last if ref $cookie eq 'CGI::Cookie' and $cookie->name eq $name;
-            $offset++;
-        }
-    }
-
-    # add/overwrite CGI::Cookie object
-    splice @cookies, $offset, 1, $new_cookie;
-
-    $header{Set_Cookie} = @cookies > 1 ? \@cookies : $cookies[0];
-
-    return;
-}
-
-sub get_cookie {
-    my ( $self, $name ) = @_;
-
-    my @values;
-    if ( my $cookies = $header{Set_Cookie} ) {
-        @values = grep {
-            ref $_ eq 'CGI::Cookie' and $_->name eq $name
-        } (
-            ref $cookies eq 'ARRAY' ? @{ $cookies } : $cookies,
-        );
-    }
-
-    wantarray ? @values : $values[0];
-}
-
-# This method/function is obsolete and will be removed in 0.06
-sub push_cookie {
-    require CGI::Cookie;
-
-    my $self = ref $_[0] ? shift : __PACKAGE__->instance;
-
-    my @cookies;
-    for my $cookie ( @_ ) {
-        $cookie = CGI::Cookie->new( $cookie ) if ref $cookie eq 'HASH';
-        push @cookies, $cookie; 
-    }
-
-    $self->_push( Set_Cookie => @cookies );
-}
-
-sub push_p3p_tags {
-    my $self = ref $_[0] ? shift : __PACKAGE__->instance;
-    $self->_push( P3P => @_ );
-}
-
-*push_p3p = \&push_p3p_tags;
-
-sub _push {
-    my ( $self, $field, @values ) = @_;
-
-    return carp( 'Useless use of _push() with no values' ) unless @values;
-
-    if ( my $value = $header{ $field } ) {
-        return push @{ $value }, @values if ref $value eq 'ARRAY';
-        unshift @values, $value;
-    }
-
-    $header{ $field } = @values > 1 ? \@values : $values[0];
-
-    scalar @values;
-}
-
-sub attachment {
-    my $self = shift;
-    $adapter->attachment( @_ );
-}
-
-sub nph {
-    my $self = shift;
-    $adapter->nph( @_ );
-}
-
-sub charset {
-    my $self = shift;
-    my $type = $header{Content_Type};
-    my ( $charset ) = $type =~ /charset=([^;]+)/ if $type;
-    return unless $charset;
-    uc $charset;
-}
-
-# This method is obsolete and will be removed in 0.06
-sub cookie {
-    my $self = shift;
-
-    if ( @_ ) {
-        delete $header{Set_Cookie};
-        $self->push_cookie( @_ );
-    }
-    elsif ( my $cookie = $header{Set_Cookie} ) {
-        my @cookies = ref $cookie eq 'ARRAY' ? @{ $cookie } : ( $cookie );
-        return wantarray ? @cookies : $cookies[0];
-    }
-
-    return;
-}
-
-sub last_modified { shift->_date_header( Last_modified => $_[0] ) }
-sub date          { shift->_date_header( Date => $_[0] )          }
-
-sub _date_header {
-    my ( $self, $field, $time ) = @_;
-
-    if ( defined $time ) {
-        return $header{ $field } = _time2str( $time );
-    }
-    elsif ( my $date = $header{ $field } ) {
-        return _str2time( $date );
-    }
-
-    return;
-}
-
-sub expires {
-    my $self = shift;
-    return $header{Expires} = shift if @_;
-    my $expires = $header{Expires};
-    return unless $expires;
-    _str2time( $expires );
-}
-
-sub p3p_tags {
-    my $self = shift;
-
-    if ( @_ ) {
-        my @tags = @_ > 1 ? @_ : split / /, shift;
-        $header{P3P} = @tags > 1 ? \@tags : $tags[0];
-    }
-    elsif ( my $tags = $header{P3P} ) {
-        my @tags = ref $tags eq 'ARRAY' ? @{ $tags } : ( $tags );
-        @tags = map { split / / } @tags;
-        return wantarray ? @tags : $tags[0];
-    }
-
-    return;
-}
-
-*p3p = \&p3p_tags;
-
-sub content_type {
-    my $self = shift;
-    return $header{Content_Type} = shift if @_;
-    my $content_type = $header{Content_Type};
-    return q{} unless $content_type;
-    my ( $type, $rest ) = split /;\s*/, $content_type, 2;
-    wantarray ? ( lc $type, $rest ) : lc $type;
-}
-
-*type = \&content_type;
-
-sub status {
-    my $self = shift;
-
-    if ( @_ ) {
-        require HTTP::Status;
-        my $code = shift;
-        my $message = HTTP::Status::status_message( $code );
-        return $header{Status} = "$code $message" if $message;
-        carp( qq{Unknown status code "$code" passed to status()} );
-    }
-    elsif ( my $status = $header{Status} ) {
-        return substr( $status, 0, 3 );
-    }
-
-    return;
-}
-
-sub target {
-    my $self = shift;
-    return $header{Window_Target} = shift if @_;
-    $header{Window_Target};
-}
 
 1;
 
@@ -681,16 +688,14 @@ a NPH (no-parse-header) script:
 Represents the P3P tags. C<p3p()> is an alias.
 The parameter can be an array or a space-delimited string.
 
-  $header->p3p( qw/CAO DSP LAW CURa/ );
-  $header->p3p( 'CAO DSP LAW CURa' );
+  $header->p3p_tags( qw/CAO DSP LAW CURa/ );
+  $header->p3p_tags( 'CAO DSP LAW CURa' );
 
-  my @tags = $header->p3p; # ( 'CAO', 'DSP', 'LAW', 'CURa' )
+  my @tags = $header->p3p_tags; # ( 'CAO', 'DSP', 'LAW', 'CURa' )
 
 In this case, the outgoing header will be formatted as:
 
   P3P: policyref="/w3c/p3p.xml" CP="CAO DSP LAW CURa"
-
-=item @tags = $header->push_p3p_tags
 
 =item $header->push_p3p_tags( @tags )
 
@@ -699,12 +704,12 @@ C<push_p3p()> is an alias.
 Accepts a list of P3P tags.
 
   # get P3P tags
-  my @tags = $header->p3p; # ( 'CAO', 'DSP', 'LAW' )
+  my @tags = $header->p3p_tags; # ( 'CAO', 'DSP', 'LAW' )
 
   # add P3P tags
-  $header->push_p3p( 'CURa' );
+  $header->push_p3p_tags( 'CURa' );
 
-  @tags = $header->p3p; # ( 'CAO', 'DSP', 'LAW', 'CURa' )
+  @tags = $header->p3p_tags; # ( 'CAO', 'DSP', 'LAW', 'CURa' )
 
 =item $code = $header->status
 

@@ -66,21 +66,25 @@ sub FETCH {
         my $attachment = $adaptee->{-attachment};
         return qq{attachment; filename="$attachment"} if $attachment;
     }
-    elsif ( $norm eq '-expires' ) {
-        my $expires = $adaptee->{ $norm };
-        return $expires ? expires( $expires ) : undef;
-    }
+    #elsif ( $norm eq '-expires' ) {
+    #    my $expires = $adaptee->{ $norm };
+    #    return $expires ? expires( $expires ) : undef;
+    #}
     elsif ( $norm eq '-date' and $self->date_header_is_fixed ) {
-        return expires( time );
+        return _expires( time );
+    }
+    elsif ( $norm eq '-p3p' ) {
+        my $p3p = $adaptee->{ $norm };
+        return unless $p3p;
+        my $tags = ref $p3p eq 'ARRAY' ? join ' ', @$p3p : $p3p;
+        return qq{policyref="/w3c/p3p.xml" CP="$tags"};
     }
 
     $adaptee->{ $norm };
 }
 
-*EXISTS = \&FETCH;
 
-my %expires;
-sub expires { $expires{ $_[0] } ||= CGI::Util::expires( $_[0] ) }
+*EXISTS = \&FETCH;
 
 sub STORE {
     my $self    = shift;
@@ -99,6 +103,9 @@ sub STORE {
     }
     elsif ( $norm eq '-date' and $self->date_header_is_fixed ) {
         return carp( 'The Date header is fixed' );
+    }
+    elsif ( $norm eq '-p3p' ) {
+        return;
     }
 
     $adaptee->{ $norm } = $value;
@@ -124,6 +131,10 @@ sub DELETE {
     }
     elsif ( $norm eq '-date' and $self->date_header_is_fixed ) {
         return carp( 'The Date header is fixed' );
+    }
+    elsif ( $norm eq 'p3p' ) {
+        delete $adaptee->{-p3p};
+        return $self->FETCH( 'P3P' );
     }
 
     delete $adaptee->{ $norm };
@@ -204,6 +215,49 @@ sub date_header_is_fixed {
 }
 
 *has_date_header = \&date_header_is_fixed;
+
+sub p3p_tags {
+    my $self    = shift;
+    my $adaptee = $self->{adaptee};
+
+    if ( @_ ) {
+        my @tags = @_ > 1 ? @_ : split / /, shift;
+        $adaptee->{-p3p} = @tags > 1 ? \@tags : $tags[0];
+    }
+    elsif ( my $tags = $adaptee->{-p3p} ) {
+        my @tags = ref $tags eq 'ARRAY' ? @{ $tags } : ( $tags );
+        @tags = map { split / / } @tags;
+        return wantarray ? @tags : $tags[0];
+    }
+
+    return;
+}
+
+sub push_p3p_tags {
+    my ( $self, @values ) = @_;
+    my $adaptee = $self->{adaptee};
+
+    if ( my $value = $adaptee->{-p3p} ) {
+        return push @{ $value }, @values if ref $value eq 'ARRAY';
+        unshift @values, $value;
+    }
+
+    $adaptee->{-p3p} = @values > 1 ? \@values : $values[0];
+
+    scalar @values;
+}
+
+sub expires {
+    my $self = shift;
+    my $expires = $self->{adaptee}->{-expires};
+    return unless $expires;
+    _expires( $expires );
+}
+
+# Internal functions
+
+my %expires;
+sub _expires { $expires{ $_[0] } ||= CGI::Util::expires( $_[0] ) }
 
 1;
 
