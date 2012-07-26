@@ -13,6 +13,7 @@ use Blosxom::Header;
         -p3p        => [qw/CAO DSP LAW CURa/],
         -target     => 'ResultsWindow',
         -foo        => 'bar',
+        -bar        => 'baz',
         -expires    => '+3M',
         -nph        => 1,
         -status     => '304 Not Modified',
@@ -20,6 +21,7 @@ use Blosxom::Header;
 }
 
 my $header = Blosxom::Header->instance;
+$header->last_modified( time );
 
 cmpthese(100000, {
     'Content-Type'        => sub { my $v = $header->{Content_Type}        },
@@ -27,11 +29,10 @@ cmpthese(100000, {
     'P3P'                 => sub { my $v = $header->{P3P}                 },
     'Window-Target'       => sub { my $v = $header->{Window_Target}       },
     'Foo'                 => sub { my $v = $header->{Foo}                 },
+    'Bar'                 => sub { my $v = $header->{Bar}                 },
     'Date'                => sub { my $v = $header->{Date}                },
     'Expires'             => sub { my $v = $header->{Expires}             },
 });
-
-$header->last_modified( time );
 
 cmpthese(300000, {
     'charset'             => sub { my $v = $header->charset       },
