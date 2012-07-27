@@ -157,7 +157,7 @@ __END__
 
 =head1 NAME
 
-Blosxom::Header::Target - Base class for Blosxom::Header
+Blosxom::Header::Hash - Base class for Blosxom::Header
 
 =head1 DESCRIPTION
 

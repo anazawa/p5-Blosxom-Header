@@ -248,6 +248,7 @@ methods.
 =item $header = Blosxom::Header->instance
 
 Returns a current Blosxom::Header object instance or create a new one.
+C<new()> is an alias.
 
 =item $header = Blosxom::Header->has_instance
 
@@ -279,7 +280,7 @@ You can use underscores as a replacement for dashes in header names.
 
   # field names are case-insensitive
   $header->get( 'Content-Length' );
-  $header->get( 'Content_length' );
+  $header->get( 'content_length' );
 
 =item $header->set( $field => $value )
 
@@ -362,7 +363,10 @@ Returns a Boolean value telling whether C<< $header->field_names >>
 returns a null array or not.
 
   $header->clear;
-  my $is_empty = $header->is_empty; # true
+
+  if ( $header->is_empty ) { # true
+      ...
+  }
 
 =item @headers = $header->flatten
 
@@ -371,7 +375,31 @@ Returns pairs of fields and values.
   my @headers = $header->flatten;
   # => ( 'Status', '304 Not Modified', 'Content-Type', 'text/plain' )
 
-=item $header->as_hashref
+=item $hashref = $header->as_hashref
+
+Returns a reference to hash which represents header fields.
+You can C<set()>, C<get()> and C<delete()> header fields using the hash
+syntax.
+
+  $header->as_hashref->{Foo} = 'bar';
+  my $value = $header->as_hashref->{Foo};
+  my $deleted = delete $header->as_hashref->{Foo};
+
+The hash dereference operator of C<$header> is L<overload>ed with C<as_hashref()>
+and so you can omit calling C<as_hashref()> method:
+
+  $header->{Foo} = 'bar';
+  my $value = $header->{Foo};
+  my $deleted = delete $header->{Foo};
+
+NOTE: You can't iterate over C<$header> using C<CORE::each()>, C<CORE::keys()>
+or C<CORE::values()>. Use C<< $header->field_names >> or C<< $header->each >>
+instead.
+
+  # wrong
+  keys %{ $header };
+  values %{ $header };
+  each %{ $header };
 
 =back
 
@@ -650,9 +678,7 @@ See L<"HANDLING COOKIES">.
 
 =item push_p3p( @tags )
 
-A shorcut for
-
-  Blosxom::Header->instance->push_p3p( @tags );
+This function is obsolete and will be removed in 0.06.
 
 =item header_iter( \&callback )
 

@@ -267,7 +267,7 @@ Blosxom::Header::Adapter - Adapter for CGI::header()
 
   # field names are case-insensitive
   my $length = $adapter{'Content-Length'}; # 1234
-  $adapter{'Content_length'} = 4321;
+  $adapter{'content_length'} = 4321;
 
   print header( %adaptee );
   # Content-length: 4321
@@ -308,6 +308,14 @@ A shortcut for
 
 =item $bool = $adapter->date_header_is_fixed
 
+=item @tags = $adapter->p3p_tags
+
+=item $adapter->p3p_tags( @tags )
+
+=item $adapter->push_p3p_tags( @tags )
+
+=item $date = $adapter->expires
+
 =back
 
 =head1 DIAGONOSTICS
@@ -323,7 +331,6 @@ C<-cookie>, C<-nph> or C<-expires> was set.
 
 =head1 SEE ALSO
 
-L<Blosxom::Header::Iterator>,
 L<Tie::Hash>
 
 =head1 AUTHOR
