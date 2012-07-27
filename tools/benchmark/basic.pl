@@ -11,7 +11,7 @@ use Blosxom::Header qw(
     our $header = {};
 }
 
-my $header = Blosxom::Header->instance;
+my $header = Blosxom::Header->new;
 
 # STORE
 cmpthese(100000, {

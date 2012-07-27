@@ -1,6 +1,7 @@
 package Blosxom::Header::Adapter;
 use strict;
 use warnings;
+use Blosxom::Header::Util;
 use Carp qw/carp/;
 use CGI::Util;
 use List::Util qw/first/;
@@ -66,12 +67,8 @@ sub FETCH {
         my $attachment = $adaptee->{-attachment};
         return qq{attachment; filename="$attachment"} if $attachment;
     }
-    #elsif ( $norm eq '-expires' ) {
-    #    my $expires = $adaptee->{ $norm };
-    #    return $expires ? expires( $expires ) : undef;
-    #}
     elsif ( $norm eq '-date' and $self->date_header_is_fixed ) {
-        return _expires( time );
+        return Blosxom::Header::Util::expires( time );
     }
     elsif ( $norm eq '-p3p' ) {
         my $p3p = $adaptee->{ $norm };
@@ -214,8 +211,6 @@ sub date_header_is_fixed {
     $adaptee->{-expires} || $adaptee->{-cookie} || $adaptee->{-nph};
 }
 
-*has_date_header = \&date_header_is_fixed;
-
 sub p3p_tags {
     my $self    = shift;
     my $adaptee = $self->{adaptee};
@@ -251,13 +246,8 @@ sub expires {
     my $self = shift;
     my $expires = $self->{adaptee}->{-expires};
     return unless $expires;
-    _expires( $expires );
+    Blosxom::Header::Util::expires( $expires );
 }
-
-# Internal functions
-
-my %expires;
-sub _expires { $expires{ $_[0] } ||= CGI::Util::expires( $_[0] ) }
 
 1;
 
