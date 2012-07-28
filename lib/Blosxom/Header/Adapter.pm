@@ -3,28 +3,25 @@ use strict;
 use warnings;
 use Blosxom::Header::Util;
 use Carp qw/carp/;
-use CGI::Util;
 use List::Util qw/first/;
 
 sub TIEHASH {
-    my $class   = shift;
-    my $adaptee = ref $_[0] eq 'HASH' ? shift : {};
-    my $self    = bless { adaptee => $adaptee }, $class;
+    my ( $class, $adaptee ) = @_;
 
-    $self->{norm_of} = {
+    my %norm_of = (
         -attachment => q{},        -charset       => q{},
         -cookie     => q{},        -nph           => q{},
         -set_cookie => q{-cookie}, -target        => q{},
         -type       => q{},        -window_target => q{-target},
-    };
+    );
 
     my %field_name_of = (
         -attachment => 'Content-Disposition', -cookie => 'Set-Cookie',
-        -type       => 'Content-Type',        -target => 'Window-Target',
-        -p3p        => 'P3P',
+        -p3p        => 'P3P',                 -target => 'Window-Target',
+        -type       => 'Content-Type',
     );
 
-    $self->{denormalize} = sub {
+    my $denormalize = sub {
         my $norm = shift;
         unless ( exists $field_name_of{ $norm } ) {
             ( my $field = $norm ) =~ s/^-//;
@@ -34,7 +31,13 @@ sub TIEHASH {
         $field_name_of{ $norm };
     };
 
-    $self;
+    my %self = (
+        adaptee     => $adaptee,
+        norm_of     => \%norm_of,
+        denormalize => $denormalize,
+    );
+
+    bless \%self, $class;
 }
 
 sub FETCH {
@@ -80,8 +83,24 @@ sub FETCH {
     $adaptee->{ $norm };
 }
 
+sub EXISTS {
+    my $self    = shift;
+    my $norm    = $self->normalize( shift );
+    my $adaptee = $self->{adaptee};
 
-*EXISTS = \&FETCH;
+    if ( $norm eq '-content_type' ) {
+        return 1 unless exists $adaptee->{-type};
+        return !defined $adaptee->{-type} || $adaptee->{-type};
+    }
+    elsif ( $norm eq '-content_disposition' ) {
+        return $adaptee->{-attachment} || $adaptee->{ $norm };
+    }
+    elsif ( $norm eq '-date' ) {
+        return $self->date_header_is_fixed;
+    }
+
+    $adaptee->{ $norm };
+}
 
 sub STORE {
     my $self    = shift;
@@ -103,6 +122,9 @@ sub STORE {
     }
     elsif ( $norm eq '-p3p' ) {
         return;
+    }
+    elsif ( $norm eq '-expires' or $norm eq '-cookie' ) {
+        delete $adaptee->{-date};
     }
 
     $adaptee->{ $norm } = $value;
@@ -144,9 +166,8 @@ sub CLEAR {
 
 sub SCALAR {
     my $self = shift;
-    my $header = $self->{adaptee};
-    return 1 unless exists $header->{-type}; 
-    first { $_ } values %{ $header };
+    return 1 if $self->EXISTS( 'Content-Type' ); 
+    first { $_ } values %{ $self->{adaptee} };
 }
 
 sub field_names {
@@ -166,18 +187,17 @@ sub field_names {
     push @fields, 'Content-Disposition' if delete $header{-attachment};
 
     # not ordered
-    delete $header{-charset};
+    delete @header{qw/-charset -type/};
     while ( my ($norm, $value) = each %header ) {
-        next if !$value or $norm eq '-type';
-        push @fields, $self->{denormalize}->( $norm );
+        push @fields, $self->{denormalize}->( $norm ) if $value;
     }
 
-    push @fields, 'Content-Type' if !exists $header{-type} or $header{-type};
+    push @fields, 'Content-Type' if $self->EXISTS( 'Content-Type' );
 
     @fields;
 }
 
-sub denormalize { shift->{denormalize}->( @_ ) }
+sub denormalize { $_[0]->{denormalize}->( $_[1] ) }
 
 sub normalize {
     my $self  = shift;
@@ -202,8 +222,17 @@ sub attachment {
 
 sub nph {
     my $adaptee = shift->{adaptee};
-    return $adaptee->{-nph} = shift if @_;
-    $adaptee->{-nph};
+    
+    if ( @_ ) {
+        my $nph = shift;
+        delete $adaptee->{-date} if $nph;
+        $adaptee->{-nph} = $nph;
+    }
+    else {
+        return $adaptee->{-nph};
+    }
+
+    return;
 }
 
 sub date_header_is_fixed {
@@ -229,17 +258,17 @@ sub p3p_tags {
 }
 
 sub push_p3p_tags {
-    my ( $self, @values ) = @_;
+    my ( $self, @tags ) = @_;
     my $adaptee = $self->{adaptee};
 
     if ( my $value = $adaptee->{-p3p} ) {
-        return push @{ $value }, @values if ref $value eq 'ARRAY';
-        unshift @values, $value;
+        return push @{ $value }, @tags if ref $value eq 'ARRAY';
+        unshift @tags, $value;
     }
 
-    $adaptee->{-p3p} = @values > 1 ? \@values : $values[0];
+    $adaptee->{-p3p} = @tags > 1 ? \@tags : $tags[0];
 
-    scalar @values;
+    scalar @tags;
 }
 
 sub expires {
