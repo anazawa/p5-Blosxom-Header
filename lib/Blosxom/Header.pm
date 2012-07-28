@@ -7,7 +7,7 @@ use Blosxom::Header::Util qw/time2str str2time/;
 use Carp qw/croak carp/;
 use Exporter 'import';
 
-our $VERSION = '0.05011';
+our $VERSION = '0.05012';
 
 our @EXPORT_OK = qw(
     header_get  header_set  header_exists header_delete header_iter
