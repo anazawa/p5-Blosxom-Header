@@ -1,12 +1,15 @@
 use strict;
 use Blosxom::Header::Adapter;
 use HTTP::Date;
-use Test::More tests => 22;
+use Test::More tests => 23;
 use Test::Warn;
 
 my %adaptee;
 my $adapter = tie my %adapter, 'Blosxom::Header::Adapter', \%adaptee;
 can_ok $adapter, qw( expires date_header_is_fixed );
+
+%adaptee = ( -date => 'Sat, 07 Jul 2012 05:05:09 GMT' );
+ok exists $adapter{Date};
 
 %adaptee = ( -expires => 1341637509 );
 is $adapter{Expires}, 1341637509;

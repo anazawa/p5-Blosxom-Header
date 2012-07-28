@@ -41,122 +41,140 @@ sub TIEHASH {
 }
 
 sub FETCH {
-    my $self    = shift;
-    my $norm    = $self->normalize( shift );
-    my $adaptee = $self->{adaptee};
+    my $self   = shift;
+    my $norm   = $self->normalize( shift );
+    my $header = $self->{adaptee};
 
     if ( $norm eq '-content_type' ) {
-        my $type    = $adaptee->{-type};
-        my $charset = $adaptee->{-charset};
+        my $type    = $header->{-type};
+        my $charset = $header->{-charset};
 
         if ( defined $type and $type eq q{} ) {
             undef $charset;
             undef $type;
         }
         elsif ( !defined $type ) {
-            $type    = 'text/html';
-            $charset = 'ISO-8859-1' unless defined $charset;
+            $type = 'text/html';
         }
-        elsif ( $type =~ /\bcharset\b/ ) {
-            undef $charset;
-        }
-        elsif ( !defined $charset ) {
-            $charset = 'ISO-8859-1';
+
+        if ( $type ) {
+            if ( $type =~ /\bcharset\b/ ) {
+                undef $charset;
+            }
+            elsif ( !defined $charset ) {
+                $charset = 'ISO-8859-1';
+            }
         }
 
         return $charset ? "$type; charset=$charset" : $type;
     }
     elsif ( $norm eq '-content_disposition' ) {
-        my $attachment = $adaptee->{-attachment};
-        return qq{attachment; filename="$attachment"} if $attachment;
+        if ( my $attachment = $header->{-attachment} ) {
+            return qq{attachment; filename="$attachment"};
+        }
     }
-    elsif ( $norm eq '-date' and $self->date_header_is_fixed ) {
-        return Blosxom::Header::Util::expires( time );
+    elsif ( $norm eq '-date' ) {
+        if ( $self->date_header_is_fixed ) {
+            return Blosxom::Header::Util::expires( time );
+        }
     }
     elsif ( $norm eq '-p3p' ) {
-        my $p3p = $adaptee->{ $norm };
-        return unless $p3p;
-        my $tags = ref $p3p eq 'ARRAY' ? join ' ', @$p3p : $p3p;
-        return qq{policyref="/w3c/p3p.xml" CP="$tags"};
+        if ( my $p3p = $header->{-p3p} ) {
+            my $tags = ref $p3p eq 'ARRAY' ? join ' ', @{ $p3p } : $p3p;
+            return qq{policyref="/w3c/p3p.xml" CP="$tags"};
+        }
+        else {
+            return;
+        }
     }
 
-    $adaptee->{ $norm };
+    $header->{ $norm };
 }
 
 sub EXISTS {
-    my $self    = shift;
-    my $norm    = $self->normalize( shift );
-    my $adaptee = $self->{adaptee};
+    my $self   = shift;
+    my $norm   = $self->normalize( shift );
+    my $header = $self->{adaptee};
 
     if ( $norm eq '-content_type' ) {
-        return 1 unless exists $adaptee->{-type};
-        return !defined $adaptee->{-type} || $adaptee->{-type};
+        return 1 unless exists $header->{-type};
+        return !defined $header->{-type} || $header->{-type};
     }
     elsif ( $norm eq '-content_disposition' ) {
-        return $adaptee->{-attachment} || $adaptee->{ $norm };
+        return 1 if $header->{-attachment};
     }
     elsif ( $norm eq '-date' ) {
-        return $self->date_header_is_fixed;
+        return 1 if $self->date_header_is_fixed;
     }
 
-    $adaptee->{ $norm };
+    $header->{ $norm };
 }
 
 sub STORE {
-    my $self    = shift;
-    my $norm    = $self->normalize( shift );
-    my $value   = shift;
-    my $adaptee = $self->{adaptee};
+    my $self   = shift;
+    my $norm   = $self->normalize( shift );
+    my $value  = shift;
+    my $header = $self->{adaptee};
 
     if ( $norm eq '-content_type' ) {
-        my $has_charset = $value =~ /\bcharset\b/;
-        delete $adaptee->{-charset} if $has_charset;
-        $adaptee->{-charset} = q{} unless $has_charset;
-        $norm = '-type';
+        if ( $value =~ /\bcharset\b/ ) {
+            delete $header->{-charset};
+        }
+        else {
+            $header->{-charset} = q{};
+        }
+        $header->{-type} = $value;
+        return;
     }
     elsif ( $norm eq '-content_disposition' ) {
-        delete $adaptee->{-attachment};
+        delete $header->{-attachment};
     }
-    elsif ( $norm eq '-date' and $self->date_header_is_fixed ) {
-        return carp( 'The Date header is fixed' );
+    elsif ( $norm eq '-date' ) {
+        if ( $self->date_header_is_fixed ) {
+            return carp( 'The Date header is fixed' );
+        }
     }
     elsif ( $norm eq '-p3p' ) {
         return;
     }
     elsif ( $norm eq '-expires' or $norm eq '-cookie' ) {
-        delete $adaptee->{-date};
+        delete $header->{-date};
     }
 
-    $adaptee->{ $norm } = $value;
+    $header->{ $norm } = $value;
 
     return;
 }
 
 sub DELETE {
-    my $self    = shift;
-    my $norm    = $self->normalize( shift );
-    my $adaptee = $self->{adaptee};
+    my $self   = shift;
+    my $field  = shift;
+    my $norm   = $self->normalize( $field );
+    my $header = $self->{adaptee};
 
     if ( $norm eq '-content_type' ) {
-        my $deleted = $self->FETCH( 'Content-Type' );
-        delete $adaptee->{-charset};
-        $adaptee->{-type} = q{};
+        my $deleted = $self->FETCH( $field );
+        delete $header->{-charset};
+        $header->{-type} = q{};
         return $deleted;
     }
     elsif ( $norm eq '-content_disposition' ) {
-        my $deleted = $self->FETCH( 'Content-Disposition' );
-        delete @{ $adaptee }{ $norm, '-attachment' };
+        my $deleted = $self->FETCH( $field );
+        delete @{ $header }{ $norm, '-attachment' };
         return $deleted;
     }
-    elsif ( $norm eq '-date' and $self->date_header_is_fixed ) {
-        return carp( 'The Date header is fixed' );
+    elsif ( $norm eq '-date' ) {
+        if ( $self->date_header_is_fixed ) {
+            return carp( 'The Date header is fixed' );
+        }
     }
-    elsif ( $norm eq 'p3p' ) {
-        delete $adaptee->{-p3p};
-        return $self->FETCH( 'P3P' );
+    elsif ( $norm eq '-p3p' ) {
+        my $deleted = $self->FETCH( $field );
+        delete $header->{-p3p};
+        return $deleted;
     }
 
-    delete $adaptee->{ $norm };
+    delete $header->{ $norm };
 }
 
 sub CLEAR {
@@ -197,7 +215,10 @@ sub field_names {
     @fields;
 }
 
-sub denormalize { $_[0]->{denormalize}->( $_[1] ) }
+sub denormalize {
+    my ( $self, $norm ) = @_;
+    $self->{denormalize}->( $norm );
+}
 
 sub normalize {
     my $self  = shift;
@@ -221,34 +242,36 @@ sub attachment {
 }
 
 sub nph {
-    my $adaptee = shift->{adaptee};
+    my $self   = shift;
+    my $header = $self->{adaptee};
     
     if ( @_ ) {
         my $nph = shift;
-        delete $adaptee->{-date} if $nph;
-        $adaptee->{-nph} = $nph;
+        delete $header->{-date} if $nph;
+        $header->{-nph} = $nph;
     }
     else {
-        return $adaptee->{-nph};
+        return $header->{-nph};
     }
 
     return;
 }
 
 sub date_header_is_fixed {
-    my $adaptee = shift->{adaptee};
-    $adaptee->{-expires} || $adaptee->{-cookie} || $adaptee->{-nph};
+    my $self = shift;
+    my $header = $self->{adaptee};
+    $header->{-expires} || $header->{-cookie} || $header->{-nph};
 }
 
 sub p3p_tags {
-    my $self    = shift;
-    my $adaptee = $self->{adaptee};
+    my $self   = shift;
+    my $header = $self->{adaptee};
 
     if ( @_ ) {
         my @tags = @_ > 1 ? @_ : split / /, shift;
-        $adaptee->{-p3p} = @tags > 1 ? \@tags : $tags[0];
+        $header->{-p3p} = @tags > 1 ? \@tags : $tags[0];
     }
-    elsif ( my $tags = $adaptee->{-p3p} ) {
+    elsif ( my $tags = $header->{-p3p} ) {
         my @tags = ref $tags eq 'ARRAY' ? @{ $tags } : ( $tags );
         @tags = map { split / / } @tags;
         return wantarray ? @tags : $tags[0];
@@ -259,23 +282,27 @@ sub p3p_tags {
 
 sub push_p3p_tags {
     my ( $self, @tags ) = @_;
-    my $adaptee = $self->{adaptee};
+    my $header = $self->{adaptee};
 
-    if ( my $value = $adaptee->{-p3p} ) {
-        return push @{ $value }, @tags if ref $value eq 'ARRAY';
-        unshift @tags, $value;
+    if ( my $tags = $header->{-p3p} ) {
+        return push @{ $tags }, @tags if ref $tags eq 'ARRAY';
+        unshift @tags, $tags;
     }
 
-    $adaptee->{-p3p} = @tags > 1 ? \@tags : $tags[0];
+    $header->{-p3p} = @tags > 1 ? \@tags : $tags[0];
 
     scalar @tags;
 }
 
 sub expires {
-    my $self = shift;
-    my $expires = $self->{adaptee}->{-expires};
-    return unless $expires;
-    Blosxom::Header::Util::expires( $expires );
+    my $self   = shift;
+    my $header = $self->{adaptee};
+
+    if ( my $expires = $header->{-expires} ) {
+        return Blosxom::Header::Util::expires( $expires );
+    }
+
+    return;
 }
 
 1;
