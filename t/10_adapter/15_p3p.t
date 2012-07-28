@@ -1,9 +1,9 @@
 use strict;
-use Blosxom::Header::Adapter;
+use Blosxom::Header;
 use Test::More tests => 17;
 
 my %adaptee;
-my $adapter = tie my %adapter, 'Blosxom::Header::Adapter', \%adaptee;
+my $adapter = tie my %adapter, 'Blosxom::Header', \%adaptee;
 
 %adaptee = ( -p3p => [qw/CAO DSP LAW CURa/] );
 is $adapter{P3P}, 'policyref="/w3c/p3p.xml" CP="CAO DSP LAW CURa"';
