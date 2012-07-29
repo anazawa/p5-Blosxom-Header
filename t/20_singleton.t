@@ -1,4 +1,5 @@
 use strict;
+use warnings;
 use Blosxom::Header;
 use Test::More tests => 5;
 

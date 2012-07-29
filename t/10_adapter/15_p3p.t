@@ -30,8 +30,8 @@ my @got = $adapter->p3p_tags;
 my @expected = qw( CAO DSP LAW CURa );
 is_deeply \@got, \@expected;
 
-%adaptee = ( -p3p => [ 'CAO DSP', 'LAW CURa' ] );
-is $adapter->p3p_tags, 'CAO';
+#%adaptee = ( -p3p => [ 'CAO DSP', 'LAW CURa' ] );
+#is $adapter->p3p_tags, 'CAO';
 @got = $adapter->p3p_tags;
 @expected = qw( CAO DSP LAW CURa );
 is_deeply \@got, \@expected;
