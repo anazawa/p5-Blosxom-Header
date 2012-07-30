@@ -1,6 +1,6 @@
 use strict;
 use Blosxom::Header;
-use Test::More tests => 17;
+use Test::More tests => 16;
 
 my %adaptee;
 my $adapter = tie my %adapter, 'Blosxom::Header', \%adaptee;

@@ -4,10 +4,14 @@ use strict;
 use warnings;
 use overload '%{}' => 'as_hashref', 'fallback' => 1;
 use Exporter 'import';
-use Blosxom::Header::Util qw/time2str str2time/;
 use Carp qw/croak carp/;
 use List::Util qw/first/;
 use Scalar::Util qw/refaddr/;
+
+BEGIN {
+    *clear = \&CLEAR;    *exists = \&EXISTS;
+    *new   = \&instance; *type   = \&content_type;
+}
 
 our $VERSION = '0.05012';
 
@@ -16,17 +20,13 @@ our @EXPORT_OK = qw(
     header_delete header_iter
 );
 
-BEGIN {
-    *exists = \&EXISTS;
-    *clear  = \&CLEAR;
-}
-
 sub header_get    { __PACKAGE__->instance->get( @_ )    }
 sub header_set    { __PACKAGE__->instance->set( @_ )    }
 sub header_exists { __PACKAGE__->instance->exists( @_ ) }
 sub header_delete { __PACKAGE__->instance->delete( @_ ) }
 sub header_iter   { __PACKAGE__->instance->each( @_ )   }
 
+# instance variables
 my ( %header_of, %adaptee_of );
 
 my $instance;
@@ -45,8 +45,6 @@ sub instance {
 
     croak( q{$blosxom::header hasn't been initialized yet} );
 }
-
-*new = \&instance;
 
 sub has_instance { $instance }
 
@@ -153,22 +151,7 @@ sub content_type {
     return;
 }
 
-*type = \&content_type;
-
-sub date {
-    my ( $self, $time ) = @_;
-
-    if ( defined $time ) {
-        $self->STORE( Date => time2str( $time ) );
-    }
-    elsif ( my $date = $self->FETCH( 'Date' ) ) {
-        return str2time( $date );
-    }
-
-    return;
-}
-
-
+# constructor
 sub TIEHASH {
     my $self = bless \do { my $anon_scalar }, shift;
     $adaptee_of{ refaddr $self } = shift;
@@ -188,11 +171,9 @@ sub FETCH {
             undef $charset;
             undef $type;
         }
-        elsif ( !defined $type ) {
-            $type = 'text/html';
-        }
+        else {
+            $type ||= 'text/html';
 
-        if ( $type ) {
             if ( $type =~ /\bcharset\b/ ) {
                 undef $charset;
             }
@@ -210,7 +191,8 @@ sub FETCH {
     }
     elsif ( $norm eq '-date' ) {
         if ( $self->_date_header_is_fixed ) {
-            return Blosxom::Header::Util::expires( time );
+            require HTTP::Date;
+            return HTTP::Date::time2str( time );
         }
     }
     elsif ( $norm eq '-p3p' ) {
@@ -259,32 +241,26 @@ sub STORE {
 }
 
 sub DELETE {
-    my $self   = shift;
-    my $field  = shift;
-    my $norm   = $self->_normalize( $field );
-    my $header = $adaptee_of{ refaddr $self };
+    my $self    = shift;
+    my $field   = shift;
+    my $norm    = $self->_normalize( $field );
+    my $deleted = defined wantarray && $self->FETCH( $field );
+    my $header  = $adaptee_of{ refaddr $self };
 
     if ( $norm eq '-date' and $self->_date_header_is_fixed ) {
         return carp( 'The Date header is fixed' );
     }
     elsif ( $norm eq '-content_type' ) {
-        my $deleted = defined wantarray && $self->FETCH( $field );
-        delete @{ $header }{ $norm, '-charset' };
+        delete $header->{-charset};
         $header->{-type} = q{};
-        return $deleted;
     }
     elsif ( $norm eq '-content_disposition' ) {
-        my $deleted = defined wantarray && $self->FETCH( $field );
-        delete @{ $header }{ $norm, '-attachment' };
-        return $deleted;
-    }
-    elsif ( $norm eq '-p3p' ) {
-        my $deleted = defined wantarray && $self->FETCH( $field );
-        delete $header->{ $norm };
-        return $deleted;
+        delete $header->{-attachment};
     }
 
     delete $header->{ $norm };
+
+    $deleted;
 }
 
 sub CLEAR {
@@ -360,6 +336,33 @@ sub field_names {
     @fields;
 }
 
+sub attachment {
+    my $header = $adaptee_of{ refaddr shift };
+    return $header->{-attachment} = shift if @_;
+    $header->{-attachment};
+}
+
+sub date {
+    my $self   = shift;
+    my $time   = shift;
+    my $header = $adaptee_of{ refaddr $self };
+
+    require HTTP::Date;
+
+    if ( defined $time ) {
+        $self->STORE( Date => HTTP::Date::time2str( $time ) );
+    }
+    elsif ( $self->_date_header_is_fixed ) {
+        return time;
+    }
+    elsif ( my $date = $header->{-date} ) {
+        return HTTP::Date::str2time( $date );
+    }
+
+    return;
+}
+
+my %expires;
 sub expires {
     my $self   = shift;
     my $header = $adaptee_of{ refaddr $self };
@@ -368,8 +371,18 @@ sub expires {
         $header->{-expires} = shift;
     }
     elsif ( my $expires = $header->{-expires} ) {
-        my $date = Blosxom::Header::Util::expires( $expires );
-        return str2time( $date );
+        if ( exists $expires{ $expires } ) {
+            return $expires{ $expires };
+        }
+        else { # TODO: expensive process
+            require CGI::Util;
+            require HTTP::Date;
+
+            my $date = CGI::Util::expires( $expires );
+            my $time = HTTP::Date::str2time( $date );
+
+            return $expires{ $expires } = $time;
+        }
     }
 
     return;
@@ -380,11 +393,13 @@ sub last_modified {
     my $time   = shift;
     my $header = $adaptee_of{ refaddr $self };
 
+    require HTTP::Date;
+
     if ( defined $time ) {
-        $header->{-last_modified} = time2str( $time );
+        $header->{-last_modified} = HTTP::Date::time2str( $time );
     }
     elsif ( my $date = $header->{-last_modified} ) {
-        return str2time( $date );
+        return HTTP::Date::str2time( $date );
     }
 
     return;
@@ -506,15 +521,10 @@ sub status {
     return;
 }
 
-# make accessors
-for my $method (qw/target attachment/) {
-    my $code = sub {
-        my $header = $adaptee_of{ refaddr shift };
-        return $header->{ "-$method" } = shift if @_;
-        $header->{ "-$method" };
-    };
-    no strict 'refs';
-    *$method = $code;
+sub target {
+    my $header = $adaptee_of{ refaddr shift };
+    return $header->{-target} = shift if @_;
+    $header->{-target};
 }
 
 my %norm_of = (
@@ -558,9 +568,22 @@ sub _denormalize {
 }
 
 sub _date_header_is_fixed {
-    my $self = shift;
-    my $header = $adaptee_of{ refaddr $self };
+    my $header = $adaptee_of{ refaddr shift };
     $header->{-expires} || $header->{-cookie} || $header->{-nph};
+}
+
+sub _dump {
+    my $self = shift;
+
+    require Data::Dumper;
+
+    local $Data::Dumper::Terse  = 1;
+    local $Data::Dumper::Indent = 1;
+
+    Data::Dumper::Dumper({
+        adaptee => $adaptee_of{ refaddr $self },
+        header  => { $self->flatten },
+    });
 }
 
 1;

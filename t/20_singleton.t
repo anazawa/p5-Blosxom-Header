@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use Blosxom::Header;
-use Test::More tests => 5;
+use Test::More tests => 6;
 
 {
     package blosxom;
