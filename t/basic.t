@@ -122,11 +122,13 @@ subtest 'as_hashref()' => sub {
     my $got = $header->as_hashref;
     ok ref $got eq 'HASH';
 
-    ok my $adapter = tied( %{ $got } );
-    ok $adapter->isa( 'Blosxom::Header' );
-    ok tied( %{ $header } ) eq $adapter;
+    ok my $tied = tied( %{ $got } );
+    ok $tied eq $header;
 
     %header = ();
     $header->{Foo} = 'bar';
-    is_deeply \%header, { -foo => 'bar' };
+    is_deeply \%header, { -foo => 'bar' }, 'overload';
+
+    untie %{ $header->as_hashref };
+    ok !$header->as_hashref, 'untie';
 };

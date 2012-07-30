@@ -4,7 +4,7 @@ use Test::Base;
 
 plan tests => 1 * blocks();
 
-my $header = Blosxom::Header->TIEHASH;
+my $header = 'Blosxom::Header';
 
 run {
     my $block = shift;
