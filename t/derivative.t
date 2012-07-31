@@ -4,7 +4,7 @@ use Test::More tests => 1;
 
 package CGI::Header;
 use base 'Blosxom::Header';
-use Carp qw/carp;/
+use Carp qw/carp/;
 use Scalar::Util qw/refaddr/;
 
 sub header_get    { carp 'not supported' }

@@ -721,10 +721,6 @@ The field names have case as returned by C<CGI::header()>.
 
 In scalar context return the number of distinct field names.
 
-  if ( $header->field_names == 0 ) {
-      # no header fields
-  }
-
 =item $header->each( \&callback )
 
 Apply a subroutine to each header field in turn.
@@ -785,9 +781,6 @@ instead.
 =back
 
 =head3 HANDLING COOKIES
-
-C<cookie()> and C<push_cookie()> are obsolete and will be removed in 0.06.
-These methods were replaced with C<set_cookie()> and C<get_cookie()>.
 
 =over 4
 
@@ -910,7 +903,7 @@ This method doesn't receive any arguments.
 
 =item ( $media_type, $rest ) = $header->content_type
 
-=item $header->content_type( 'text/html; charset=ISO-88591' )
+=item $header->content_type( 'text/html; charset=ISO-8859-1' )
 
 Represents the Content-Type header which indicates the media type of
 the message content. C<type()> is an alias.
@@ -1110,7 +1103,6 @@ L<Blosxom 2.0.0|http://blosxom.sourceforge.net/> or higher.
 
 =head1 SEE ALSO
 
-L<Blosxom::Header::Adapter>,
 L<HTTP::Headers>,
 L<Plack::Util>,
 L<Class::Singleton>

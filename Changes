@@ -1,5 +1,6 @@
 Revision history for Perl extension Blosxom::Header.
 
+0.06000 Jul, 31st
   - Removed the following methods/functions:
         * cookie
         * push_cookie
