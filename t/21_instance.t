@@ -76,11 +76,20 @@ subtest 'charset()' => sub {
     %header = ( -type => 'text/html; charset=iso-8859-1; Foo=1' );
     is $header->charset, 'ISO-8859-1';
 
-    SKIP: {
-        skip 'not supported yet', 1;
-        %header = ( -type => 'text/html; charset="iso-8859-1"; Foo=1' );
-        is $header->charset, 'ISO-8859-1';
-    }
+    %header = ( -type => 'text/html; charset="iso-8859-1"; Foo=1' );
+    is $header->charset, 'ISO-8859-1';
+
+    %header = ( -type => 'text/html; charset = "iso-8859-1"; Foo=1' );
+    is $header->charset, 'ISO-8859-1';
+
+    %header = ( -type => 'text/html;\r\n charset = "iso-8859-1"; Foo=1' );
+    is $header->charset, 'ISO-8859-1';
+
+    %header = ( -type => 'text/html;\r\n charset = iso-8859-1 ; Foo=1' );
+    is $header->charset, 'ISO-8859-1';
+
+    %header = ( -type => 'text/html;\r\n charset = iso-8859-1 ' );
+    is $header->charset, 'ISO-8859-1';
 };
 
 subtest 'content_type()' => sub {

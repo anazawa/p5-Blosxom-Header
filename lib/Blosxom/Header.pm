@@ -126,12 +126,13 @@ sub is_empty { !shift->SCALAR }
 sub charset {
     my $self = shift;
 
-    if ( my $content_type = $self->FETCH( 'Content-Type' ) ) {
-        my ( $charset ) = $content_type =~ /charset=([^;]+)/;
-        return uc $charset if $charset;
+    my $charset;
+    for ( $self->FETCH( 'Content-Type' ) || q{} ) {
+        if    ( /charset\s*=\s*\"([^\"]*)\"/ ) { $charset = $1 } # quoted
+        elsif ( /charset\s*=\s*([^;\s]*)/    ) { $charset = $1 } # unquoted
     }
 
-    return;
+    $charset && uc $charset;
 }
 
 sub content_type {
