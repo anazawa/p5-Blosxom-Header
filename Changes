@@ -1,6 +1,9 @@
 Revision history for Perl extension Blosxom::Header.
 
 0.06000 Jul, 31st
+  - charset() parse a quoted string
+        $header->set( Content_Type => 'text/plain; charset="utf-8"' );
+        my $charset = $header->charset; # UTF-8
   - Removed the following methods/functions:
         * cookie
         * push_cookie
