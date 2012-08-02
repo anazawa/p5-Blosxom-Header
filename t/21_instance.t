@@ -99,42 +99,26 @@ subtest 'content_type()' => sub {
     my @expected = ( 'text/html', 'charset=ISO-8859-1' );
     is_deeply \@got, \@expected;
 
-    %header = ( -type => 'text/plain; charset=EUC-JP' );
-    is $header->content_type, 'text/plain';
-    @got = $header->content_type;
-    @expected = ( 'text/plain', 'charset=EUC-JP' );
-    is_deeply \@got, \@expected;
-
     %header = ( -type => 'text/plain; charset=EUC-JP; Foo=1' );
     is $header->content_type, 'text/plain';
     @got = $header->content_type;
     @expected = ( 'text/plain', 'charset=EUC-JP; Foo=1' );
     is_deeply \@got, \@expected;
 
-    %header = ( -charset => 'utf-8' );
+    %header = ();
     $header->content_type( 'text/plain; charset=EUC-JP' );
-    is_deeply $blosxom::header, { -type => 'text/plain; charset=EUC-JP' };
-
-    %header = ( -type => 'text/plain', -charset => 'utf-8' );
-    @got = $header->content_type;
-    @expected = ( 'text/plain', 'charset=utf-8' );
-    is_deeply \@got, \@expected;
+    is_deeply \%header, { -type => 'text/plain; charset=EUC-JP' };
 
     %header = ( -type => 'text/plain; Foo=1', -charset => 'utf-8' );
     @got = $header->content_type;
     @expected = ( 'text/plain', 'Foo=1; charset=utf-8' );
     is_deeply \@got, \@expected;
 
-    %header = (
-        -type    => 'text/plain; charset=euc-jp',
-        -charset => 'utf-8',
-    );
-    @got = $header->content_type;
-    @expected = ( 'text/plain', 'charset=euc-jp' );
-    is_deeply \@got, \@expected;
-
     %header = ( -type => q{} );
     is $header->content_type, q{};
+
+    %header = ( -type => '   TEXT  / HTML   ' );
+    is $header->content_type, 'text/html';
 };
 
 subtest 'target()' => sub {

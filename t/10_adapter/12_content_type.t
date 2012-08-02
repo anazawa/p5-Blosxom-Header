@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use Blosxom::Header;
-use Test::More tests => 27;
+use Test::More tests => 29;
 
 my %adaptee;
 tie my %adapter, 'Blosxom::Header', \%adaptee;
@@ -68,3 +68,11 @@ is $adapter{Content_Type}, 'text/html; charset=utf-8';
 %adaptee = ( -type => 'text/plain', -charset => 'utf-8' );
 is delete $adapter{Content_Type}, 'text/plain; charset=utf-8';
 is_deeply \%adaptee, { -type => q{} };
+
+%adaptee = ();
+$adapter{Content_Type} = 'text/html; charSet=utf-8';
+is_deeply \%adaptee, { -type => 'text/html; charset=utf-8' };
+
+# feature
+%adaptee = ( -type => 'text/plain; charSet=utf-8' );
+is $adapter{Content_Type}, 'text/plain; charSet=utf-8; charset=ISO-8859-1';

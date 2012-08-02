@@ -68,6 +68,14 @@ subtest 'delete()' => sub {
     my @deleted = $header->delete( qw/foo bar/ );
     is_deeply \@deleted, [ 'bar', 'baz' ], 'delete() multiple elements';
     is_deeply \%header, { -baz => 'qux' };
+
+    %header = (
+        -foo => 'bar',
+        -bar => 'baz',
+        -baz => 'qux',
+    );
+    is $header->delete(qw/foo bar baz/), 'qux';
+    is_deeply \%header, {};
 };
 
 subtest 'expires()' => sub {
@@ -112,7 +120,7 @@ subtest 'flatten()' => sub {
     %header = ( -p3p => [ 'foo', 'bar' ] );
     @got = $header->flatten;
     @expected = (
-        'P3P',          'policyref="/w3c/p3p.xml" CP="foo bar"',
+        'P3P',          'policyref="/w3c/p3p.xml", CP="foo bar"',
         'Content-Type', 'text/html; charset=ISO-8859-1',
     );
     is_deeply \@got, \@expected;
