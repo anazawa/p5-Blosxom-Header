@@ -1,5 +1,6 @@
 Revision history for Perl extension Blosxom::Header.
 
+0.06001 Aug, 2nd
   - Corrected typo:
       P3P: policyref="/w3c/p3p.xml", CP="%s" (comma was missing)
 

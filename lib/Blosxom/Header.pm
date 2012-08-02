@@ -13,7 +13,7 @@ BEGIN {
     *new   = \&instance; *type   = \&content_type;
 }
 
-our $VERSION = '0.06000';
+our $VERSION = '0.06001';
 
 our @EXPORT_OK = qw(
     header_get    header_set  header_exists
