@@ -19,6 +19,7 @@ test_requires 'Test::Exception' => '0.31';
 test_requires 'Test::More'      => '0.98';
 test_requires 'Test::Pod'       => '1.45';
 test_requires 'Test::Warn'      => '0.24';
+test_requires 'CGI'             => '3.59';
 
 tests 't/*.t t/*/*.t xt/*.t';
 

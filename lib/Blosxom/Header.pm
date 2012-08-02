@@ -783,20 +783,21 @@ Returns pairs of fields and values.
 =item $hashref = $header->as_hashref
 
 Returns a reference to hash which represents header fields.
-You can C<set()>, C<get()> and C<delete()> header fields using the hash
-syntax.
+You can manipulate header fields using the hash syntax.
 
   $header->as_hashref->{Foo} = 'bar';
-  my $value = $header->as_hashref->{Foo};
+  my $value   = $header->as_hashref->{Foo};
   my $deleted = delete $header->as_hashref->{Foo};
+  my $bool    = exists $header->as_hashref->{Foo};
 
 Since the hash dereference operator of C<$header> is L<overload>ed
 with C<as_hashref()>,
 you can omit calling C<as_hashref()> method from the above operations:
 
   $header->{Foo} = 'bar';
-  my $value = $header->{Foo};
+  my $value   = $header->{Foo};
   my $deleted = delete $header->{Foo};
+  my $bool    = exists $header->{Foo};
 
 NOTE: You can't iterate over C<$header> using C<CORE::each()>, C<CORE::keys()>
 or C<CORE::values()>. Use C<< $header->field_names >> or C<< $header->each >>
