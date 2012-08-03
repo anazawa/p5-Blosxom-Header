@@ -121,7 +121,7 @@ sub flatten {
     map { $_, $self->FETCH( $_ ) } $self->field_names;
 }
 
-sub is_empty { !shift->SCALAR }
+sub is_empty { not $_[0]->SCALAR }
 
 sub charset {
     my $self = shift;
@@ -803,7 +803,7 @@ NOTE: You can't iterate over C<$header> using C<CORE::each()>, C<CORE::keys()>
 or C<CORE::values()>. Use C<< $header->field_names >> or C<< $header->each >>
 instead.
 
-  # wrong
+  # not supported
   keys %{ $header };
   values %{ $header };
   each %{ $header };
@@ -824,10 +824,10 @@ Overwrites existent cookie.
 
   $header->set_cookie(
       ID => {
-         value   => '123456',
-         path    => '/',
-         domain  => '.example.com',
-         expires => '+3M',
+          value   => '123456',
+          path    => '/',
+          domain  => '.example.com',
+          expires => '+3M',
       }
   );
 
@@ -1056,13 +1056,6 @@ A shorcut for
 A shortcut for 
 
     Blosxom::Header->instance->each( \&callback );
-
-E.g.:
-
-  header_iter sub {
-      my ($field, $value) = @_;
-      print "$field: $value";
-  };
 
 =back
 

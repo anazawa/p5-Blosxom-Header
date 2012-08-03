@@ -1,6 +1,6 @@
 use strict;
 use Blosxom::Header;
-use Test::More tests => 14;
+use Test::More tests => 13;
 use Test::Warn;
 use Test::Exception;
 
@@ -83,21 +83,6 @@ subtest 'delete()' => sub {
     );
     is $header->delete(qw/foo bar baz/), 'qux';
     is_deeply \%header, {};
-};
-
-subtest 'expires()' => sub {
-    %header = ();
-    is $header->expires, undef;
-
-    my $now = 1341637509;
-    $header->expires( $now );
-    is $header->expires, $now, 'get expires()';
-    is $header{-expires}, $now;
-
-    $now++;
-    $header->expires( 'Sat, 07 Jul 2012 05:05:10 GMT' );
-    is $header->expires, $now, 'get expires()';
-    is $header{-expires}, 'Sat, 07 Jul 2012 05:05:10 GMT';
 };
 
 subtest 'each()' => sub {

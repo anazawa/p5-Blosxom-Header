@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use Blosxom::Header;
-use Test::More tests => 31;
+use Test::More tests => 32;
 
 my %adaptee;
 my $adapter = tie my %adapter, 'Blosxom::Header', \%adaptee;
@@ -24,6 +24,9 @@ is_deeply \%adaptee, { -type => q{} };
 is $adapter{Content_Type}, 'text/plain; charset=ISO-8859-1';
 ok exists $adapter{Content_Type};
 
+
+# FETCH
+
 %adaptee = ( -charset => 'utf-8' );
 is $adapter{Content_Type}, 'text/html; charset=utf-8';
 
@@ -45,6 +48,12 @@ is $adapter{Content_Type}, 'text/plain; charset=euc-jp';
 %adaptee = ( -charset => q{} );
 is $adapter{Content_Type}, 'text/html';
 
+%adaptee = ( -type => 'text/plain; Foo=1', -charset => 'utf-8' );
+is $adapter{Content_Type}, 'text/plain; Foo=1; charset=utf-8';
+
+
+# STORE
+
 %adaptee = ();
 $adapter{Content_Type} = 'text/plain; charset=utf-8';
 is_deeply \%adaptee, { -type => 'text/plain; charset=utf-8' };
@@ -57,6 +66,11 @@ is_deeply \%adaptee, { -type => 'text/plain', -charset => q{} };
 $adapter{Content_Type} = 'text/plain; charset=utf-8';
 is_deeply \%adaptee, { -type => 'text/plain; charset=utf-8' };
 
+%adaptee = ();
+$adapter{Content_Type} = 'text/html; charSet=utf-8';
+is_deeply \%adaptee, { -type => 'text/html; charset=utf-8' };
+
+
 %adaptee = ( -type => undef );
 is $adapter{Content_Type}, 'text/html; charset=ISO-8859-1';
 ok exists $adapter{Content_Type};
@@ -68,10 +82,6 @@ is $adapter{Content_Type}, 'text/html; charset=utf-8';
 %adaptee = ( -type => 'text/plain', -charset => 'utf-8' );
 is delete $adapter{Content_Type}, 'text/plain; charset=utf-8';
 is_deeply \%adaptee, { -type => q{} };
-
-%adaptee = ();
-$adapter{Content_Type} = 'text/html; charSet=utf-8';
-is_deeply \%adaptee, { -type => 'text/html; charset=utf-8' };
 
 # feature
 %adaptee = ( -type => 'text/plain; charSet=utf-8' );
@@ -125,11 +135,6 @@ subtest 'content_type()' => sub {
     %adaptee = ();
     $adapter->content_type( 'text/plain; charset=EUC-JP' );
     is_deeply \%adaptee, { -type => 'text/plain; charset=EUC-JP' };
-
-    %adaptee = ( -type => 'text/plain; Foo=1', -charset => 'utf-8' );
-    @got = $adapter->content_type;
-    @expected = ( 'text/plain', 'Foo=1; charset=utf-8' );
-    is_deeply \@got, \@expected;
 
     %adaptee = ( -type => q{} );
     is $adapter->content_type, q{};

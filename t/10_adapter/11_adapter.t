@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use Blosxom::Header;
-use Test::More tests => 18;
+use Test::More tests => 17;
 use Test::Warn;
 
 my %adaptee;
@@ -57,15 +57,12 @@ subtest 'nph()' => sub {
     $adapter->nph( 1 );
     ok $adapter->nph;
     is $adaptee{-nph}, 1;
+
+    %adaptee = ( -date => 'Sat, 07 Jul 2012 05:05:09 GMT' );
+    $adapter->nph( 1 );
+    is_deeply \%adaptee, { -nph => 1 };
 };
 
-subtest 'attachment()' => sub {
-    %adaptee = ();
-    is $adapter->attachment, undef;
-    $adapter->attachment( 'genome.jpg' );
-    is $adapter->attachment, 'genome.jpg';
-    is_deeply \%adaptee, { -attachment => 'genome.jpg' };
-};
 
 subtest 'field_names()' => sub {
     %adaptee = ( -type => undef );
