@@ -1,6 +1,6 @@
 Revision history for Perl extension Blosxom::Header.
 
-  - charset() requires HTTP::Headers::Util
+  - Requires HTTP::Headers::Util
 
 0.06001 Aug, 2nd
   - Corrected typo:

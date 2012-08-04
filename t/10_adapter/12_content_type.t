@@ -56,7 +56,11 @@ is $adapter{Content_Type}, 'text/plain; Foo=1; charset=utf-8';
 
 %adaptee = ();
 $adapter{Content_Type} = 'text/plain; charset=utf-8';
-is_deeply \%adaptee, { -type => 'text/plain; charset=utf-8' };
+#is_deeply \%adaptee, { -type => 'text/plain; charset=utf-8' };
+is_deeply \%adaptee, {
+    -type    => 'text/plain',
+    -charset => 'utf-8',
+};
 
 %adaptee = ();
 $adapter{Content_Type} = 'text/plain';
@@ -64,15 +68,27 @@ is_deeply \%adaptee, { -type => 'text/plain', -charset => q{} };
 
 %adaptee = ( -charset => 'euc-jp' );
 $adapter{Content_Type} = 'text/plain; charset=utf-8';
-is_deeply \%adaptee, { -type => 'text/plain; charset=utf-8' };
+#is_deeply \%adaptee, { -type => 'text/plain; charset=utf-8' };
+is_deeply \%adaptee, {
+    -type    => 'text/plain',
+    -charset => 'utf-8',
+};
 
 %adaptee = ();
 $adapter{Content_Type} = 'text/html; charSet=utf-8';
-is_deeply \%adaptee, { -type => 'text/html; charset=utf-8' };
+#is_deeply \%adaptee, { -type => 'text/html; charset=utf-8' };
+is_deeply \%adaptee, {
+    -type    => 'text/html',
+    -charset => 'utf-8',
+};
 
 %adaptee = ();
 $adapter{Content_Type} = 'text/html; charSet="CHARSET"; Foo="CHARSET"';
-is_deeply \%adaptee, { -type => 'text/html; charset="CHARSET"; Foo="CHARSET"' };
+#is_deeply \%adaptee, { -type => 'text/html; charset="CHARSET"; Foo="CHARSET"' };
+is_deeply \%adaptee, {
+    -type    => 'text/html; foo=CHARSET',
+    -charset => 'CHARSET',
+};
 
 
 %adaptee = ( -type => undef );
@@ -138,7 +154,11 @@ subtest 'content_type()' => sub {
 
     %adaptee = ();
     $adapter->content_type( 'text/plain; charset=EUC-JP' );
-    is_deeply \%adaptee, { -type => 'text/plain; charset=EUC-JP' };
+    #is_deeply \%adaptee, { -type => 'text/plain; charset=EUC-JP' };
+    is_deeply \%adaptee, {
+        -type    => 'text/plain',
+        -charset => 'EUC-JP',
+    };
 
     %adaptee = ( -type => q{} );
     is $adapter->content_type, q{};

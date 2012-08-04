@@ -5,6 +5,7 @@ use warnings;
 use overload '%{}' => 'as_hashref', 'fallback' => 1;
 use Exporter 'import';
 use Carp qw/croak carp/;
+use HTTP::Headers::Util qw/split_header_words join_header_words/;
 use List::Util qw/first/;
 use Scalar::Util qw/refaddr/;
 
@@ -126,19 +127,14 @@ sub is_empty { not $_[0]->SCALAR }
 sub charset {
     my $self = shift;
 
-    require HTTP::Headers::Util;
-
-    if ( my $type = $self->FETCH( 'Content-Type' ) ) {
-        my ( $values ) = HTTP::Headers::Util::split_header_words( $type );
-        if ( ref $values eq 'ARRAY' ) {
-            splice @{ $values }, 0, 2;
-            my %param = @{ $values };
-            if ( my $charset = $param{charset} ) {
-                $charset = uc $charset;
-                $charset =~ s/^\s+//;
-                $charset =~ s/\s+\z//;
-                return uc $charset if $charset;
-            }
+    if ( my $content_type = $self->FETCH('Content-Type') ) {
+        my ( $values ) = split_header_words( $content_type );
+        splice @{ $values }, 0, 2;
+        my %param = @{ $values };
+        if ( my $charset = $param{charset} ) {
+            $charset =~ s/^\s+//;
+            $charset =~ s/\s+$//;
+            return uc $charset if $charset;
         }
     }
 
@@ -151,7 +147,7 @@ sub content_type {
     if ( @_ ) {
         $self->STORE( Content_Type => shift );
     }
-    elsif ( my $content_type = $self->FETCH( 'Content-Type' ) ) {
+    elsif ( my $content_type = $self->FETCH('Content-Type') ) {
         my ( $media_type, $rest ) = split /;\s*/, $content_type, 2;
         $media_type =~ s/\s+//g;
         return wantarray ? ( lc $media_type, $rest ) : lc $media_type;
@@ -230,12 +226,12 @@ sub STORE {
         return carp( 'The Date header is fixed' );
     }
     elsif ( $norm eq '-content_type' ) {
-        if ( $value =~ s/\b(charset)\b/\L$1/i ) {
-            delete $header->{-charset};
-        } else {
-            $header->{-charset} = q{};
-        }
-        $norm = '-type';
+        my ( $values ) = split_header_words( $value );
+        my @media_type = splice @{ $values }, 0, 2;
+        my %param = @{ $values };
+        $header->{-charset} = $param{charset} ? delete $param{charset} : q{};
+        $header->{-type} = join_header_words( @media_type, %param );
+        return;
     }
     elsif ( $norm eq '-content_disposition' ) {
         delete $header->{-attachment};
@@ -303,7 +299,7 @@ sub EXISTS {
 sub SCALAR {
     my $self = shift;
     my $header = $adaptee_of{ refaddr $self };
-    $self->EXISTS( 'Content-Type' ) || first { $_ } values %{ $header };
+    !defined $header->{-type} || first { $_ } values %{ $header };
 }
 
 sub UNTIE {
