@@ -126,13 +126,23 @@ sub is_empty { not $_[0]->SCALAR }
 sub charset {
     my $self = shift;
 
-    my $charset;
-    for ( $self->FETCH( 'Content-Type' ) || q{} ) {
-        if    ( /charset\s*=\s*\"([^\"]*)\"/ ) { $charset = $1 } # quoted
-        elsif ( /charset\s*=\s*([^;\s]*)/    ) { $charset = $1 } # unquoted
+    require HTTP::Headers::Util;
+
+    if ( my $type = $self->FETCH( 'Content-Type' ) ) {
+        my ( $values ) = HTTP::Headers::Util::split_header_words( $type );
+        if ( ref $values eq 'ARRAY' ) {
+            splice @{ $values }, 0, 2;
+            my %param = @{ $values };
+            if ( my $charset = $param{charset} ) {
+                $charset = uc $charset;
+                $charset =~ s/^\s+//;
+                $charset =~ s/\s+\z//;
+                return uc $charset if $charset;
+            }
+        }
     }
 
-    $charset && uc $charset;
+    return;
 }
 
 sub content_type {
@@ -328,12 +338,12 @@ sub field_names {
     push @fields, 'Content-Disposition' if delete $header{-attachment};
 
     # not ordered
-    delete @header{qw/-charset -type/};
+    my $type = delete @header{qw/-charset -type/};
     while ( my ($norm, $value) = CORE::each %header ) {
         push @fields, $self->_denormalize( $norm ) if $value;
     }
 
-    push @fields, 'Content-Type' if $self->EXISTS( 'Content-Type' );
+    push @fields, 'Content-Type' if !defined $type or $type ne q{};
 
     @fields;
 }

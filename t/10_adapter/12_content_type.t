@@ -70,6 +70,10 @@ is_deeply \%adaptee, { -type => 'text/plain; charset=utf-8' };
 $adapter{Content_Type} = 'text/html; charSet=utf-8';
 is_deeply \%adaptee, { -type => 'text/html; charset=utf-8' };
 
+%adaptee = ();
+$adapter{Content_Type} = 'text/html; charSet="CHARSET"; Foo="CHARSET"';
+is_deeply \%adaptee, { -type => 'text/html; charset="CHARSET"; Foo="CHARSET"' };
+
 
 %adaptee = ( -type => undef );
 is $adapter{Content_Type}, 'text/html; charset=ISO-8859-1';
