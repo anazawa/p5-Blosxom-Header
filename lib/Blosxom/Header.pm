@@ -5,6 +5,7 @@ use warnings;
 use overload '%{}' => 'as_hashref', 'fallback' => 1;
 use Exporter 'import';
 use Carp qw/croak carp/;
+use HTTP::Date qw/time2str str2time/;
 use HTTP::Headers::Util qw/split_header_words join_header_words/;
 use List::Util qw/first/;
 use Scalar::Util qw/refaddr/;
@@ -28,7 +29,7 @@ sub header_delete { __PACKAGE__->instance->delete( @_ ) }
 sub header_iter   { __PACKAGE__->instance->each( @_ )   }
 
 # instance variables
-my ( %header_of, %adaptee_of );
+my ( %adapter_of, %adaptee_of );
 
 my $instance;
 
@@ -39,8 +40,8 @@ sub instance {
     return $instance if defined $instance;
 
     if ( $class->is_initialized ) {
-        my $self = tie my %header => $class => $blosxom::header;
-        $header_of{ refaddr $self } = \%header;
+        my $self = tie my %adapter => $class => $blosxom::header;
+        $adapter_of{ refaddr $self } = \%adapter;
         return $instance = $self;
     }
 
@@ -51,7 +52,7 @@ sub has_instance { $instance }
 
 sub is_initialized { ref $blosxom::header eq 'HASH' }
 
-sub as_hashref { $header_of{ refaddr shift } }
+sub as_hashref { $adapter_of{ refaddr shift } }
 
 sub get {
     my ( $self, @fields ) = @_;
@@ -128,13 +129,14 @@ sub charset {
     my $self = shift;
 
     if ( my $content_type = $self->FETCH('Content-Type') ) {
-        my ( $values ) = split_header_words( $content_type );
-        splice @{ $values }, 0, 2;
-        my %param = @{ $values };
-        if ( my $charset = $param{charset} ) {
-            $charset =~ s/^\s+//;
-            $charset =~ s/\s+$//;
-            return uc $charset if $charset;
+        if ( my ($values) = split_header_words($content_type) ) {
+            splice @{ $values }, 0, 2;
+            my %param = @{ $values };
+            if ( my $charset = $param{charset} ) {
+                $charset =~ s/^\s+//;
+                $charset =~ s/\s+$//;
+                return uc $charset if $charset;
+            }
         }
     }
 
@@ -199,8 +201,7 @@ sub FETCH {
     }
     elsif ( $norm eq '-date' ) {
         if ( $self->_date_header_is_fixed ) {
-            require HTTP::Date;
-            return HTTP::Date::time2str( time );
+            return time2str( time );
         }
     }
     elsif ( $norm eq '-p3p' ) {
@@ -289,8 +290,7 @@ sub EXISTS {
         return 1 if $header->{-attachment};
     }
     elsif ( $norm eq '-date' ) {
-        my $h = $header;
-        return 1 if $h->{-nph} or $h->{-expires} or $h->{-cookie};
+        return 1 if first { $header->{$_} } qw(-nph -expires -cookie);
     }
 
     $header->{ $norm };
@@ -304,14 +304,14 @@ sub SCALAR {
 
 sub UNTIE {
     my $self = shift;
-    delete $header_of{ refaddr $self };
+    delete $adapter_of{ refaddr $self };
     return;
 }
 
 sub DESTROY {
     my $self = shift;
     my $id = refaddr $self;
-    delete $header_of{$id};
+    delete $adapter_of{$id};
     delete $adaptee_of{$id};
     return;
 }
@@ -355,42 +355,31 @@ sub date {
     my $time   = shift;
     my $header = $adaptee_of{ refaddr $self };
 
-    require HTTP::Date;
-
     if ( defined $time ) {
-        $self->STORE( Date => HTTP::Date::time2str( $time ) );
+        $self->STORE( Date => time2str($time) );
     }
     elsif ( $self->_date_header_is_fixed ) {
         return time;
     }
     elsif ( my $date = $header->{-date} ) {
-        return HTTP::Date::str2time( $date );
+        return str2time( $date );
     }
 
     return;
 }
 
-my %expires;
 sub expires {
     my $self   = shift;
     my $header = $adaptee_of{ refaddr $self };
+
+    require CGI::Util;
 
     if ( @_ ) {
         $header->{-expires} = shift;
     }
     elsif ( my $expires = $header->{-expires} ) {
-        if ( exists $expires{ $expires } ) {
-            return $expires{ $expires };
-        }
-        else { # TODO: expensive process
-            require CGI::Util;
-            require HTTP::Date;
-
-            my $date = CGI::Util::expires( $expires );
-            my $time = HTTP::Date::str2time( $date );
-
-            return $expires{ $expires } = $time;
-        }
+        my $date = CGI::Util::expires( $expires );
+        return str2time( $date );
     }
 
     return;
@@ -401,13 +390,11 @@ sub last_modified {
     my $time   = shift;
     my $header = $adaptee_of{ refaddr $self };
 
-    require HTTP::Date;
-
     if ( defined $time ) {
-        $header->{-last_modified} = HTTP::Date::time2str( $time );
+        $header->{-last_modified} = time2str( $time );
     }
     elsif ( my $date = $header->{-last_modified} ) {
-        return HTTP::Date::str2time( $date );
+        return str2time( $date );
     }
 
     return;
@@ -500,18 +487,16 @@ sub set_cookie {
 sub get_cookie {
     my $self   = shift;
     my $name   = shift;
-    my $header = $adaptee_of{ refaddr $self };
+    my $id     = refaddr $self;
+    my $cookie = $adaptee_of{$id}->{-cookie};
 
-    if ( my $cookies = $header->{-cookie} ) {
-        my @values = grep {
-            ref $_ eq 'CGI::Cookie' and $_->name eq $name
-        } (
-            ref $cookies eq 'ARRAY' ? @{ $cookies } : $cookies,
-        );
-        return wantarray ? @values : $values[0];
-    }
+    my @values = grep {
+        ref $_ eq 'CGI::Cookie' and $_->name eq $name
+    } (
+        ref $cookie eq 'ARRAY' ? @{ $cookie } : $cookie,
+    );
 
-    return;
+    wantarray ? @values : $values[0];
 }
 
 sub status {
@@ -594,7 +579,7 @@ sub _dump {
 
     Data::Dumper::Dumper({
         adaptee => $adaptee_of{ refaddr $self },
-        header  => { $self->flatten },
+        adapter => { $self->flatten },
     });
 }
 

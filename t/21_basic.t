@@ -132,4 +132,3 @@ subtest 'as_hashref()' => sub {
     untie %{ $header->as_hashref };
     ok !$header->as_hashref, 'untie';
 };
-

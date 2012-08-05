@@ -56,7 +56,6 @@ is $adapter{Content_Type}, 'text/plain; Foo=1; charset=utf-8';
 
 %adaptee = ();
 $adapter{Content_Type} = 'text/plain; charset=utf-8';
-#is_deeply \%adaptee, { -type => 'text/plain; charset=utf-8' };
 is_deeply \%adaptee, {
     -type    => 'text/plain',
     -charset => 'utf-8',
@@ -68,7 +67,6 @@ is_deeply \%adaptee, { -type => 'text/plain', -charset => q{} };
 
 %adaptee = ( -charset => 'euc-jp' );
 $adapter{Content_Type} = 'text/plain; charset=utf-8';
-#is_deeply \%adaptee, { -type => 'text/plain; charset=utf-8' };
 is_deeply \%adaptee, {
     -type    => 'text/plain',
     -charset => 'utf-8',
@@ -76,7 +74,6 @@ is_deeply \%adaptee, {
 
 %adaptee = ();
 $adapter{Content_Type} = 'text/html; charSet=utf-8';
-#is_deeply \%adaptee, { -type => 'text/html; charset=utf-8' };
 is_deeply \%adaptee, {
     -type    => 'text/html',
     -charset => 'utf-8',
@@ -84,7 +81,6 @@ is_deeply \%adaptee, {
 
 %adaptee = ();
 $adapter{Content_Type} = 'text/html; charSet="CHARSET"; Foo="CHARSET"';
-#is_deeply \%adaptee, { -type => 'text/html; charset="CHARSET"; Foo="CHARSET"' };
 is_deeply \%adaptee, {
     -type    => 'text/html; foo=CHARSET',
     -charset => 'CHARSET',
