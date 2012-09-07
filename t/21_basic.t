@@ -129,6 +129,12 @@ subtest 'as_hashref()' => sub {
     $header->{Foo} = 'bar';
     is_deeply \%header, { -foo => 'bar' }, 'overload';
 
+    ok exists $header->{Foo};
+    ok !exists $header->{Bar};
+
+    is delete $header->{Foo}, 'bar';
+    is_deeply \%header, {};
+
     untie %{ $header->as_hashref };
     ok !$header->as_hashref, 'untie';
 };

@@ -109,7 +109,7 @@ subtest 'status()' => sub {
     $adapter->status( 304 );
     is $adaptee{-status}, '304 Not Modified';
     is $adapter->status, '304';
-    my $expected = 'Unknown status code "999" passed to status()';
+    my $expected = q{Unknown status code '999' passed to status()};
     warning_is { $adapter->status( 999 ) } $expected;
 };
 

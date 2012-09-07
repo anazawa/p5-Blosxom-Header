@@ -45,7 +45,7 @@ sub instance {
         return $instance = $self;
     }
 
-    croak( q{$blosxom::header hasn't been initialized yet} );
+    croak q{$blosxom::header hasn't been initialized yet};
 }
 
 sub has_instance { $instance }
@@ -56,32 +56,22 @@ sub as_hashref { $adapter_of{ refaddr shift } }
 
 sub get {
     my ( $self, @fields ) = @_;
-
-    if ( @fields ) {
-        if ( @fields > 1 ) {
-            my @values = map { $self->FETCH( $_ ) } @fields;
-            return wantarray ? @values : $values[0];
-        }
-        else {
-            return $self->FETCH( $fields[0] );
-        }
-    }
-
-    return;
+    my @values = map { $self->FETCH($_) } @fields;
+    wantarray ? @values : $values[0];
 }
 
 sub set {
     my ( $self, @headers ) = @_;
+
+    return unless @headers;
     
-    if ( @headers ) {
-        if ( @headers % 2 == 0 ) {
-            while ( my ($field, $value) = splice @headers, 0, 2 ) {
-                $self->STORE( $field => $value );
-            }
+    if ( @headers % 2 == 0 ) {
+        while ( my ($field, $value) = splice @headers, 0, 2 ) {
+            $self->STORE( $field => $value );
         }
-        else {
-            carp( 'Odd number of elements passed to set()' );
-        }
+    }
+    else {
+        carp 'Odd number of elements passed to set()';
     }
 
     return;
@@ -90,14 +80,18 @@ sub set {
 sub delete {
     my ( $self, @fields ) = @_;
 
-    if ( @fields ) {
-        if ( defined wantarray ) {
-            my @deleted = map { $self->DELETE( $_ ) } @fields;
-            return wantarray ? @deleted : $deleted[-1];
-        }
-        else {
-            $self->DELETE( $_ ) for @fields;
-        }
+    return unless @fields;
+
+    if ( wantarray ) {
+        return map { $self->DELETE($_) } @fields;
+    }
+    elsif ( defined wantarray ) {
+        my $deleted = $self->DELETE( pop @fields );
+        $self->DELETE( $_ ) for @fields;
+        return $deleted;
+    }
+    else {
+        $self->DELETE( $_ ) for @fields;
     }
 
     return;
@@ -108,11 +102,11 @@ sub each {
 
     if ( ref $callback eq 'CODE' ) {
         for my $field ( $self->field_names ) {
-            $callback->( $field, $self->FETCH( $field ) );
+            $callback->( $field, $self->FETCH($field) );
         }
     }
     else {
-        croak( 'Must provide a code reference to each()' );
+        croak 'Must provide a code reference to each()';
     }
 
     return;
@@ -120,10 +114,10 @@ sub each {
 
 sub flatten {
     my $self = shift;
-    map { $_, $self->FETCH( $_ ) } $self->field_names;
+    map { $_, $self->FETCH($_) } $self->field_names;
 }
 
-sub is_empty { not $_[0]->SCALAR }
+sub is_empty { not shift->SCALAR }
 
 sub charset {
     my $self = shift;
@@ -152,7 +146,8 @@ sub content_type {
     elsif ( my $content_type = $self->FETCH('Content-Type') ) {
         my ( $media_type, $rest ) = split /;\s*/, $content_type, 2;
         $media_type =~ s/\s+//g;
-        return wantarray ? ( lc $media_type, $rest ) : lc $media_type;
+        $media_type = lc $media_type;
+        return wantarray ? ($media_type, $rest) : $media_type;
     }
     else {
         return q{};
@@ -160,6 +155,7 @@ sub content_type {
 
     return;
 }
+
 
 # constructor
 sub TIEHASH {
@@ -274,8 +270,8 @@ sub DELETE {
 
 sub CLEAR {
     my $self = shift;
-    my $id = refaddr $self;
-    %{ $adaptee_of{$id} } = ( -type => q{} );
+    my $header = $adaptee_of{ refaddr $self };
+    %{ $header } = ( -type => q{} );
 }
 
 sub EXISTS {
@@ -345,8 +341,9 @@ sub field_names {
 }
 
 sub attachment {
-    my $header = $adaptee_of{ refaddr shift };
-    return $header->{-attachment} = shift if @_;
+    my $self = shift;
+    my $header = $adaptee_of{ refaddr $self };
+    $header->{-attachment} = shift if @_;
     $header->{-attachment};
 }
 
@@ -487,8 +484,7 @@ sub set_cookie {
 sub get_cookie {
     my $self   = shift;
     my $name   = shift;
-    my $id     = refaddr $self;
-    my $cookie = $adaptee_of{$id}->{-cookie};
+    my $cookie = $adaptee_of{ refaddr $self }->{-cookie};
 
     my @values = grep {
         ref $_ eq 'CGI::Cookie' and $_->name eq $name
@@ -509,7 +505,7 @@ sub status {
         my $code = shift;
         my $message = HTTP::Status::status_message( $code );
         return $header->{-status} = "$code $message" if $message;
-        carp( qq{Unknown status code "$code" passed to status()} );
+        carp "Unknown status code '$code' passed to status()";
     }
     elsif ( my $status = $header->{-status} ) {
         return substr( $status, 0, 3 );
@@ -519,8 +515,9 @@ sub status {
 }
 
 sub target {
-    my $header = $adaptee_of{ refaddr shift };
-    return $header->{-target} = shift if @_;
+    my $self = shift;
+    my $header = $adaptee_of{ refaddr $self };
+    $header->{-target} = shift if @_;
     $header->{-target};
 }
 
@@ -541,9 +538,7 @@ sub _normalize {
     # add an initial dash
     $field = "-$field";
 
-    return $norm_of{ $field } if exists $norm_of{ $field };
-
-    $field;
+    exists $norm_of{$field} ? $norm_of{$field} : $field;
 }
 
 my %field_name_of = (
@@ -555,21 +550,21 @@ my %field_name_of = (
 sub _denormalize {
     my ( $self, $norm ) = @_;
 
-    unless ( exists $field_name_of{ $norm } ) {
+    unless ( exists $field_name_of{$norm} ) {
         ( my $field = $norm ) =~ s/^-//;
         $field =~ tr/_/-/;
-        return $field_name_of{ $norm } = ucfirst $field;
+        $field_name_of{ $norm } = ucfirst $field;
     }
 
     $field_name_of{ $norm };
-}
+};
 
 sub _date_header_is_fixed {
     my $header = $adaptee_of{ refaddr shift };
     $header->{-expires} || $header->{-cookie} || $header->{-nph};
 }
 
-sub _dump {
+sub dump {
     my $self = shift;
 
     require Data::Dumper;
