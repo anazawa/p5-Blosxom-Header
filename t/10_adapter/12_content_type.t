@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use Blosxom::Header;
-use Test::More tests => 32;
+use Test::More tests => 33;
 
 my %adaptee;
 my $adapter = tie my %adapter, 'Blosxom::Header', \%adaptee;
