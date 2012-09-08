@@ -15,7 +15,7 @@ BEGIN {
     *exists = \&EXISTS;
 }
 
-our $VERSION = '0.06001';
+our $VERSION = '0.06002';
 
 our @EXPORT_OK = qw(
     header_get    header_set  header_exists
