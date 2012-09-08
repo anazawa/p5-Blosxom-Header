@@ -11,8 +11,8 @@ use List::Util qw/first/;
 use Scalar::Util qw/refaddr/;
 
 BEGIN {
-    *clear = \&CLEAR;    *exists = \&EXISTS;
-    *new   = \&instance; *type   = \&content_type;
+    *clear  = \&CLEAR;
+    *exists = \&EXISTS;
 }
 
 our $VERSION = '0.06001';
@@ -47,6 +47,8 @@ sub instance {
 
     croak q{$blosxom::header hasn't been initialized yet};
 }
+
+sub new { shift->instance }
 
 sub has_instance { $instance }
 
@@ -122,16 +124,18 @@ sub is_empty { not shift->SCALAR }
 sub charset {
     my $self = shift;
 
-    if ( my $content_type = $self->FETCH('Content-Type') ) {
-        if ( my ($values) = split_header_words($content_type) ) {
-            splice @{ $values }, 0, 2;
-            my %param = @{ $values };
-            if ( my $charset = $param{charset} ) {
-                $charset =~ s/^\s+//;
-                $charset =~ s/\s+$//;
-                return uc $charset if $charset;
-            }
-        }
+    my %param = do {
+        my $content_type = $self->FETCH( 'Content-Type' );
+        my ( $param ) = split_header_words( $content_type );
+        return unless $param;
+        splice @{ $param }, 0, 2;
+        @{ $param };
+    };
+
+    if ( my $charset = $param{charset} ) {
+        $charset =~ s/^\s+//;
+        $charset =~ s/\s+$//;
+        return uc $charset;
     }
 
     return;
@@ -141,20 +145,24 @@ sub content_type {
     my $self = shift;
 
     if ( @_ ) {
-        $self->STORE( Content_Type => shift );
-    }
-    elsif ( my $content_type = $self->FETCH('Content-Type') ) {
-        my ( $media_type, $rest ) = split /;\s*/, $content_type, 2;
-        $media_type =~ s/\s+//g;
-        $media_type = lc $media_type;
-        return wantarray ? ($media_type, $rest) : $media_type;
-    }
-    else {
-        return q{};
+        my $content_type = shift;
+        $self->STORE( Content_Type => $content_type );
+        return;
     }
 
-    return;
+    my ( $media_type, $rest ) = do {
+        my $content_type = $self->FETCH( 'Content-Type' );
+        return q{} unless defined $content_type;
+        split /;\s*/, $content_type, 2;
+    };
+
+    $media_type =~ s/\s+//g;
+    $media_type = lc $media_type;
+
+    wantarray ? ($media_type, $rest) : $media_type;
 }
+
+sub type { shift->content_type( @_ ) }
 
 my %norm_of = (
     -attachment => q{},        -charset       => q{},
@@ -260,10 +268,10 @@ sub STORE {
         return carp( 'The Date header is fixed' );
     }
     elsif ( $norm eq '-content_type' ) {
-        my ( $values ) = split_header_words( $value );
-        my @media_type = splice @{ $values }, 0, 2;
-        my %param = @{ $values };
-        $header->{-charset} = $param{charset} ? delete $param{charset} : q{};
+        my ( $params ) = split_header_words( $value );
+        my @media_type = splice @{ $params }, 0, 2;
+        my %param = @{ $params };
+        $header->{-charset} = delete $param{charset} || q{};
         $header->{-type} = join_header_words( @media_type, %param );
         return;
     }
@@ -343,9 +351,9 @@ sub UNTIE {
 
 sub DESTROY {
     my $self = shift;
-    my $id = refaddr $self;
-    delete $adapter_of{ $id };
-    delete $adaptee_of{ $id };
+    my $this = refaddr $self;
+    delete $adapter_of{ $this };
+    delete $adaptee_of{ $this };
     return;
 }
 
@@ -620,7 +628,11 @@ Blosxom::Header - Object representing CGI response headers
 
 This module provides Blosxom plugin developers
 with an interface to handle L<CGI> response headers.
-Blosxom starts speaking HTTP at last.
+This class represents a global variable C<$blosxom::header>,
+and so it can have only one instance.
+Since the variable is a reference to a hash, each header field is
+restricted to appear only once except the C<Set-Cookie> header.
+In other words, the instance behaves like a hash rather than an array.
 
 =head2 BACKGROUND
 
@@ -894,7 +906,9 @@ If the given header wasn't defined then C<undef> would be returned.
 
 =over 4
 
-=item $header->attachment
+=item $filename = $header->attachment
+
+=item $header->attachment( $filename )
 
 Can be used to turn the page into an attachment.
 Represents suggested name for the saved file.
@@ -1052,7 +1066,8 @@ A shortcut for
 Each header field is restricted to appear only once,
 except for the Set-Cookie header.
 That's why C<$header> can't C<push()> header fields unlike L<HTTP::Headers>
-objects. This feature originates from how C<CGI::header()> behaves.
+objects. In other words, C<CGI::header()> behaves like a hash rather than
+an array.
 
 =head2 THE P3P HEADER
 
@@ -1096,13 +1111,7 @@ You attempted to create a Blosxom::Header object
 before the variable was initialized.
 See C<< Blosxom::Header->is_initialized() >>.
 
-=item Useless use of %s with no values
-
-You used the C<push_cookie()> or C<push_p3p()> method with no argument
-apart from the array,
-like C<< $header->push_cookie() >> or C<< $header->push_p3p() >>.
-
-=item Unknown status code "%d%d%d" passed to status()
+=item Unknown status code '%d%d%d' passed to status()
 
 The given status code is unknown to L<HTTP::Status>.
 

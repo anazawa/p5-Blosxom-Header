@@ -4,15 +4,10 @@ use Test::More tests => 13;
 use Test::Warn;
 use Test::Exception;
 
-{
-    package blosxom;
-    our $header;
-}
-
-{
+subtest 'instance() throws an execption' => sub {
     my $expected = qr{^\$blosxom::header hasn't been initialized yet};
     throws_ok { Blosxom::Header->new } $expected;
-}
+};
 
 # initialize
 my %header;
