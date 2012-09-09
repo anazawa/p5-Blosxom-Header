@@ -164,44 +164,6 @@ sub content_type {
 
 sub type { shift->content_type( @_ ) }
 
-my %norm_of = (
-    -attachment => q{},        -charset       => q{},
-    -cookie     => q{},        -nph           => q{},
-    -set_cookie => q{-cookie}, -target        => q{},
-    -type       => q{},        -window_target => q{-target},
-);
-
-my $normalize = sub {
-    my $self  = shift;
-    my $field = lc shift;
-
-    # transliterate dashes into underscores
-    $field =~ tr{-}{_};
-
-    # add an initial dash
-    $field = "-$field";
-
-    exists $norm_of{$field} ? $norm_of{ $field } : $field;
-};
-
-my %field_name_of = (
-    -attachment => 'Content-Disposition', -cookie => 'Set-Cookie',
-    -p3p        => 'P3P',                 -target => 'Window-Target',
-    -type       => 'Content-Type',
-);
-
-my $denormalize = sub {
-    my ( $self, $norm ) = @_;
-
-    unless ( exists $field_name_of{$norm} ) {
-        ( my $field = $norm ) =~ s/^-//;
-        $field =~ tr/_/-/;
-        $field_name_of{ $norm } = ucfirst $field;
-    }
-
-    $field_name_of{ $norm };
-};
-
 # constructor
 sub TIEHASH {
     my $self = bless \do { my $anon_scalar }, shift;
@@ -211,7 +173,7 @@ sub TIEHASH {
 
 sub FETCH {
     my $self   = shift;
-    my $norm   = $self->$normalize( shift );
+    my $norm   = $self->_normalize( shift );
     my $header = $adaptee_of{ refaddr $self };
 
     if ( $norm eq '-content_type' ) {
@@ -260,7 +222,7 @@ sub FETCH {
 
 sub STORE {
     my $self   = shift;
-    my $norm   = $self->$normalize( shift );
+    my $norm   = $self->_normalize( shift );
     my $value  = shift;
     my $header = $adaptee_of{ refaddr $self };
 
@@ -293,7 +255,7 @@ sub STORE {
 sub DELETE {
     my $self    = shift;
     my $field   = shift;
-    my $norm    = $self->$normalize( $field );
+    my $norm    = $self->_normalize( $field );
     my $deleted = defined wantarray && $self->FETCH( $field );
     my $header  = $adaptee_of{ refaddr $self };
 
@@ -317,11 +279,12 @@ sub CLEAR {
     my $self = shift;
     my $header = $adaptee_of{ refaddr $self };
     %{ $header } = ( -type => q{} );
+    return;
 }
 
 sub EXISTS {
     my $self   = shift;
-    my $norm   = $self->$normalize( shift );
+    my $norm   = $self->_normalize( shift );
     my $header = $adaptee_of{ refaddr $self };
 
     if ( $norm eq '-content_type' ) {
@@ -377,7 +340,7 @@ sub field_names {
     # not ordered
     my $type = delete @header{qw/-charset -type/};
     while ( my ($norm, $value) = CORE::each %header ) {
-        push @fields, $self->$denormalize( $norm ) if $value;
+        push @fields, $self->_denormalize( $norm ) if $value;
     }
 
     push @fields, 'Content-Type' if !defined $type or $type ne q{};
@@ -475,22 +438,20 @@ sub p3p_tags {
 }
 
 sub push_p3p_tags {
-    my ( $self, @tags ) = @_;
+    my $self   = shift;
+    my @tags   = @_;
+    my $header = $adaptee_of{ refaddr $self };
 
-    if ( @tags ) {
-        my $header = $adaptee_of{ refaddr $self };
+    return unless @tags;
 
-        if ( my $tags = $header->{-p3p} ) {
-            return push @{ $tags }, @tags if ref $tags eq 'ARRAY';
-            unshift @tags, $tags;
-        }
-
-        $header->{-p3p} = @tags > 1 ? \@tags : $tags[0];
-
-        return scalar @tags;
+    if ( my $tags = $header->{-p3p} ) {
+        return push @{ $tags }, @tags if ref $tags eq 'ARRAY';
+        unshift @tags, $tags;
     }
 
-    return;
+    $header->{-p3p} = @tags > 1 ? \@tags : $tags[0];
+
+    scalar @tags;
 }
 
 sub set_cookie {
@@ -566,8 +527,47 @@ sub target {
     $header->{-target};
 }
 
-*_normalize   = $normalize;
-*_denormalize = $denormalize;
+{
+    my %norm_of = (
+        -attachment => q{},        -charset       => q{},
+        -cookie     => q{},        -nph           => q{},
+        -set_cookie => q{-cookie}, -target        => q{},
+        -type       => q{},        -window_target => q{-target},
+    );
+
+    sub _normalize {
+        my $self  = shift;
+        my $field = lc shift;
+
+        # transliterate dashes into underscores
+        $field =~ tr{-}{_};
+
+        # add an initial dash
+        $field = "-$field";
+
+        exists $norm_of{$field} ? $norm_of{ $field } : $field;
+    }
+}
+
+{
+    my %field_name_of = (
+        -attachment => 'Content-Disposition', -cookie => 'Set-Cookie',
+        -p3p        => 'P3P',                 -target => 'Window-Target',
+        -type       => 'Content-Type',
+    );
+
+    sub _denormalize {
+        my ( $self, $norm ) = @_;
+
+        unless ( exists $field_name_of{$norm} ) {
+            ( my $field = $norm ) =~ s/^-//;
+            $field =~ tr/_/-/;
+            $field_name_of{ $norm } = ucfirst $field;
+        }
+
+        $field_name_of{ $norm };
+    }
+}
 
 sub _date_header_is_fixed {
     my $header = $adaptee_of{ refaddr shift };
