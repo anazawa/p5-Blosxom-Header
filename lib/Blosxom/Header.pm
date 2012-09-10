@@ -799,6 +799,20 @@ you can omit calling C<as_hashref()> method from the above operations:
   my $deleted = delete $header->{Foo};
   my $bool    = exists $header->{Foo};
 
+In this context, C<set()>, C<get()> and C<delete()> methods can be considered
+to behave like hash slices.
+
+  $header->set( Foo => 'bar', Bar => 'baz' );
+  my @values = $header->get( 'Foo', 'Bar' );
+  my @deleted = $header->delete( 'Foo', 'Bar' );
+
+cf.
+
+  my %fields = ( Foo => 'bar', Bar => 'baz' );
+  @{ $header }{ keys %fields } = values %fields;
+  my @values = @{ $header }{ 'Foo', 'Bar' };
+  my @deleted = delete @{ $header }{ 'Foo', 'Bar' };
+  
 NOTE: You can't iterate over C<$header> using C<CORE::each()>, C<CORE::keys()>
 or C<CORE::values()>. Use C<< $header->field_names >> or C<< $header->each >>
 instead.
@@ -836,7 +850,11 @@ Overwrites existent cookie.
 Returns a L<CGI::Cookie> object whose C<name()> is stringwise equal to C<$name>.
 
   my $id = $header->get_cookie( 'ID' ); # CGI::Cookie object
-  my $value = $id->value; # 123456
+
+  my $value   = $id->value;   # '123456'
+  my $path    = $id->path;    # '/'
+  my $domain  = $id->domain;  # '.example.com'
+  my $expires = $id->expires; # 'Thu, 25 Apr 1999 00:40:33 GMT'
 
 =back
 
