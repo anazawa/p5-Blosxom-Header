@@ -1061,6 +1061,26 @@ A shortcut for
 
 =back
 
+=head1 EXAMPLES
+
+The following is a Blosxom plugin which just adds the Content-Length header
+to CGI response headers.
+
+  package content_length;
+  use strict;
+  use warnings;
+  use Blosxom::Header;
+
+  sub start { !$blosxom::static_entries }
+
+  sub last {
+      my $header = Blosxom::Header->instance;
+      $header->set( Content_Length => length $blosxom::output );
+      return;
+  }
+
+  1;
+
 =head1 LIMITATIONS
 
 Each header field is restricted to appear only once,
