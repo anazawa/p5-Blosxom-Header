@@ -50,10 +50,18 @@ use Scalar::Util qw/refaddr/;
     }
 
     sub attachment {
-        my $self = shift;
+        my $self   = shift;
         my $header = $adaptee_of{ refaddr $self };
-        $header->{-attachment} = shift if @_;
-        $header->{-attachment};
+
+        if ( @_ ) {
+            $header->{-attachment} = shift;
+            delete $header->{-content_disposition};
+        }
+        else {
+            return $header->{-attachment};
+        }
+
+        return;
     }
 
     sub date {
@@ -123,13 +131,6 @@ use Scalar::Util qw/refaddr/;
         $header->{-p3p} = @tags > 1 ? \@tags : $tags[0];
 
         scalar @tags;
-    }
-
-    sub target {
-        my $self = shift;
-        my $header = $adaptee_of{ refaddr $self };
-        $header->{-target} = shift if @_;
-        $header->{-target};
     }
 
     # constructor

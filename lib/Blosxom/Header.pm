@@ -86,9 +86,10 @@ sub delete {
     return;
 }
 
-sub clear    { shift->CLEAR        }
-sub exists   { shift->EXISTS( @_ ) }
-sub is_empty { not shift->SCALAR   }
+sub exists { shift->EXISTS( @_ ) }
+
+sub clear    { shift->CLEAR      }
+sub is_empty { not shift->SCALAR }
 
 sub flatten {
     my $self = shift;
@@ -244,6 +245,12 @@ sub status {
     }
 
     return;
+}
+
+sub target {
+    my $self = shift;
+    $self->STORE( Window_Target => shift ) if @_;
+    $self->FETCH( 'Window-Target' );
 }
 
 1;
