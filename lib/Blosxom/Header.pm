@@ -2,7 +2,7 @@ package Blosxom::Header;
 use 5.008_009;
 use strict;
 use warnings;
-use parent 'Blosxom::Header::Entity';
+use parent qw/Blosxom::Header::Entity/;
 use Exporter 'import';
 use Carp qw/carp croak/;
 
@@ -40,7 +40,10 @@ sub header_iter   { __PACKAGE__->instance->each( @_ )   }
 
 sub is_initialized { ref $blosxom::header eq 'HASH' }
 
-sub new { shift->instance }
+sub new {
+    my $class = shift;
+    croak "private method 'new' called for $class";
+}
 
 sub get {
     my ( $self, @fields ) = @_;

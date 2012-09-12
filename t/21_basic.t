@@ -6,14 +6,14 @@ use Test::Exception;
 
 subtest 'instance() throws an execption' => sub {
     my $expected = qr{^Blosxom::Header hasn't been initialized yet};
-    throws_ok { Blosxom::Header->new } $expected;
+    throws_ok { Blosxom::Header->instance } $expected;
 };
 
 # initialize
 my %header;
 $blosxom::header = \%header;
 
-my $header = Blosxom::Header->new;
+my $header = Blosxom::Header->instance;
 ok $header->isa( 'Blosxom::Header' );
 can_ok $header, qw(
     clear delete exists field_names get set

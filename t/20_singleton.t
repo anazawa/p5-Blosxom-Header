@@ -1,7 +1,8 @@
 use strict;
 use warnings;
 use Blosxom::Header;
-use Test::More tests => 5;
+use Test::More tests => 6;
+use Test::Exception;
 
 {
     package blosxom;
@@ -9,6 +10,9 @@ use Test::More tests => 5;
 }
 
 my $class = 'Blosxom::Header';
+
+my $expected = qr{^private method 'new' called for Blosxom::Header};
+throws_ok { Blosxom::Header->new } $expected, 'new() is private method';
 
 ok !$class->has_instance, "no $class instance yet";
 

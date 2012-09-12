@@ -3,7 +3,6 @@ use strict;
 use warnings;
 use overload '%{}' => 'as_hashref', 'fallback' => 1;
 use Carp qw/carp/;
-use HTTP::Date qw/time2str str2time/;
 use List::Util qw/first/;
 use Scalar::Util qw/refaddr/;
 
@@ -61,7 +60,8 @@ use Scalar::Util qw/refaddr/;
         }
         elsif ( $norm eq '-date' ) {
             if ( $self->_date_header_is_fixed ) {
-                return time2str( time );
+                require HTTP::Date;
+                return HTTP::Date::time2str( time );
             }
         }
         elsif ( $norm eq '-p3p' ) {
@@ -193,7 +193,7 @@ use Scalar::Util qw/refaddr/;
 
         # not ordered
         my $type = delete @header{qw/-charset -type/};
-        while ( my ($norm, $value) = CORE::each %header ) {
+        while ( my ($norm, $value) = each %header ) {
             push @fields, $self->_denormalize( $norm ) if $value;
         }
 

@@ -23,7 +23,7 @@ sub as_string {
 
 package main;
 
-my $header = Blosxom::Header->new;
+my $header = Blosxom::Header->instance;
 is $header->as_string, header( $blosxom::header );
 
 %header = (
