@@ -74,38 +74,6 @@ use Scalar::Util qw/refaddr/;
         return;
     }
 
-    sub expires {
-        my $self   = shift;
-        my $header = $adaptee_of{ refaddr $self };
-
-        require CGI::Util;
-
-        if ( @_ ) {
-            $header->{-expires} = shift;
-        }
-        elsif ( my $expires = $header->{-expires} ) {
-            my $date = CGI::Util::expires( $expires );
-            return str2time( $date );
-        }
-
-        return;
-    }
-
-    sub last_modified {
-        my $self   = shift;
-        my $time   = shift;
-        my $header = $adaptee_of{ refaddr $self };
-
-        if ( defined $time ) {
-            $header->{-last_modified} = time2str( $time );
-        }
-        elsif ( my $date = $header->{-last_modified} ) {
-            return str2time( $date );
-        }
-
-        return;
-    }
-
     sub nph {
         my $self   = shift;
         my $header = $adaptee_of{ refaddr $self };
@@ -155,72 +123,6 @@ use Scalar::Util qw/refaddr/;
         $header->{-p3p} = @tags > 1 ? \@tags : $tags[0];
 
         scalar @tags;
-    }
-
-    sub set_cookie {
-        my $self   = shift;
-        my $name   = shift;
-        my $value  = shift;
-        my $header = $adaptee_of{ refaddr $self };
-
-        require CGI::Cookie;
-
-        my $new_cookie = CGI::Cookie->new(do {
-            my %args = ref $value eq 'HASH' ? %{$value} : (value => $value);
-            $args{name} = $name;
-            \%args;
-        });
-
-        my @cookies;
-        if ( my $cookies = $header->{-cookie} ) {
-            @cookies = ref $cookies eq 'ARRAY' ? @{ $cookies } : $cookies;
-            for my $cookie ( @cookies ) {
-                next unless ref $cookie eq 'CGI::Cookie';
-                next unless $cookie->name eq $name;
-                $cookie = $new_cookie;
-                undef $new_cookie;
-                last;
-            }
-        }
-
-        push @cookies, $new_cookie if $new_cookie;
-
-        $header->{-cookie} = @cookies > 1 ? \@cookies : $cookies[0];
-
-        return;
-    }
-
-    sub get_cookie {
-        my $self   = shift;
-        my $name   = shift;
-        my $cookie = $adaptee_of{ refaddr $self }->{-cookie};
-
-        my @values = grep {
-            ref $_ eq 'CGI::Cookie' and $_->name eq $name
-        } (
-            ref $cookie eq 'ARRAY' ? @{ $cookie } : $cookie,
-        );
-
-        wantarray ? @values : $values[0];
-    }
-
-    sub status {
-        my $self = shift;
-        my $header = $adaptee_of{ refaddr $self };
-
-        require HTTP::Status;
-
-        if ( @_ ) {
-            my $code = shift;
-            my $message = HTTP::Status::status_message( $code );
-            return $header->{-status} = "$code $message" if $message;
-            carp "Unknown status code '$code' passed to status()";
-        }
-        elsif ( my $status = $header->{-status} ) {
-            return substr( $status, 0, 3 );
-        }
-
-        return;
     }
 
     sub target {

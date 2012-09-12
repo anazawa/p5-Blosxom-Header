@@ -3,8 +3,9 @@ use 5.008_009;
 use strict;
 use warnings;
 use parent 'Blosxom::Header::Entity';
-use Exporter 'import';
 use Carp qw/carp croak/;
+use Exporter 'import';
+use HTTP::Date qw/time2str str2time/;
 
 our $VERSION = '0.06002';
 
@@ -154,6 +155,97 @@ sub content_type {
 }
 
 BEGIN { *type = \&content_type }
+
+sub last_modified {
+    my ( $self, $time ) = @_;
+
+    if ( defined $time ) {
+        $self->STORE( Last_Modified => time2str($time) );
+    }
+    elsif ( my $date = $self->FETCH('Last-Modified') ) {
+        return str2time( $date );
+    }
+
+    return;
+}
+
+sub expires {
+    my $self = shift;
+
+    require CGI::Util;
+
+    if ( @_ ) {
+        $self->STORE( Expires => shift );
+    }
+    elsif ( my $expires = $self->FETCH('Expires') ) {
+        my $date = CGI::Util::expires( $expires );
+        return str2time( $date );
+    }
+
+    return;
+}
+
+sub set_cookie {
+    my ( $self, $name, $value ) = @_;
+
+    require CGI::Cookie;
+
+    my $new_cookie = CGI::Cookie->new(do {
+        my %args = ref $value eq 'HASH' ? %{ $value } : ( value => $value );
+        $args{name} = $name;
+        \%args;
+    });
+
+    my @cookies;
+    if ( my $cookies = $self->FETCH('Set-Cookie') ) {
+        @cookies = ref $cookies eq 'ARRAY' ? @{ $cookies } : $cookies;
+        for my $cookie ( @cookies ) {
+            next unless ref $cookie eq 'CGI::Cookie';
+            next unless $cookie->name eq $name;
+            $cookie = $new_cookie;
+            undef $new_cookie;
+            last;
+        }
+    }
+
+    push @cookies, $new_cookie if $new_cookie;
+
+    $self->STORE( Set_Cookie => @cookies > 1 ? \@cookies : $cookies[0] );
+
+    return;
+}
+
+sub get_cookie {
+    my $self   = shift;
+    my $name   = shift;
+    my $cookie = $self->FETCH( 'Set-Cookie' );
+
+    my @values = grep {
+        ref $_ eq 'CGI::Cookie' and $_->name eq $name
+    } (
+        ref $cookie eq 'ARRAY' ? @{ $cookie } : $cookie,
+    );
+
+    wantarray ? @values : $values[0];
+}
+
+sub status {
+    my $self = shift;
+
+    require HTTP::Status;
+
+    if ( @_ ) {
+        my $code = shift;
+        my $message = HTTP::Status::status_message( $code );
+        return $self->STORE( Status => "$code $message" ) if $message;
+        carp "Unknown status code '$code' passed to status()";
+    }
+    elsif ( my $status = $self->FETCH('Status') ) {
+        return substr( $status, 0, 3 );
+    }
+
+    return;
+}
 
 1;
 
