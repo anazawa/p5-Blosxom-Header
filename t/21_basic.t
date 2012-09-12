@@ -5,7 +5,7 @@ use Test::Warn;
 use Test::Exception;
 
 subtest 'instance() throws an execption' => sub {
-    my $expected = qr{^\$blosxom::header hasn't been initialized yet};
+    my $expected = qr{^Blosxom::Header hasn't been initialized yet};
     throws_ok { Blosxom::Header->new } $expected;
 };
 
