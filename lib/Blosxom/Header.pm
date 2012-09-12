@@ -3,9 +3,8 @@ use 5.008_009;
 use strict;
 use warnings;
 use parent 'Blosxom::Header::Entity';
-use Carp qw/carp croak/;
 use Exporter 'import';
-use HTTP::Date qw/time2str str2time/;
+use Carp qw/carp croak/;
 
 our $VERSION = '0.06002';
 
@@ -133,7 +132,7 @@ sub content_type {
 
     if ( @_ ) {
         my $content_type = shift;
-        $self->STORE( Content_Type => $content_type );
+        $self->STORE( 'Content-Type' => $content_type );
         return;
     }
 
@@ -151,14 +150,19 @@ sub content_type {
 
 sub type { shift->content_type( @_ ) }
 
-sub last_modified {
-    my ( $self, $time ) = @_;
+sub date          { shift->_date_header( 'Date',          @_ ) }
+sub last_modified { shift->_date_header( 'Last-Modified', @_ ) }
+
+sub _date_header {
+    my ( $self, $field, $time ) = @_;
+
+    require HTTP::Date;
 
     if ( defined $time ) {
-        $self->STORE( Last_Modified => time2str($time) );
+        $self->STORE( $field => HTTP::Date::time2str($time) );
     }
-    elsif ( my $date = $self->FETCH('Last-Modified') ) {
-        return str2time( $date );
+    elsif ( my $date = $self->FETCH($field) ) {
+        return HTTP::Date::str2time( $date );
     }
 
     return;
@@ -167,6 +171,7 @@ sub last_modified {
 sub expires {
     my $self = shift;
 
+    require HTTP::Date;
     require CGI::Util;
 
     if ( @_ ) {
@@ -174,7 +179,7 @@ sub expires {
     }
     elsif ( my $expires = $self->FETCH('Expires') ) {
         my $date = CGI::Util::expires( $expires );
-        return str2time( $date );
+        return HTTP::Date::str2time( $date );
     }
 
     return;
@@ -205,7 +210,7 @@ sub set_cookie {
 
     push @cookies, $new_cookie if $new_cookie;
 
-    $self->STORE( Set_Cookie => @cookies > 1 ? \@cookies : $cookies[0] );
+    $self->STORE( 'Set-Cookie' => @cookies > 1 ? \@cookies : $cookies[0] );
 
     return;
 }
@@ -244,7 +249,7 @@ sub status {
 
 sub target {
     my $self = shift;
-    $self->STORE( Window_Target => shift ) if @_;
+    $self->STORE( 'Window-Target' => shift ) if @_;
     $self->FETCH( 'Window-Target' );
 }
 

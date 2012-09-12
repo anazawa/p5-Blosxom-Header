@@ -222,24 +222,6 @@ use Scalar::Util qw/refaddr/;
         return;
     }
 
-    sub date {
-        my $self   = shift;
-        my $time   = shift;
-        my $header = $adaptee_of{ refaddr $self };
-
-        if ( defined $time ) {
-            $self->STORE( Date => time2str($time) );
-        }
-        elsif ( $self->_date_header_is_fixed ) {
-            return time;
-        }
-        elsif ( my $date = $header->{-date} ) {
-            return str2time( $date );
-        }
-
-        return;
-    }
-
     sub nph {
         my $self   = shift;
         my $header = $adaptee_of{ refaddr $self };
