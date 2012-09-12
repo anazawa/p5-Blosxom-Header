@@ -41,7 +41,7 @@ sub header_iter   { __PACKAGE__->instance->each( @_ )   }
 
 sub is_initialized { ref $blosxom::header eq 'HASH' }
 
-BEGIN { *new = \&instance }
+sub new { shift->instance }
 
 sub get {
     my ( $self, @fields ) = @_;
@@ -86,10 +86,9 @@ sub delete {
     return;
 }
 
-sub clear  { shift->CLEAR        }
-sub exists { shift->EXISTS( @_ ) }
-
-sub is_empty { not shift->SCALAR }
+sub clear    { shift->CLEAR        }
+sub exists   { shift->EXISTS( @_ ) }
+sub is_empty { not shift->SCALAR   }
 
 sub flatten {
     my $self = shift;
@@ -154,7 +153,7 @@ sub content_type {
     wantarray ? ($media_type, $rest) : $media_type;
 }
 
-BEGIN { *type = \&content_type }
+sub type { shift->content_type( @_ ) }
 
 sub last_modified {
     my ( $self, $time ) = @_;

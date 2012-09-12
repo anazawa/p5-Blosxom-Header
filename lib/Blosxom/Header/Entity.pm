@@ -301,7 +301,7 @@ use Scalar::Util qw/refaddr/;
         local $Data::Dumper::Indent = 1;
 
         my %self = (
-            adaptee => $self->adaptee,
+            adaptee => $adaptee_of{ refaddr $self },
             adapter => { $self->flatten },
         );
 
