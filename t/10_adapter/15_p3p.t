@@ -20,23 +20,12 @@ is delete $adapter{P3P}, 'policyref="/w3c/p3p.xml", CP="CAO"';
 
 %adaptee = ();
 $adapter->p3p_tags( 'CAO DSP LAW CURa' );
-is_deeply \%adaptee, { -p3p => [qw/CAO DSP LAW CURa/] };
+#is_deeply \%adaptee, { -p3p => [qw/CAO DSP LAW CURa/] };
+is_deeply \%adaptee, { -p3p => 'CAO DSP LAW CURa' };
 
 %adaptee = ();
 $adapter->p3p_tags( qw/CAO DSP LAW CURa/ );
 is_deeply \%adaptee, { -p3p => [qw/CAO DSP LAW CURa/] };
-
-#%adaptee = ( -p3p => [qw/CAO DSP LAW CURa/] );
-#is $adapter->p3p_tags, 'CAO';
-#my @got = $adapter->p3p_tags;
-#my @expected = qw( CAO DSP LAW CURa );
-#is_deeply \@got, \@expected;
-
-#%adaptee = ( -p3p => [ 'CAO DSP', 'LAW CURa' ] );
-#is $adapter->p3p_tags, 'CAO';
-#@got = $adapter->p3p_tags;
-#@expected = qw( CAO DSP LAW CURa );
-#is_deeply \@got, \@expected;
 
 %adaptee = ( -p3p => 'CAO DSP LAW CURa' );
 is $adapter->p3p_tags, 'CAO';

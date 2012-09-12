@@ -6,7 +6,6 @@ use overload '%{}' => 'as_hashref', 'fallback' => 1;
 use Exporter 'import';
 use Carp qw/croak carp/;
 use HTTP::Date qw/time2str str2time/;
-use HTTP::Headers::Util qw/split_header_words join_header_words/;
 use List::Util qw/first/;
 use Scalar::Util qw/refaddr/;
 
@@ -124,12 +123,14 @@ sub is_empty { not shift->SCALAR }
 sub charset {
     my $self = shift;
 
+    require HTTP::Headers::Util;
+
     my %param = do {
-        my $content_type = $self->FETCH( 'Content-Type' );
-        my ( $param ) = split_header_words( $content_type );
-        return unless $param;
-        splice @{ $param }, 0, 2;
-        @{ $param };
+        my $type = $self->FETCH( 'Content-Type' );
+        my ( $params ) = HTTP::Headers::Util::split_header_words( $type );
+        return unless $params;
+        splice @{ $params }, 0, 2;
+        @{ $params };
     };
 
     if ( my $charset = $param{charset} ) {
@@ -230,11 +231,8 @@ sub STORE {
         return carp( 'The Date header is fixed' );
     }
     elsif ( $norm eq '-content_type' ) {
-        my ( $params ) = split_header_words( $value );
-        my @media_type = splice @{ $params }, 0, 2;
-        my %param = @{ $params };
-        $header->{-charset} = delete $param{charset} || q{};
-        $header->{-type} = join_header_words( @media_type, %param );
+        $header->{-charset} = q{};
+        $header->{-type} = $value;
         return;
     }
     elsif ( $norm eq '-content_disposition' ) {
@@ -426,7 +424,7 @@ sub p3p_tags {
     my $header = $adaptee_of{ refaddr $self };
 
     if ( @_ ) {
-        my @tags = @_ > 1 ? @_ : split / /, shift;
+        my @tags = @_ > 1 ? @_ : shift;
         $header->{-p3p} = @tags > 1 ? \@tags : $tags[0];
     }
     elsif ( my $tags = $header->{-p3p} ) {

@@ -99,18 +99,18 @@ subtest 'is_empty()' => sub {
 };
 
 subtest 'flatten()' => sub {
-    %header = ();
-    my @got = $header->flatten;
-    my @expected = ( 'Content-Type', 'text/html; charset=ISO-8859-1' );
-    is_deeply \@got, \@expected;
-
-    %header = ( -p3p => [ 'foo', 'bar' ] );
-    @got = $header->flatten;
-    @expected = (
-        'P3P',          'policyref="/w3c/p3p.xml", CP="foo bar"',
-        'Content-Type', 'text/html; charset=ISO-8859-1',
+    %header = (
+        -status         => '304 Not Modified',
+        -content_length => 12345,
     );
-    is_deeply \@got, \@expected;
+
+    my @expected = (
+        'Status',         '304 Not Modified',
+        'Content-length', '12345',
+        'Content-Type',   'text/html; charset=ISO-8859-1',
+    );
+
+    is_deeply [ $header->flatten ], \@expected;
 };
 
 subtest 'as_hashref()' => sub {
