@@ -21,119 +21,6 @@ use Scalar::Util qw/refaddr/;
 
     sub as_hashref { $adapter_of{ refaddr shift } }
 
-    sub field_names {
-        my $self   = shift;
-        my $header = $adaptee_of{ refaddr $self };
-        my %header = %{ $header }; # copy
-
-        my @fields;
-
-        push @fields, 'Status'        if delete $header{-status};
-        push @fields, 'Window-Target' if delete $header{-target};
-        push @fields, 'P3P'           if delete $header{-p3p};
-
-        push @fields, 'Set-Cookie' if my $cookie  = delete $header{-cookie};
-        push @fields, 'Expires'    if my $expires = delete $header{-expires};
-        push @fields, 'Date' if delete $header{-nph} or $cookie or $expires;
-
-        push @fields, 'Content-Disposition' if delete $header{-attachment};
-
-        # not ordered
-        my $type = delete @header{qw/-charset -type/};
-        while ( my ($norm, $value) = CORE::each %header ) {
-            push @fields, $self->_denormalize( $norm ) if $value;
-        }
-
-        push @fields, 'Content-Type' if !defined $type or $type ne q{};
-
-        @fields;
-    }
-
-    sub attachment {
-        my $self   = shift;
-        my $header = $adaptee_of{ refaddr $self };
-
-        if ( @_ ) {
-            $header->{-attachment} = shift;
-            delete $header->{-content_disposition};
-        }
-        else {
-            return $header->{-attachment};
-        }
-
-        return;
-    }
-
-    sub date {
-        my $self   = shift;
-        my $time   = shift;
-        my $header = $adaptee_of{ refaddr $self };
-
-        if ( defined $time ) {
-            $self->STORE( Date => time2str($time) );
-        }
-        elsif ( $self->_date_header_is_fixed ) {
-            return time;
-        }
-        elsif ( my $date = $header->{-date} ) {
-            return str2time( $date );
-        }
-
-        return;
-    }
-
-    sub nph {
-        my $self   = shift;
-        my $header = $adaptee_of{ refaddr $self };
-    
-        if ( @_ ) {
-            my $nph = shift;
-            delete $header->{-date} if $nph;
-            $header->{-nph} = $nph;
-        }
-        else {
-            return $header->{-nph};
-        }
-
-        return;
-    }
-
-    sub p3p_tags {
-        my $self   = shift;
-        my $header = $adaptee_of{ refaddr $self };
-
-        if ( @_ ) {
-            $header->{-p3p} = @_ > 1 ? [ @_ ] : $_[0];
-        }
-        elsif ( my $tags = $header->{-p3p} ) {
-            my @tags = ref $tags eq 'ARRAY' ? @{ $tags } : split / /, $tags;
-            return wantarray ? @tags : $tags[0];
-        }
-
-        return;
-    }
-
-    sub push_p3p_tags {
-        my $self   = shift;
-        my @tags   = @_;
-        my $header = $adaptee_of{ refaddr $self };
-
-        unless ( @tags ) {
-            carp 'Useless use of push_p3p_tags() with no values';
-            return;
-        }
-
-        if ( my $tags = $header->{-p3p} ) {
-            return push @{ $tags }, @tags if ref $tags eq 'ARRAY';
-            unshift @tags, $tags;
-        }
-
-        $header->{-p3p} = @tags > 1 ? \@tags : $tags[0];
-
-        scalar @tags;
-    }
-
-    # constructor
     sub TIEHASH {
         my ( $class, $adaptee ) = @_;
         my $self = bless \do { my $anon_scalar }, $class;
@@ -271,6 +158,118 @@ use Scalar::Util qw/refaddr/;
         my $self = shift;
         my $header = $adaptee_of{ refaddr $self };
         !defined $header->{-type} || first { $_ } values %{ $header };
+    }
+
+    sub field_names {
+        my $self   = shift;
+        my $header = $adaptee_of{ refaddr $self };
+        my %header = %{ $header }; # copy
+
+        my @fields;
+
+        push @fields, 'Status'        if delete $header{-status};
+        push @fields, 'Window-Target' if delete $header{-target};
+        push @fields, 'P3P'           if delete $header{-p3p};
+
+        push @fields, 'Set-Cookie' if my $cookie  = delete $header{-cookie};
+        push @fields, 'Expires'    if my $expires = delete $header{-expires};
+        push @fields, 'Date' if delete $header{-nph} or $cookie or $expires;
+
+        push @fields, 'Content-Disposition' if delete $header{-attachment};
+
+        # not ordered
+        my $type = delete @header{qw/-charset -type/};
+        while ( my ($norm, $value) = CORE::each %header ) {
+            push @fields, $self->_denormalize( $norm ) if $value;
+        }
+
+        push @fields, 'Content-Type' if !defined $type or $type ne q{};
+
+        @fields;
+    }
+
+    sub attachment {
+        my $self   = shift;
+        my $header = $adaptee_of{ refaddr $self };
+
+        if ( @_ ) {
+            $header->{-attachment} = shift;
+            delete $header->{-content_disposition};
+        }
+        else {
+            return $header->{-attachment};
+        }
+
+        return;
+    }
+
+    sub date {
+        my $self   = shift;
+        my $time   = shift;
+        my $header = $adaptee_of{ refaddr $self };
+
+        if ( defined $time ) {
+            $self->STORE( Date => time2str($time) );
+        }
+        elsif ( $self->_date_header_is_fixed ) {
+            return time;
+        }
+        elsif ( my $date = $header->{-date} ) {
+            return str2time( $date );
+        }
+
+        return;
+    }
+
+    sub nph {
+        my $self   = shift;
+        my $header = $adaptee_of{ refaddr $self };
+    
+        if ( @_ ) {
+            my $nph = shift;
+            delete $header->{-date} if $nph;
+            $header->{-nph} = $nph;
+        }
+        else {
+            return $header->{-nph};
+        }
+
+        return;
+    }
+
+    sub p3p_tags {
+        my $self   = shift;
+        my $header = $adaptee_of{ refaddr $self };
+
+        if ( @_ ) {
+            $header->{-p3p} = @_ > 1 ? [ @_ ] : $_[0];
+        }
+        elsif ( my $tags = $header->{-p3p} ) {
+            my @tags = ref $tags eq 'ARRAY' ? @{ $tags } : split / /, $tags;
+            return wantarray ? @tags : $tags[0];
+        }
+
+        return;
+    }
+
+    sub push_p3p_tags {
+        my $self   = shift;
+        my @tags   = @_;
+        my $header = $adaptee_of{ refaddr $self };
+
+        unless ( @tags ) {
+            carp 'Useless use of push_p3p_tags() with no values';
+            return;
+        }
+
+        if ( my $tags = $header->{-p3p} ) {
+            return push @{ $tags }, @tags if ref $tags eq 'ARRAY';
+            unshift @tags, $tags;
+        }
+
+        $header->{-p3p} = @tags > 1 ? \@tags : $tags[0];
+
+        scalar @tags;
     }
 
     sub _date_header_is_fixed {
