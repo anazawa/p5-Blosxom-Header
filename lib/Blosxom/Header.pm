@@ -91,11 +91,6 @@ sub exists { shift->EXISTS( @_ ) }
 sub clear    { shift->CLEAR      }
 sub is_empty { not shift->SCALAR }
 
-sub flatten {
-    my $self = shift;
-    map { $_, $self->FETCH($_) } $self->field_names;
-}
-
 sub each {
     my ( $self, $callback ) = @_;
 

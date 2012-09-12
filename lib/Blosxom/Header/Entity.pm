@@ -160,6 +160,20 @@ use Scalar::Util qw/refaddr/;
         !defined $header->{-type} || first { $_ } values %{ $header };
     }
 
+    sub UNTIE {
+        my $self = shift;
+        delete $adapter_of{ refaddr $self };
+        return;
+    }
+
+    sub DESTROY {
+        my $self = shift;
+        my $this = refaddr $self;
+        delete $adapter_of{ $this };
+        delete $adaptee_of{ $this };
+        return;
+    }
+
     sub field_names {
         my $self   = shift;
         my $header = $adaptee_of{ refaddr $self };
@@ -186,6 +200,11 @@ use Scalar::Util qw/refaddr/;
         push @fields, 'Content-Type' if !defined $type or $type ne q{};
 
         @fields;
+    }
+
+    sub flatten {
+        my $self = shift;
+        map { $_, $self->FETCH($_) } $self->field_names;
     }
 
     sub attachment {
@@ -276,20 +295,6 @@ use Scalar::Util qw/refaddr/;
         my $self = shift;
         my $header = $adaptee_of{ refaddr $self };
         $header->{-expires} || $header->{-cookie} || $header->{-nph};
-    }
-
-    sub UNTIE {
-        my $self = shift;
-        delete $adapter_of{ refaddr $self };
-        return;
-    }
-
-    sub DESTROY {
-        my $self = shift;
-        my $this = refaddr $self;
-        delete $adapter_of{ $this };
-        delete $adaptee_of{ $this };
-        return;
     }
 
     sub dump {
