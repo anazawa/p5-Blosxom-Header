@@ -118,7 +118,9 @@ this module extends Blosxom without rewriting C<blosxom.cgi>.
 =item $header = Blosxom::Header->instance
 
 Returns a current Blosxom::Header object instance or create a new one.
-C<new()> is an alias.
+
+C<new()> isn't an alias, any more. C<new()> become a private method
+since 0.06003.
 
 =item $header = Blosxom::Header->has_instance
 
@@ -174,7 +176,7 @@ In an exceptional case, $value may be a reference to an array.
 
 Returns a Boolean value telling whether the specified HTTP header exists.
 
-  if ( $header->exists( 'ETag' ) ) {
+  if ( $header->exists('ETag') ) {
       ....
   }
 
@@ -454,6 +456,8 @@ In this case, the outgoing header will be formatted as:
 
 =item $header->push_p3p_tags( @tags )
 
+This method is obsolete and will be removed in 0.07.
+
 Adds P3P tags to the P3P header.
 Accepts a list of P3P tags.
 
@@ -536,21 +540,17 @@ A shortcut for
 
 =head1 EXAMPLES
 
-The following is a Blosxom plugin which just adds the Content-Length header
-to CGI response headers.
+The following script is a Blosxom plugin which just adds the Content-Length
+header to CGI response headers.
 
   package content_length;
   use strict;
   use warnings;
-  use Blosxom::Header;
+  use Blosxom::Header qw/header_set/;
 
   sub start { !$blosxom::static_entries }
 
-  sub last {
-      my $header = Blosxom::Header->instance;
-      $header->set( Content_Length => length $blosxom::output );
-      return;
-  }
+  sub last { header_set( 'Content-Length' => length $blosxom::output ) }
 
   1;
 
@@ -607,6 +607,17 @@ See C<< Blosxom::Header->is_initialized() >>.
 =item Unknown status code '%d%d%d' passed to status()
 
 The given status code is unknown to L<HTTP::Status>.
+
+=item The Date header is fixed
+
+You attempted to C<set()> or C<delete()> the Date header
+when the Date header was fixed. See L<"LIMITATIONS">.
+
+=item Can't assign to '%s' directly, use accessors instead
+
+You attempted to C<set()> the Expires or P3P header.
+You can't assign any values to these headers directly.
+Use L<expires()> or L<p3p_tags()> instead.
 
 =back
 
