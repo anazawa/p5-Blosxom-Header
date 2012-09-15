@@ -11,7 +11,7 @@ use Test::Exception;
 
 my $class = 'Blosxom::Header';
 
-my $expected = qr{^private method 'new' called for Blosxom::Header};
+my $expected = qr{^Private method 'new' called for Blosxom::Header};
 throws_ok { Blosxom::Header->new } $expected, 'new() is private method';
 
 ok !$class->has_instance, "no $class instance yet";

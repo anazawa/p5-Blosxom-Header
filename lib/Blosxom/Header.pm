@@ -2,9 +2,9 @@ package Blosxom::Header;
 use 5.008_009;
 use strict;
 use warnings;
-use parent qw/Blosxom::Header::Entity/;
+use parent 'Blosxom::Header::Entity';
 use Exporter 'import';
-use Carp qw/carp croak/;
+use Carp qw/croak/;
 
 our $VERSION = '0.06002';
 
@@ -19,241 +19,28 @@ sub header_exists { __PACKAGE__->instance->exists( @_ ) }
 sub header_delete { __PACKAGE__->instance->delete( @_ ) }
 sub header_iter   { __PACKAGE__->instance->each( @_ )   }
 
-{
-    our $INSTANCE;
+our $INSTANCE;
 
-    sub instance {
-        my $class = shift;
+sub instance {
+    my $class = shift;
 
-        return $class    if ref $class;
-        return $INSTANCE if defined $INSTANCE;
+    return $class    if ref $class;
+    return $INSTANCE if defined $INSTANCE;
 
-        if ( $class->is_initialized ) {
-            return $INSTANCE = $class->SUPER::new( $blosxom::header );
-        }
-
-        croak "$class hasn't been initialized yet";
+    if ( $class->is_initialized ) {
+        return $INSTANCE = $class->SUPER::new( $blosxom::header );
     }
 
-    sub has_instance { $INSTANCE }
+    croak "$class hasn't been initialized yet";
 }
+
+sub has_instance { $INSTANCE }
 
 sub is_initialized { ref $blosxom::header eq 'HASH' }
 
 sub new {
     my $class = shift;
-    croak "private method 'new' called for $class";
-}
-
-sub get {
-    my ( $self, @fields ) = @_;
-    my @values = map { $self->FETCH($_) } @fields;
-    wantarray ? @values : $values[0];
-}
-
-sub set {
-    my ( $self, @headers ) = @_;
-
-    return unless @headers;
-   
-    if ( @headers % 2 == 0 ) {
-        while ( my ($field, $value) = splice @headers, 0, 2 ) {
-            $self->STORE( $field => $value );
-        }
-    }
-    else {
-        carp 'Odd number of elements passed to set()';
-    }
-
-    return;
-}
-
-sub delete {
-    my ( $self, @fields ) = @_;
-
-    return unless @fields;
-
-    if ( wantarray ) {
-        return map { $self->DELETE($_) } @fields;
-    }
-    elsif ( defined wantarray ) {
-        my $deleted = $self->DELETE( pop @fields );
-        $self->DELETE( $_ ) for @fields;
-        return $deleted;
-    }
-    else {
-        $self->DELETE( $_ ) for @fields;
-    }
-
-    return;
-}
-
-sub exists { shift->EXISTS( @_ ) }
-
-sub clear    { shift->CLEAR      }
-sub is_empty { not shift->SCALAR }
-
-sub each {
-    my ( $self, $callback ) = @_;
-
-    if ( ref $callback eq 'CODE' ) {
-        for my $field ( $self->field_names ) {
-            $callback->( $field, $self->FETCH($field) );
-        }
-    }
-    else {
-        croak 'Must provide a code reference to each()';
-    }
-
-    return;
-}
-
-sub charset {
-    my $self = shift;
-
-    require HTTP::Headers::Util;
-
-    my %param = do {
-        my $type = $self->FETCH( 'Content-Type' );
-        my ( $params ) = HTTP::Headers::Util::split_header_words( $type );
-        return unless $params;
-        splice @{ $params }, 0, 2;
-        @{ $params };
-    };
-
-    if ( my $charset = $param{charset} ) {
-        $charset =~ s/^\s+//;
-        $charset =~ s/\s+$//;
-        return uc $charset;
-    }
-
-    return;
-}
-
-sub content_type {
-    my $self = shift;
-
-    if ( @_ ) {
-        my $content_type = shift;
-        $self->STORE( 'Content-Type' => $content_type );
-        return;
-    }
-
-    my ( $media_type, $rest ) = do {
-        my $content_type = $self->FETCH( 'Content-Type' );
-        return q{} unless defined $content_type;
-        split /;\s*/, $content_type, 2;
-    };
-
-    $media_type =~ s/\s+//g;
-    $media_type = lc $media_type;
-
-    wantarray ? ($media_type, $rest) : $media_type;
-}
-
-sub type { shift->content_type( @_ ) }
-
-sub date          { shift->_date_header( 'Date',          @_ ) }
-sub last_modified { shift->_date_header( 'Last-Modified', @_ ) }
-
-sub _date_header {
-    my ( $self, $field, $time ) = @_;
-
-    require HTTP::Date;
-
-    if ( defined $time ) {
-        $self->STORE( $field => HTTP::Date::time2str($time) );
-    }
-    elsif ( my $date = $self->FETCH($field) ) {
-        return HTTP::Date::str2time( $date );
-    }
-
-    return;
-}
-
-sub expires {
-    my $self = shift;
-
-    require HTTP::Date;
-    require CGI::Util;
-
-    if ( @_ ) {
-        $self->STORE( Expires => shift );
-    }
-    elsif ( my $expires = $self->FETCH('Expires') ) {
-        my $date = CGI::Util::expires( $expires );
-        return HTTP::Date::str2time( $date );
-    }
-
-    return;
-}
-
-sub set_cookie {
-    my ( $self, $name, $value ) = @_;
-
-    require CGI::Cookie;
-
-    my $new_cookie = CGI::Cookie->new(do {
-        my %args = ref $value eq 'HASH' ? %{ $value } : ( value => $value );
-        $args{name} = $name;
-        \%args;
-    });
-
-    my @cookies;
-    if ( my $cookies = $self->FETCH('Set-Cookie') ) {
-        @cookies = ref $cookies eq 'ARRAY' ? @{ $cookies } : $cookies;
-        for my $cookie ( @cookies ) {
-            next unless ref $cookie eq 'CGI::Cookie';
-            next unless $cookie->name eq $name;
-            $cookie = $new_cookie;
-            undef $new_cookie;
-            last;
-        }
-    }
-
-    push @cookies, $new_cookie if $new_cookie;
-
-    $self->STORE( 'Set-Cookie' => @cookies > 1 ? \@cookies : $cookies[0] );
-
-    return;
-}
-
-sub get_cookie {
-    my $self   = shift;
-    my $name   = shift;
-    my $cookie = $self->FETCH( 'Set-Cookie' );
-
-    my @values = grep {
-        ref $_ eq 'CGI::Cookie' and $_->name eq $name
-    } (
-        ref $cookie eq 'ARRAY' ? @{ $cookie } : $cookie,
-    );
-
-    wantarray ? @values : $values[0];
-}
-
-sub status {
-    my $self = shift;
-
-    require HTTP::Status;
-
-    if ( @_ ) {
-        my $code = shift;
-        my $message = HTTP::Status::status_message( $code );
-        return $self->STORE( Status => "$code $message" ) if $message;
-        carp "Unknown status code '$code' passed to status()";
-    }
-    elsif ( my $status = $self->FETCH('Status') ) {
-        return substr( $status, 0, 3 );
-    }
-
-    return;
-}
-
-sub target {
-    my $self = shift;
-    $self->STORE( 'Window-Target' => shift ) if @_;
-    $self->FETCH( 'Window-Target' );
+    croak "Private method 'new' called for $class";
 }
 
 1;

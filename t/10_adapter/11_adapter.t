@@ -12,7 +12,7 @@ can_ok $adapter, qw(
     _normalize _denormalize
     _date_header_is_fixed
     field_names
-    push_p3p_tags p3p_tags
+    p3p_tags push_p3p_tags
     nph attachment status target
     set_cookie get_cookie
     date last_modified expires

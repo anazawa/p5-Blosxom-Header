@@ -19,7 +19,7 @@ can_ok $header, qw(
     clear delete exists field_names get set
     as_hashref is_empty flatten
     content_type type charset
-    p3p_tags push_p3p_tags 
+    p3p_tags push_p3p_tags
     last_modified date expires
     attachment charset nph status target
 );
