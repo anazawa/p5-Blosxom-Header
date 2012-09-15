@@ -141,22 +141,6 @@ sub _date_header {
     return;
 }
 
-sub expires {
-    my $self = shift;
-
-    if ( @_ ) {
-        $self->STORE( Expires => shift );
-    }
-    elsif ( my $expires = $self->FETCH('Expires') ) {
-        require HTTP::Date;
-        require CGI::Util;
-        my $date = CGI::Util::expires( $expires );
-        return HTTP::Date::str2time( $date );
-    }
-
-    return;
-}
-
 sub set_cookie {
     my ( $self, $name, $value ) = @_;
 
@@ -221,7 +205,7 @@ sub status {
 
 sub target {
     my $self = shift;
-    $self->STORE( 'Window-Target' => shift ) if @_;
+    return $self->STORE( 'Window-Target' => shift ) if @_;
     $self->FETCH( 'Window-Target' );
 }
 
@@ -269,13 +253,16 @@ sub FETCH {
             return HTTP::Date::time2str( time );
         }
     }
+    elsif ( $norm eq '-expires' ) {
+        if ( my $expires = $header->{-expires} ) {
+            require CGI::Util;
+            return CGI::Util::expires( $expires );
+        }
+    }
     elsif ( $norm eq '-p3p' ) {
         if ( my $p3p = $header->{-p3p} ) {
             my $tags = ref $p3p eq 'ARRAY' ? join ' ', @{ $p3p } : $p3p;
             return qq{policyref="/w3c/p3p.xml", CP="$tags"};
-        }
-        else {
-            return;
         }
     }
 
@@ -301,10 +288,11 @@ sub STORE {
     elsif ( $norm eq '-content_disposition' ) {
         delete $header->{-attachment};
     }
-    elsif ( $norm eq '-expires' or $norm eq '-cookie' ) {
+    elsif ( $norm eq '-cookie' ) {
         delete $header->{-date};
     }
-    elsif ( $norm eq '-p3p' ) {
+    elsif ( $norm eq '-p3p' or $norm eq '-expires' ) {
+        carp "Can't assign to '$norm' directly, use accessors instead";
         return;
     }
 
@@ -421,11 +409,32 @@ sub attachment {
     my $header = $adaptee_of{ refaddr $self };
 
     if ( @_ ) {
+        my $attachment = shift;
         delete $header->{-content_disposition};
-        $header->{-attachment} = shift;
+        $header->{-attachment} = $attachment;
     }
     else {
         return $header->{-attachment};
+    }
+
+    return;
+}
+
+sub expires {
+    my $self   = shift;
+    my $header = $adaptee_of{ refaddr $self };
+
+    if ( @_ ) {
+        my $expires = shift;
+
+        # CGI::header() automatically adds the Date header
+        delete $header->{-date};
+
+        $header->{-expires} = $expires;
+    }
+    elsif ( my $expires = $self->FETCH('Expires') ) {
+        require HTTP::Date;
+        return HTTP::Date::str2time( $expires );
     }
 
     return;
@@ -462,9 +471,10 @@ sub p3p_tags {
     return;
 }
 
+# this method is obsolete and will be removed in 0.07
 sub push_p3p_tags {
-    my $self = shift;
-    my @tags = @_;
+    my $self   = shift;
+    my @tags   = @_;
     my $header = $adaptee_of{ refaddr $self };
 
     unless ( @tags ) {

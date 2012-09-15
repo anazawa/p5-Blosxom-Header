@@ -1,6 +1,7 @@
 use strict;
 use Blosxom::Header;
-use Test::More tests => 11;
+use Test::More tests => 12;
+use Test::Warn;
 
 my %adaptee;
 my $adapter = tie my %adapter, 'Blosxom::Header', \%adaptee;
@@ -20,7 +21,6 @@ is delete $adapter{P3P}, 'policyref="/w3c/p3p.xml", CP="CAO"';
 
 %adaptee = ();
 $adapter->p3p_tags( 'CAO DSP LAW CURa' );
-#is_deeply \%adaptee, { -p3p => [qw/CAO DSP LAW CURa/] };
 is_deeply \%adaptee, { -p3p => 'CAO DSP LAW CURa' };
 
 %adaptee = ();
@@ -32,6 +32,9 @@ is $adapter->p3p_tags, 'CAO';
 @got = $adapter->p3p_tags;
 @expected = qw( CAO DSP LAW CURa );
 is_deeply \@got, \@expected;
+
+warning_is { $adapter{P3P} = 'CAO DSP LAW CURa' }
+    "Can't assign to '-p3p' directly, use accessors instead";
 
 subtest 'push_p3p_tags()' => sub {
     %adaptee = ();

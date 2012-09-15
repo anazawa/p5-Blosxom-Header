@@ -61,7 +61,8 @@ subtest 'last_modified()' => sub {
 
 subtest 'Expires' => sub {
     %adaptee = ( -expires => 1341637509 );
-    is $adapter{Expires}, 1341637509;
+    is $adapter{Expires}, 'Sat, 07 Jul 2012 05:05:09 GMT';
+    #is $adapter{Expires}, 1341637509;
     #is $adapter->expires, 'Sat, 07 Jul 2012 05:05:09 GMT';
     is $adapter{Date}, time2str( time );
     ok $adapter->_date_header_is_fixed;
@@ -69,10 +70,12 @@ subtest 'Expires' => sub {
     warning_is { $adapter{Date} = 'foo' } 'The Date header is fixed';
 
     %adaptee = ( -date => 'Sat, 07 Jul 2012 05:05:09 GMT' );
-    $adapter{Expires} = '+3M';
+    #$adapter{Expires} = '+3M';
+    $adapter->expires( '+3M' );
     is_deeply \%adaptee, { -expires => '+3M' };
 
     %adaptee = ( -expires => q{} );
+    #is $adapter{Expires}, q{};
     is $adapter{Expires}, q{};
     ok !$adapter->_date_header_is_fixed;
 
@@ -88,4 +91,7 @@ subtest 'Expires' => sub {
     $adapter->expires( 'Sat, 07 Jul 2012 05:05:10 GMT' );
     is $adapter->expires, $now, 'get expires()';
     is $adaptee{-expires}, 'Sat, 07 Jul 2012 05:05:10 GMT';
+
+    warning_is { $adapter{Expires} = '+3M' }
+        "Can't assign to '-expires' directly, use accessors instead";
 };
