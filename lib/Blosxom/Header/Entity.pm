@@ -76,6 +76,11 @@ sub each {
     return;
 }
 
+sub flatten {
+    my $self = shift;
+    map { $_, $self->FETCH($_) } $self->field_names;
+}
+
 sub charset {
     my $self = shift;
 
@@ -207,6 +212,22 @@ sub target {
     $self->FETCH( 'Window-Target' );
 }
 
+sub dump {
+    my $self = shift;
+
+    require Data::Dumper;
+
+    local $Data::Dumper::Terse  = 1;
+    local $Data::Dumper::Indent = 1;
+
+    my %self = (
+        adaptee => $self->adaptee,
+        adapter => { $self->flatten },
+    );
+
+    Data::Dumper::Dumper( \%self );
+}
+
 sub UNTIE {
     my $self = shift;
     delete $adapter_of{ refaddr $self };
@@ -215,7 +236,7 @@ sub UNTIE {
 
 sub DESTROY {
     my $self = shift;
-    $self->UNTIE;
+    delete $adapter_of{ refaddr $self };
     $self->SUPER::DESTROY;
 }
 

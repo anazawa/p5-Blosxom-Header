@@ -161,6 +161,8 @@ sub DESTROY {
     return;
 }
 
+sub adaptee { $adaptee_of{ refaddr shift } }
+
 sub field_names {
     my $self   = shift;
     my $header = $adaptee_of{ refaddr $self };
@@ -180,18 +182,13 @@ sub field_names {
 
     # not ordered
     my $type = delete @header{qw/-charset -type/};
-    while ( my ($norm, $value) = CORE::each %header ) {
+    while ( my ($norm, $value) = each %header ) {
         push @fields, $self->_denormalize( $norm ) if $value;
     }
 
     push @fields, 'Content-Type' if !defined $type or $type ne q{};
 
     @fields;
-}
-
-sub flatten {
-    my $self = shift;
-    map { $_, $self->FETCH($_) } $self->field_names;
 }
 
 sub attachment {
@@ -286,22 +283,6 @@ sub _date_header_is_fixed {
     my $self = shift;
     my $header = $adaptee_of{ refaddr $self };
     $header->{-expires} || $header->{-cookie} || $header->{-nph};
-}
-
-sub dump {
-    my $self = shift;
-
-    require Data::Dumper;
-
-    local $Data::Dumper::Terse  = 1;
-    local $Data::Dumper::Indent = 1;
-
-    my %self = (
-        adaptee => $adaptee_of{ refaddr $self },
-        adapter => { $self->flatten },
-    );
-
-    Data::Dumper::Dumper( \%self );
 }
 
 my %norm_of = (
