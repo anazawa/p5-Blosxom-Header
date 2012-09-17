@@ -33,7 +33,7 @@ sub set {
         }
     }
     else {
-        carp 'Odd number of elements passed to set()';
+        croak 'Odd number of elements passed to set()';
     }
 
     return;
@@ -236,7 +236,7 @@ sub UNTIE {
 
 sub DESTROY {
     my $self = shift;
-    delete $adapter_of{ refaddr $self };
+    $self->UNTIE;
     $self->SUPER::DESTROY;
 }
 

@@ -43,8 +43,8 @@ is_deeply \%header, { -type => q{} }, 'should be empty';
 subtest 'set()' => sub {
     %header = ();
 
-    my $expected = 'Odd number of elements passed to set()';
-    warning_is { $header->set( 'Foo' ) } $expected;
+    my $expected = qr{^Odd number of elements passed to set\(\)};
+    throws_ok { $header->set( 'Foo' ) } $expected;
 
     $header->set(
         Foo => 'bar',

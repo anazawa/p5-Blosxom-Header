@@ -41,8 +41,8 @@ sub FETCH {
         return $charset ? "$type; charset=$charset" : $type;
     }
     elsif ( $norm eq '-content_disposition' ) {
-        if ( my $attachment = $header->{-attachment} ) {
-            return qq{attachment; filename="$attachment"};
+        if ( my $filename = $header->{-attachment} ) {
+            return qq{attachment; filename="$filename"};
         }
     }
     elsif ( $norm eq '-date' ) {
@@ -196,9 +196,9 @@ sub attachment {
     my $header = $adaptee_of{ refaddr $self };
 
     if ( @_ ) {
-        my $attachment = shift;
+        my $filename = shift;
         delete $header->{-content_disposition};
-        $header->{-attachment} = $attachment;
+        $header->{-attachment} = $filename;
     }
     else {
         return $header->{-attachment};
