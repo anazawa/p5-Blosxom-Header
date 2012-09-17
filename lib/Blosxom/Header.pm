@@ -21,26 +21,23 @@ sub header_iter   { __PACKAGE__->instance->each( @_ )   }
 
 our $INSTANCE;
 
+sub new { croak "Private method 'new' called for $_[0]" }
+
+sub is_initialized { ref $blosxom::header eq 'HASH' }
+
+sub has_instance { $INSTANCE }
+
 sub instance {
     my $class = shift;
 
     return $class    if ref $class;
     return $INSTANCE if defined $INSTANCE;
 
-    if ( $class->is_initialized ) {
+    if ( ref $blosxom::header eq 'HASH' ) {
         return $INSTANCE = $class->SUPER::new( $blosxom::header );
     }
 
     croak "$class hasn't been initialized yet";
-}
-
-sub has_instance { $INSTANCE }
-
-sub is_initialized { ref $blosxom::header eq 'HASH' }
-
-sub new {
-    my $class = shift;
-    croak "Private method 'new' called for $class";
 }
 
 1;

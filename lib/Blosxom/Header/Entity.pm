@@ -21,7 +21,7 @@ sub as_hashref { $adapter_of{ refaddr shift } }
 sub get {
     my ( $self, @fields ) = @_;
     my @values = map { $self->FETCH($_) } @fields;
-    wantarray ? @values : $values[0];
+    wantarray ? @values : $values[-1];
 }
 
 sub set {

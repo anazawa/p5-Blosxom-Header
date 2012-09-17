@@ -1,51 +1,39 @@
 use strict;
-use Blosxom::Header;
-use Test::More tests => 17;
+use warnings;
+use Blosxom::Header::Entity;
+use Test::More tests => 19;
 use Test::Warn;
 use Test::Exception;
 
-my $class = 'Blosxom::Header';
+my $class = 'Blosxom::Header::Entity';
 
-ok $class->isa( 'Blosxom::Header' );
-ok $class->isa( 'Blosxom::Header::Entity' );
 ok $class->isa( 'Blosxom::Header::Adapter' );
 
 can_ok $class, qw(
-    instance has_instance new
-    clear delete exists get set is_empty
+    new clear delete exists get set is_empty
     dump as_hashref
     each flatten
     content_type type charset
     last_modified date
     status 
+    UNTIE DESTROY
 );
-
-subtest 'instance()' => sub {
-    local $blosxom::header;
-    ok !$class->is_initialized;
-
-    my $expected = qr{^Blosxom::Header hasn't been initialized yet};
-    throws_ok { $class->instance } $expected;
-
-    $blosxom::header = {};
-    ok $class->is_initialized;
-};
 
 # initialize
 my %header;
-$blosxom::header = \%header;
-my $header = $class->instance;
+my $header = $class->new( \%header );
 
 # exists()
 %header = ( -foo => 'bar' );
-ok $header->exists( 'Foo' ), 'should return true';
-ok !$header->exists( 'Bar' ), 'should return false';
+ok $header->exists('Foo'), 'should return true';
+ok !$header->exists('Bar'), 'should return false';
 
 # get()
 %header = ( -foo => 'bar', -bar => 'baz' );
-my @got = $header->get( 'Foo', 'Bar' );
-my @expected = qw( bar baz );
-is_deeply \@got, \@expected;
+is $header->get('Foo'), 'bar';
+is $header->get('Baz'), undef;
+is $header->get('Foo', 'Bar'), 'baz';
+is_deeply [ $header->get('Foo', 'Bar') ], [ 'bar', 'baz' ];
 
 # clear()
 %header = ( -foo => 'bar' );
@@ -53,10 +41,10 @@ $header->clear;
 is_deeply \%header, { -type => q{} }, 'should be empty';
 
 subtest 'set()' => sub {
-    %header = ();
-
     my $expected = qr{^Odd number of elements passed to set\(\)};
-    throws_ok { $header->set( 'Foo' ) } $expected;
+    throws_ok { $header->set('Foo') } $expected;
+
+    %header = ();
 
     $header->set(
         Foo => 'bar',
@@ -77,26 +65,24 @@ subtest 'delete()' => sub {
     %header = ();
     is $header->delete('Foo'), undef;
 
-    %header = (
-        -foo => 'bar',
-        -bar => 'baz',
-        -baz => 'qux',
-    );
-
-    my @got = $header->delete(qw/Foo Bar/);
-
-    is_deeply \@got, [ 'bar', 'baz' ], 'delete() multiple elements';
-    is_deeply \%header, { -baz => 'qux' };
+    %header = ( -foo => 'bar' );
+    is $header->delete('Foo'), 'bar';
+    is_deeply \%header, {};
 
     %header = (
         -foo => 'bar',
         -bar => 'baz',
-        -baz => 'qux',
     );
 
-    my $got = $header->delete(qw/Foo Bar Baz/);
+    is_deeply [ $header->delete('Foo', 'Bar') ], [ 'bar', 'baz' ];
+    is_deeply \%header, {};
 
-    ok $got eq 'qux';
+    %header = (
+        -foo => 'bar',
+        -bar => 'baz',
+    );
+
+    ok $header->delete('Foo', 'Bar') eq 'baz';
     is_deeply \%header, {};
 };
 
@@ -162,6 +148,27 @@ subtest 'as_hashref()' => sub {
 
     is delete $header->{Foo}, 'bar';
     is_deeply \%header, {};
+};
+
+subtest 'status()' => sub {
+    %header = ();
+    is $header->status, undef;
+
+    $header->status( 304 );
+    is $header{-status}, '304 Not Modified';
+    is $header->status, '304';
+
+    my $expected = q{Unknown status code '999' passed to status()};
+    warning_is { $header->status( 999 ) } $expected;
+};
+
+subtest 'target()' => sub {
+    %header = ();
+    is $header->target, undef;
+
+    $header->target( 'ResultsWindow' );
+    is $header->target, 'ResultsWindow';
+    is_deeply \%header, { -target => 'ResultsWindow' };
 };
 
 subtest 'dump()' => sub {
