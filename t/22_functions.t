@@ -1,19 +1,19 @@
 use strict;
+use warnings;
 use Test::Exception;
 use Test::More tests => 10;
 
 BEGIN {
-    use_ok 'Blosxom::Header', qw(
+    my @functions = qw(
         header_get    header_set  header_exists
         header_delete header_iter
     );
+
+    use_ok 'Blosxom::Header', @functions;
+    can_ok __PACKAGE__, @functions;
 }
 
-can_ok __PACKAGE__, qw(
-    header_get    header_set  header_exists
-    header_delete header_iter
-);
-
+# initialize
 my %header;
 $blosxom::header = \%header;
 
@@ -30,5 +30,11 @@ is header_delete( 'Status' ), '304 Not Modified';
 is_deeply \%header, {};
 
 my @got;
-header_iter(sub { push @got, @_ });
-is_deeply \@got, [ 'Content-Type', 'text/html; charset=ISO-8859-1' ];
+header_iter sub {
+    my ( $field, $value ) = @_;
+    push @got, $field, $value;
+};
+
+my @expected = ( 'Content-Type', 'text/html; charset=ISO-8859-1' );
+
+is_deeply \@got, \@expected;

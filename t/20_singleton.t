@@ -12,7 +12,7 @@ use Test::Exception;
 my $class = 'Blosxom::Header';
 
 my $expected = qr{^Private method 'new' called for Blosxom::Header};
-throws_ok { Blosxom::Header->new } $expected, 'new() is private method';
+throws_ok { $class->new } $expected, 'new() is private method';
 
 ok !$class->has_instance, "no $class instance yet";
 
@@ -24,6 +24,3 @@ ok $h2, "created $class instance 2";
 
 ok $h1 eq $h2, 'both instances are the same object';
 ok $class->has_instance eq $h1, "$class has instance";
-
-#$h1->DESTROY;
-#is $h1->content_type, 'text/html', 'feature';

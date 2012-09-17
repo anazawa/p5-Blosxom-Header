@@ -1,10 +1,10 @@
 use strict;
 use warnings;
-use Blosxom::Header;
+use Blosxom::Header::Entity;
 use Test::More tests => 33;
 
 my %adaptee;
-my $adapter = tie my %adapter, 'Blosxom::Header', \%adaptee;
+my $adapter = tie my %adapter, 'Blosxom::Header::Entity', \%adaptee;
 
 %adaptee = ( -type => q{} );
 is $adapter{Content_Type}, undef;

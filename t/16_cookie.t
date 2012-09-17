@@ -1,16 +1,10 @@
 use strict;
-use Blosxom::Header;
+use Blosxom::Header::Entity;
 use CGI::Cookie;
 use Test::More tests => 10;
 
 my %header;
-
-{
-    package blosxom;
-    our $header = \%header;
-}
-
-my $header = Blosxom::Header->instance;
+my $header = Blosxom::Header::Entity->new( \%header );
 
 # set_cookie()
 

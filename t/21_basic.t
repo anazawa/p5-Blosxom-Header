@@ -1,29 +1,40 @@
 use strict;
 use Blosxom::Header;
-use Test::More tests => 13;
+use Test::More tests => 17;
 use Test::Warn;
 use Test::Exception;
 
-subtest 'instance() throws an execption' => sub {
+my $class = 'Blosxom::Header';
+
+ok $class->isa( 'Blosxom::Header' );
+ok $class->isa( 'Blosxom::Header::Entity' );
+ok $class->isa( 'Blosxom::Header::Adapter' );
+
+can_ok $class, qw(
+    instance has_instance new
+    clear delete exists get set is_empty
+    dump as_hashref
+    each flatten
+    content_type type charset
+    last_modified date
+    status 
+);
+
+subtest 'instance()' => sub {
+    local $blosxom::header;
+    ok !$class->is_initialized;
+
     my $expected = qr{^Blosxom::Header hasn't been initialized yet};
-    throws_ok { Blosxom::Header->instance } $expected;
+    throws_ok { $class->instance } $expected;
+
+    $blosxom::header = {};
+    ok $class->is_initialized;
 };
 
 # initialize
 my %header;
 $blosxom::header = \%header;
-
-my $header = Blosxom::Header->instance;
-ok $header->isa( 'Blosxom::Header' );
-can_ok $header, qw(
-    clear delete exists field_names get set
-    as_hashref is_empty flatten
-    content_type type charset
-    p3p_tags push_p3p_tags
-    last_modified date expires
-    attachment charset nph status target
-    dump header
-);
+my $header = $class->instance;
 
 # exists()
 %header = ( -foo => 'bar' );
@@ -63,13 +74,18 @@ subtest 'set()' => sub {
 };
 
 subtest 'delete()' => sub {
+    %header = ();
+    is $header->delete('Foo'), undef;
+
     %header = (
         -foo => 'bar',
         -bar => 'baz',
         -baz => 'qux',
     );
-    my @deleted = $header->delete( qw/foo bar/ );
-    is_deeply \@deleted, [ 'bar', 'baz' ], 'delete() multiple elements';
+
+    my @got = $header->delete(qw/Foo Bar/);
+
+    is_deeply \@got, [ 'bar', 'baz' ], 'delete() multiple elements';
     is_deeply \%header, { -baz => 'qux' };
 
     %header = (
@@ -77,18 +93,34 @@ subtest 'delete()' => sub {
         -bar => 'baz',
         -baz => 'qux',
     );
-    is $header->delete(qw/foo bar baz/), 'qux';
+
+    my $got = $header->delete(qw/Foo Bar Baz/);
+
+    ok $got eq 'qux';
     is_deeply \%header, {};
 };
 
 subtest 'each()' => sub {
-    %header = ( -foo => 'bar' );
-    my @got;
-    $header->each( sub { push @got, @_ } );
-    my @expected = (
-        'Foo'          => 'bar',
-        'Content-Type' => 'text/html; charset=ISO-8859-1',
+    my $expected = qr{^Must provide a code reference to each\(\)};
+    throws_ok { $header->each } $expected;
+
+    %header = (
+        -status         => '304 Not Modified',
+        -content_length => 12345,
     );
+
+    my @got;
+    $header->each(sub {
+        my ( $field, $value ) = @_;
+        push @got, $field, $value;
+    });
+
+    my @expected = (
+        'Status',         '304 Not Modified',
+        'Content-length', '12345',
+        'Content-Type',   'text/html; charset=ISO-8859-1',
+    );
+
     is_deeply \@got, \@expected;
 };
 
@@ -105,13 +137,15 @@ subtest 'flatten()' => sub {
         -content_length => 12345,
     );
 
+    my @got = $header->flatten;
+
     my @expected = (
         'Status',         '304 Not Modified',
         'Content-length', '12345',
         'Content-Type',   'text/html; charset=ISO-8859-1',
     );
 
-    is_deeply [ $header->flatten ], \@expected;
+    is_deeply \@got, \@expected;
 };
 
 subtest 'as_hashref()' => sub {
@@ -132,6 +166,7 @@ subtest 'as_hashref()' => sub {
 
 subtest 'dump()' => sub {
     %header = ( -type => 'text/plain' );
+
     my $got = eval $header->dump;
 
     my %expected = (

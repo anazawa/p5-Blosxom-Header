@@ -1,23 +1,23 @@
 use strict;
 use warnings;
-use Blosxom::Header;
+use Blosxom::Header::Adapter;
 use Test::More tests => 17;
 use Test::Warn;
 
-my %adaptee;
-my $adapter = tie my %adapter, 'Blosxom::Header', \%adaptee;
-ok $adapter->isa( 'Blosxom::Header' );
-can_ok $adapter, qw(
-    FETCH STORE DELETE EXISTS CLEAR SCALAR UNTIE DESTROY
+can_ok 'Blosxom::Header::Adapter', qw(
+    FETCH STORE DELETE EXISTS CLEAR SCALAR DESTROY
     _normalize _denormalize
     _date_header_is_fixed
     field_names
     p3p_tags push_p3p_tags
-    nph attachment status target
-    set_cookie get_cookie
-    date last_modified expires
-    content_type type charset
+    nph attachment
+    expires
+    header
 );
+
+my %adaptee;
+my $adapter = tie my %adapter, 'Blosxom::Header::Adapter', \%adaptee;
+ok $adapter->isa( 'Blosxom::Header::Adapter' );
 
 # SCALAR
 %adaptee = ();
@@ -57,6 +57,7 @@ is $adapter->header, \%adaptee;
 subtest 'nph()' => sub {
     %adaptee = ();
     ok !$adapter->nph;
+
     $adapter->nph( 1 );
     ok $adapter->nph;
     is $adaptee{-nph}, 1;
@@ -103,24 +104,6 @@ subtest 'field_names()' => sub {
     );
 
     is_deeply \@got, \@expected;
-};
-
-subtest 'status()' => sub {
-    %adaptee = ();
-    is $adapter->status, undef;
-    $adapter->status( 304 );
-    is $adaptee{-status}, '304 Not Modified';
-    is $adapter->status, '304';
-    my $expected = q{Unknown status code '999' passed to status()};
-    warning_is { $adapter->status( 999 ) } $expected;
-};
-
-subtest 'target()' => sub {
-    %adaptee = ();
-    is $adapter->target, undef;
-    $adapter->target( 'ResultsWindow' );
-    is $adapter->target, 'ResultsWindow';
-    is_deeply \%adaptee, { -target => 'ResultsWindow' };
 };
 
 subtest 'DESTROY()' => sub {

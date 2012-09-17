@@ -1,10 +1,10 @@
 use strict;
-use Blosxom::Header;
+use Blosxom::Header::Adapter;
 use Test::More tests => 12;
 use Test::Warn;
 
 my %adaptee;
-my $adapter = tie my %adapter, 'Blosxom::Header', \%adaptee;
+my $adapter = tie my %adapter, 'Blosxom::Header::Adapter', \%adaptee;
 
 %adaptee = ( -p3p => [qw/CAO DSP LAW CURa/] );
 is $adapter{P3P}, 'policyref="/w3c/p3p.xml", CP="CAO DSP LAW CURa"';
@@ -36,6 +36,7 @@ is_deeply \@got, \@expected;
 warning_is { $adapter{P3P} = 'CAO DSP LAW CURa' }
     "Can't assign to '-p3p' directly, use accessors instead";
 
+# this method is obsolete and will be removed in 0.07
 subtest 'push_p3p_tags()' => sub {
     %adaptee = ();
 

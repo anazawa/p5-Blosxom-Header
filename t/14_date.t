@@ -1,11 +1,11 @@
 use strict;
-use Blosxom::Header;
+use Blosxom::Header::Entity;
 use HTTP::Date;
 use Test::More tests => 13;
 use Test::Warn;
 
 my %adaptee;
-my $adapter = tie my %adapter, 'Blosxom::Header', \%adaptee;
+my $adapter = tie my %adapter, 'Blosxom::Header::Entity', \%adaptee;
 
 %adaptee = ( -nph => 1 );
 is $adapter{Date}, time2str( time );
