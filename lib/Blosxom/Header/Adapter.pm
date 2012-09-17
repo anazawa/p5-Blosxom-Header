@@ -161,7 +161,7 @@ sub DESTROY {
     return;
 }
 
-sub adaptee { $adaptee_of{ refaddr shift } }
+sub header { $adaptee_of{ refaddr shift } }
 
 sub field_names {
     my $self   = shift;

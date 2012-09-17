@@ -22,6 +22,7 @@ can_ok $header, qw(
     p3p_tags push_p3p_tags
     last_modified date expires
     attachment charset nph status target
+    dump header
 );
 
 # exists()
@@ -116,9 +117,7 @@ subtest 'flatten()' => sub {
 subtest 'as_hashref()' => sub {
     my $got = $header->as_hashref;
     ok ref $got eq 'HASH';
-
-    ok my $tied = tied( %{ $got } );
-    ok $tied eq $header;
+    ok tied %{ $got } eq $header;
 
     %header = ();
     $header->{Foo} = 'bar';
@@ -129,7 +128,26 @@ subtest 'as_hashref()' => sub {
 
     is delete $header->{Foo}, 'bar';
     is_deeply \%header, {};
+};
 
-    untie %{ $header->as_hashref };
-    ok !$header->as_hashref, 'untie';
+subtest 'dump()' => sub {
+    %header = ( -type => 'text/plain' );
+    my $got = eval $header->dump;
+
+    my %expected = (
+        'adapter' => {
+            'Content-Type' => 'text/plain; charset=ISO-8859-1',
+        },
+        'adaptee' => {
+            '-type' => 'text/plain',
+        },
+    );
+
+    is_deeply $got, \%expected;
+};
+
+subtest 'DESTROY()' => sub {
+    $header->DESTROY;
+    ok !$header->as_hashref;
+    ok !$header->header;
 };

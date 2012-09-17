@@ -61,6 +61,11 @@ sub clear    { shift->CLEAR        }
 sub exists   { shift->EXISTS( @_ ) }
 sub is_empty { not shift->SCALAR   }
 
+sub flatten {
+    my $self = shift;
+    map { $_, $self->FETCH($_) } $self->field_names;
+}
+
 sub each {
     my ( $self, $callback ) = @_;
 
@@ -74,11 +79,6 @@ sub each {
     }
 
     return;
-}
-
-sub flatten {
-    my $self = shift;
-    map { $_, $self->FETCH($_) } $self->field_names;
 }
 
 sub charset {
@@ -202,6 +202,9 @@ sub status {
     elsif ( my $status = $self->FETCH('Status') ) {
         return substr( $status, 0, 3 );
     }
+    #else {
+    #    return 200;
+    #}
 
     return;
 }
@@ -221,7 +224,7 @@ sub dump {
     local $Data::Dumper::Indent = 1;
 
     my %self = (
-        adaptee => $self->adaptee,
+        adaptee => $self->header,
         adapter => { $self->flatten },
     );
 

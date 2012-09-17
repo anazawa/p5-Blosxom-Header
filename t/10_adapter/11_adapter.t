@@ -51,6 +51,9 @@ is $adapter{Bar}, undef;
 $adapter{Foo} = 'bar';
 is_deeply \%adaptee, { -foo => 'bar' };
 
+# header()
+is $adapter->header, \%adaptee;
+
 subtest 'nph()' => sub {
     %adaptee = ();
     ok !$adapter->nph;
@@ -62,7 +65,6 @@ subtest 'nph()' => sub {
     $adapter->nph( 1 );
     is_deeply \%adaptee, { -nph => 1 };
 };
-
 
 subtest 'field_names()' => sub {
     %adaptee = ( -type => undef );
@@ -119,4 +121,9 @@ subtest 'target()' => sub {
     $adapter->target( 'ResultsWindow' );
     is $adapter->target, 'ResultsWindow';
     is_deeply \%adaptee, { -target => 'ResultsWindow' };
+};
+
+subtest 'DESTROY()' => sub {
+    $adapter->DESTROY;
+    ok !$adapter->header;
 };
