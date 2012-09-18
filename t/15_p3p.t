@@ -1,4 +1,5 @@
 use strict;
+use warnings;
 use Blosxom::Header::Adapter;
 use Test::More tests => 12;
 use Test::Warn;
@@ -9,9 +10,7 @@ my $adapter = tie my %adapter, 'Blosxom::Header::Adapter', \%adaptee;
 %adaptee = ( -p3p => [qw/CAO DSP LAW CURa/] );
 is $adapter{P3P}, 'policyref="/w3c/p3p.xml", CP="CAO DSP LAW CURa"';
 is $adapter->p3p_tags, 'CAO';
-my @got = $adapter->p3p_tags;
-my @expected = qw( CAO DSP LAW CURa );
-is_deeply \@got, \@expected;
+is_deeply [ $adapter->p3p_tags ], [qw/CAO DSP LAW CURa/];
 
 %adaptee = ();
 $adapter->p3p_tags( 'CAO' );
@@ -29,9 +28,7 @@ is_deeply \%adaptee, { -p3p => [qw/CAO DSP LAW CURa/] };
 
 %adaptee = ( -p3p => 'CAO DSP LAW CURa' );
 is $adapter->p3p_tags, 'CAO';
-@got = $adapter->p3p_tags;
-@expected = qw( CAO DSP LAW CURa );
-is_deeply \@got, \@expected;
+is_deeply [ $adapter->p3p_tags ], [qw/CAO DSP LAW CURa/];
 
 warning_is { $adapter{P3P} = 'CAO DSP LAW CURa' }
     "Can't assign to '-p3p' directly, use accessors instead";

@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use Blosxom::Header::Adapter;
-use Test::More tests => 31;
+use Test::More tests => 28;
 
 my %adaptee;
 my $adapter = tie my %adapter, 'Blosxom::Header::Adapter', \%adaptee;
@@ -9,14 +9,11 @@ my $adapter = tie my %adapter, 'Blosxom::Header::Adapter', \%adaptee;
 %adaptee = ( -type => q{} );
 is $adapter{Content_Type}, undef;
 ok !exists $adapter{Content_Type};
-ok !%adapter;
 is delete $adapter{Content_Type}, undef;
-is_deeply \%adaptee, { -type => q{} };
 
 %adaptee = ();
 is $adapter{Content_Type}, 'text/html; charset=ISO-8859-1';
 ok exists $adapter{Content_Type};
-ok %adapter;
 is delete $adapter{Content_Type}, 'text/html; charset=ISO-8859-1';
 is_deeply \%adaptee, { -type => q{} };
 

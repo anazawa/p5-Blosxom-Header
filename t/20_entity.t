@@ -141,13 +141,23 @@ subtest 'as_hashref()' => sub {
 
     %header = ();
     $header->{Foo} = 'bar';
-    is_deeply \%header, { -foo => 'bar' }, 'overload';
+    is_deeply \%header, { -foo => 'bar' }, 'store';
 
-    ok exists $header->{Foo};
+    %header = ( -foo => 'bar' );
+    is $header->{Foo}, 'bar', 'fetch';
+    is $header->{Bar}, undef;
+
+    %header = ( -foo => 'bar' );
+    ok exists $header->{Foo}, 'exists';
     ok !exists $header->{Bar};
 
+    %header = ( -foo => 'bar' );
     is delete $header->{Foo}, 'bar';
-    is_deeply \%header, {};
+    is_deeply \%header, {}, 'delete';
+
+    %header = ( -foo => 'bar' );
+    %{ $header } = ();
+    is_deeply \%header, { -type => q{} }, 'clear';
 };
 
 subtest 'status()' => sub {
@@ -165,7 +175,6 @@ subtest 'status()' => sub {
 subtest 'target()' => sub {
     %header = ();
     is $header->target, undef;
-
     $header->target( 'ResultsWindow' );
     is $header->target, 'ResultsWindow';
     is_deeply \%header, { -target => 'ResultsWindow' };
@@ -177,10 +186,10 @@ subtest 'dump()' => sub {
     my $got = eval $header->dump;
 
     my %expected = (
-        'adapter' => {
+        adapter => {
             'Content-Type' => 'text/plain; charset=ISO-8859-1',
         },
-        'adaptee' => {
+        adaptee => {
             '-type' => 'text/plain',
         },
     );

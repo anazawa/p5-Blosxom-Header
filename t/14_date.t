@@ -1,7 +1,8 @@
 use strict;
+use warnings;
 use Blosxom::Header::Adapter;
 use HTTP::Date;
-use Test::More tests => 12;
+use Test::More tests => 11;
 use Test::Warn;
 
 my %adaptee;
@@ -24,10 +25,6 @@ is $adapter{Date}, undef;
 ok !$adapter->_date_header_is_fixed;
 
 %adaptee = ( -date => 'Sat, 07 Jul 2012 05:05:09 GMT' );
-$adapter->nph( 1 );
-is_deeply \%adaptee, { -nph => 1 };
-
-%adaptee = ( -date => 'Sat, 07 Jul 2012 05:05:09 GMT' );
 $adapter{Set_Cookie} = 'ID=123456; path=/';
 is_deeply \%adaptee, { -cookie => 'ID=123456; path=/' };
 
@@ -44,10 +41,9 @@ subtest 'Date' => sub {
 subtest 'Expires' => sub {
     %adaptee = ( -expires => 1341637509 );
     is $adapter{Expires}, 'Sat, 07 Jul 2012 05:05:09 GMT';
-    #is $adapter{Expires}, 1341637509;
     #is $adapter->expires, 'Sat, 07 Jul 2012 05:05:09 GMT';
-    is $adapter{Date}, time2str( time );
     ok $adapter->_date_header_is_fixed;
+    is $adapter{Date}, time2str( time );
     warning_is { delete $adapter{Date} } 'The Date header is fixed';
     warning_is { $adapter{Date} = 'foo' } 'The Date header is fixed';
 

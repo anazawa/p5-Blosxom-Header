@@ -6,7 +6,7 @@ use parent 'Blosxom::Header::Entity';
 use Exporter 'import';
 use Carp qw/croak/;
 
-our $VERSION = '0.06002';
+our $VERSION = '0.06003';
 
 our @EXPORT_OK = qw(
     header_get    header_set  header_exists

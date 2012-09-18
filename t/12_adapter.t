@@ -2,22 +2,21 @@ use strict;
 use warnings;
 use Blosxom::Header::Adapter;
 use Test::More tests => 17;
-use Test::Warn;
 
-can_ok 'Blosxom::Header::Adapter', qw(
-    FETCH STORE DELETE EXISTS CLEAR SCALAR DESTROY
-    _normalize _denormalize
-    _date_header_is_fixed
-    field_names
+my $class = 'Blosxom::Header::Adapter';
+
+can_ok $class, qw(
+    TIEHASH FETCH STORE DELETE EXISTS CLEAR SCALAR DESTROY
+    header field_names
     p3p_tags push_p3p_tags
-    nph attachment
-    expires
-    header
+    expires nph attachment
+    _normalize _denormalize _date_header_is_fixed
 );
 
 my %adaptee;
-my $adapter = tie my %adapter, 'Blosxom::Header::Adapter', \%adaptee;
-ok $adapter->isa( 'Blosxom::Header::Adapter' );
+my $adapter = tie my %adapter, $class, \%adaptee;
+ok $adapter->isa( $class );
+is $adapter->header, \%adaptee;
 
 # SCALAR
 %adaptee = ();
@@ -50,9 +49,6 @@ is $adapter{Bar}, undef;
 %adaptee = ();
 $adapter{Foo} = 'bar';
 is_deeply \%adaptee, { -foo => 'bar' };
-
-# header()
-is $adapter->header, \%adaptee;
 
 subtest 'nph()' => sub {
     %adaptee = ();
