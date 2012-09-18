@@ -56,42 +56,40 @@ is $adapter->header, \%adaptee;
 
 subtest 'nph()' => sub {
     %adaptee = ();
-    ok !$adapter->nph;
 
     $adapter->nph( 1 );
     ok $adapter->nph;
-    is $adaptee{-nph}, 1;
+    ok $adaptee{-nph} == 1;
+
+    $adapter->nph( 0 );
+    ok !$adapter->nph;
+    ok $adaptee{-nph} == 0;
 
     %adaptee = ( -date => 'Sat, 07 Jul 2012 05:05:09 GMT' );
     $adapter->nph( 1 );
-    is_deeply \%adaptee, { -nph => 1 };
+    is_deeply \%adaptee, { -nph => 1 }, '-date should be deleted';
 };
 
 subtest 'field_names()' => sub {
-    %adaptee = ( -type => undef );
-    my @got = $adapter->field_names;
-    my @expected = ( 'Content-Type' );
-    is_deeply \@got, \@expected;
+    %adaptee = ( -type => q{} );
+    is_deeply [ $adapter->field_names ], [], 'should return null array';
 
     %adaptee = (
-        -nph        => 'foo',
-        -charset    => 'foo',
-        -status     => 'foo',
-        -target     => 'foo',
-        -p3p        => 'foo',
-        -cookie     => 'foo',
-        -expires    => 'foo',
-        -attachment => 'foo',
-        -foo_bar    => 'foo',
+        -nph        => 1,
+        -status     => 1,
+        -target     => 1,
+        -p3p        => 1,
+        -cookie     => 1,
+        -expires    => 1,
+        -attachment => 1,
+        -foo_bar    => 1,
         -foo        => q{},
-        -bar        => q{},
-        -baz        => q{},
-        -qux        => q{},
+        -bar        => undef,
     );
 
-    @got = $adapter->field_names;
+    my @got = $adapter->field_names;
 
-    @expected = qw(
+    my @expected = qw(
         Status
         Window-Target
         P3P
