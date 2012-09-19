@@ -1,32 +1,26 @@
 use strict;
 use warnings;
 use Benchmark qw/cmpthese/;
-use Blosxom::Header;
+use Blosxom::Header::Adapter;
 
-{
-    package blosxom;
+my $header = Blosxom::Header::Adapter->TIEHASH({
+    -type    => 'text/plain',
+    -charset => 'utf-8',
+    -nph     => 1,
+    -foo     => 'bar',
+});
 
-    our $header = {
-        -type    => 'text/plain',
-        -charset => 'utf-8',
-        -nph     => 1,
-        -foo     => 'bar',
-    };
-}
-
-my $header = Blosxom::Header->new;
-
-cmpthese(100000, {
+cmpthese(-1, {
     'Content-Type' => sub {
-        my $bool = exists $header->{Content_Type};
+        my $bool = $header->EXISTS('Content-Type');
     },
     'Content-Disposition' => sub {
-        my $bool = exists $header->{Content_Disposition};
+        my $bool = $header->EXISTS('Content-Disposition');
     },
     'Date' => sub {
-        my $bool = exists $header->{Date};
+        my $bool = $header->EXISTS('Date');
     },
     'Foo' => sub {
-        my $bool = exists $header->{Foo};
+        my $bool = $header->EXISTS('Foo');
     },
 });

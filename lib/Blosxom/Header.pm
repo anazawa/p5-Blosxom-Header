@@ -50,20 +50,21 @@ Blosxom::Header - Object representing CGI response headers
 
 =head1 SYNOPSIS
 
+  # object-oriented interface
   use Blosxom::Header;
 
   my $header = Blosxom::Header->instance;
 
-  $header->set( Content_Length => 12345 );
+  $header->set( 'Content-Length' => 12345 );
   my $value   = $header->get( 'Status' );
   my $deleted = $header->delete( 'Content-Disposition' );
   my $bool    = $header->exists( 'ETag' );
 
   # as a hash reference
-  $header->{Content_Length} = 12345;
-  my $value   = $header->{Status};
-  my $deleted = delete $header->{Content_Disposition};
-  my $bool    = exists $header->{ETag};
+  $header->{'Content-Length'} = 12345;
+  my $value   = $header->{'Status'};
+  my $deleted = delete $header->{'Content-Disposition'};
+  my $bool    = exists $header->{'ETag'};
 
   # procedural interface
   use Blosxom::Header qw(
@@ -71,7 +72,7 @@ Blosxom::Header - Object representing CGI response headers
       header_exists header_delete
   );
 
-  header_set( Content_Length => 12345 );
+  header_set( 'Content-Length' => 12345 );
   my $value   = header_get( 'Status' );
   my $deleted = header_delete( 'Content-Disposition' );
   my $bool    = header_exists( 'ETag' );
@@ -581,10 +582,10 @@ When the Date header is fixed, you can't modify the value:
 
 =over 4
 
-=item $blosxom::header hasn't been initialized yet
+=item Blosxom::Header hasn't been initialized yet
 
 You attempted to create a Blosxom::Header object
-before the variable was initialized.
+before C<$blosxom::header> was initialized.
 See C<< Blosxom::Header->is_initialized() >>.
 
 =item Unknown status code '%d%d%d' passed to status()
@@ -600,7 +601,7 @@ when the Date header was fixed. See L<"LIMITATIONS">.
 
 You attempted to C<set()> the Expires or P3P header.
 You can't assign any values to these headers directly.
-Use L<expires()> or L<p3p_tags()> instead.
+Use C<expires()> or C<p3p_tags()> instead.
 
 =back
 

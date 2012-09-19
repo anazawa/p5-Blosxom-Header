@@ -1,77 +1,49 @@
 use strict;
 use warnings;
 use Benchmark qw/cmpthese/;
-use Blosxom::Header;
-use HTTP::Date;
+use Blosxom::Header::Entity;
 
-{
-    package blosxom;
-    our $header = {};
-}
+my $header = Blosxom::Header::Entity->new;
+my $now    = time;
 
-my $header = Blosxom::Header->new;
-my $now = time2str( time );
-
-cmpthese(100000, {
+cmpthese(-1, {
     'Content-Type' => sub {
-        %{ $blosxom::header } = ();
-        $header->{Content_Type} = 'text/plain; charset=utf-8';
+        $header->STORE( 'Content-Type' => 'text/plain; charset=utf-8' );
     },
     'Content-Disposition' => sub {
-        %{ $blosxom::header } = ();
-        $header->{Content_Disposition} = 'inline';
+        $header->STORE( 'Content-Disposition' => 'inline' );
     },
     'Date' => sub {
-        %{ $blosxom::header } = ();
-        $header->{Date} = 'Thu, 25 Apr 1999 00:40:33 GMT';
-    },
-    'Expires' => sub {
-        %{ $blosxom::header } = ();
-        $header->{Expires} = '+3M';
-    },
-    'Set-Cookie' => sub {
-        %{ $blosxom::header } = ();
-        $header->{Set_Cookie} = 'ID=123456; path=/';
+        $header->STORE( 'Date' => 'Thu, 25 Apr 1999 00:40:33 GMT' );
     },
     'Foo' => sub {
-        %{ $blosxom::header } = ();
-        $header->{Foo} = 'bar';
+        $header->STORE( 'Foo' => 'bar' );
     },
 });
 
-$now = time;
-
-cmpthese(200000, {
-    'content_type' => sub {
-        %{ $blosxom::header } = ();
+cmpthese(-1, {
+    content_type => sub {
         $header->content_type( 'text/plain; charset=utf-8' );
     },
-    'attachment' => sub {
-        %{ $blosxom::header } = ();
+    attachment => sub {
         $header->attachment( 'genome.jpg' );
     },
-    'date' => sub {
-        %{ $blosxom::header } = ();
-        $header->date( $now );
-    },
-    'expires' => sub {
-        %{ $blosxom::header } = ();
+    expires => sub {
         $header->expires( $now );
     },
-    'last_modified' => sub {
-        %{ $blosxom::header } = ();
+    last_modified => sub {
         $header->last_modified( $now );
     },
-    'status' => sub {
-        %{ $blosxom::header } = ();
+    status => sub {
         $header->status( 304 );
     },
-    'target' => sub {
-        %{ $blosxom::header } = ();
+    target => sub {
         $header->target( 'ResultsWindow' );
     },
-    'nph' => sub {
-        %{ $blosxom::header } = ();
+    nph => sub {
         $header->nph( 1 );
+    },
+    p3p_tags => sub {
+        $header->p3p_tags( 'CAO DSP LAW CURa' );
     },
 });

@@ -1,12 +1,12 @@
 use strict;
 use warnings;
 use Benchmark qw/cmpthese/;
-use CGI::Util qw/expires/;
+use CGI::Util 'expires';
 use HTTP::Date;
 
 my $now = time;
 
-cmpthese(100000, {
-    'CGI::Util'  => sub { my $date = expires( $now )  },
-    'HTTP::Date' => sub { my $date = time2str( $now ) },
+cmpthese(-1, {
+    'CGI::Util::expires()'   => sub { my $date = expires( $now )  },
+    'HTTP::Date::time2str()' => sub { my $date = time2str( $now ) },
 });
