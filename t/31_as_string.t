@@ -1,37 +1,38 @@
 use strict;
 use warnings;
-use Blosxom::Header::Entity;
 use CGI;
-use Test::More tests => 2;
+use Test::More tests => 1;
 
-package Blosxom::Header::Entity;
+package CGI::Header;
+use overload q{""} => 'as_string', fallback => 1;
+use parent 'Blosxom::Header::Entity';
 
 sub as_string {
     my $self = shift;
+    my $CRLF = $CGI::CRLF;
 
     my $result;
     $self->each(sub {
         my ( $field, $value ) = @_;
-        $result .= "$field: $value$CGI::CRLF";
+        $result .= "$field: $value$CRLF";
     });
 
-    $result ? "$result$CGI::CRLF" : $CGI::CRLF x 2;
+    $result ? "$result$CRLF" : $CRLF x 2;
 }
 
 package main;
 
-my $header = Blosxom::Header::Entity->new;
-
-is $header->as_string, CGI::header( $header->header );
-
-%{ $header->header } = (
-    -type       => 'text/plain',
-    -charset    => 'utf-8',
-    -attachment => 'genome.jpg',
-    -target     => 'ResultsWindow',
-    -foo_bar    => 'baz',
-    -status     => '304 Not Modified',
-    -cookie     => 'ID=123456; path=/',
+my $header = CGI::Header->new(
+    -type           => 'text/plain; charset=utf-8',
+    -target         => 'ResultsWindow',
+    -content_length => '12345',
 );
 
-is $header->as_string, CGI::header( $header->header );
+$header->set_cookie( foo => 'bar' );
+$header->set_cookie( bar => 'baz' );
+
+$header->attachment( 'genome.jpg' );
+$header->status( 304 );
+$header->expires( '+3M' );
+
+is $header, CGI::header( $header->header );

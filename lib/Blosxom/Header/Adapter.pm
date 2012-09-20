@@ -1,7 +1,7 @@
 package Blosxom::Header::Adapter;
 use strict;
 use warnings;
-use Carp qw/carp/;
+use Carp qw/carp croak/;
 use List::Util qw/first/;
 use Scalar::Util qw/refaddr/;
 

@@ -588,7 +588,7 @@ You attempted to create a Blosxom::Header object
 before C<$blosxom::header> was initialized.
 See C<< Blosxom::Header->is_initialized() >>.
 
-=item Unknown status code '%d%d%d' passed to status()
+=item Unknown status code '%03d' passed to status()
 
 The given status code is unknown to L<HTTP::Status>.
 

@@ -1,6 +1,8 @@
 use strict;
 use warnings;
 use Blosxom::Header::Entity;
+use CGI::Cookie;
+use CGI::Util 'expires';
 use Test::More tests => 19;
 use Test::Warn;
 use Test::Exception;
@@ -118,15 +120,29 @@ subtest 'is_empty()' => sub {
 };
 
 subtest 'flatten()' => sub {
+    my $cookie1 = CGI::Cookie->new(
+        -name  => 'foo',
+        -value => 'bar',
+    );
+
+    my $cookie2 = CGI::Cookie->new(
+        -name  => 'bar',
+        -value => 'baz',
+    );
+
     %header = (
         -status         => '304 Not Modified',
         -content_length => 12345,
+        -cookie         => [ $cookie1, $cookie2 ],
     );
 
     my @got = $header->flatten;
 
     my @expected = (
         'Status',         '304 Not Modified',
+        'Set-Cookie',     'foo=bar; path=/',
+        'Set-Cookie',     'bar=baz; path=/',
+        'Date',           expires(0, 'http'),
         'Content-length', '12345',
         'Content-Type',   'text/html; charset=ISO-8859-1',
     );
@@ -186,9 +202,9 @@ subtest 'dump()' => sub {
     my $got = eval $header->dump;
 
     my %expected = (
-        adapter => {
-            'Content-Type' => 'text/plain; charset=ISO-8859-1',
-        },
+        adapter => [
+            'Content-Type', 'text/plain; charset=ISO-8859-1',
+        ],
         adaptee => {
             '-type' => 'text/plain',
         },

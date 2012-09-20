@@ -10,7 +10,7 @@ my %adapter_of;
 
 sub new {
     my $class = shift;
-    my $adaptee = ref $_[0] eq 'HASH' ? shift : {};
+    my $adaptee = ref $_[0] eq 'HASH' ? shift : { @_ };
     my $self = tie my %adapter => $class => $adaptee;
     $adapter_of{ refaddr $self } = \%adapter;
     $self;
@@ -63,15 +63,37 @@ sub is_empty { not shift->SCALAR   }
 
 sub flatten {
     my $self = shift;
-    map { $_, $self->FETCH($_) } $self->field_names;
+
+    my @headers;
+    for my $field ( $self->field_names ) {
+        my $value = $self->FETCH( $field );
+
+        if ( $field eq 'Set-Cookie' ) {
+            my @cookies = ref $value eq 'ARRAY' ? @{ $value } : $value;
+
+            for my $cookie ( @cookies ) {
+                next unless ref $cookie eq 'CGI::Cookie';
+                $cookie = $cookie->as_string;
+            }
+
+            push @headers, map { $field, $_ } @cookies;
+
+            next;
+        }
+
+        push @headers, $field, $value;
+    }
+
+    @headers;
 }
 
 sub each {
     my ( $self, $callback ) = @_;
 
     if ( ref $callback eq 'CODE' ) {
-        for my $field ( $self->field_names ) {
-            $callback->( $field, $self->FETCH($field) );
+        my @headers = $self->flatten;
+        while ( my ($field, $value) = splice @headers, 0, 2 ) {
+            $callback->( $field, $value );
         }
     }
     else {
@@ -225,7 +247,7 @@ sub dump {
 
     my %self = (
         adaptee => $self->header,
-        adapter => { $self->flatten },
+        adapter => [ $self->flatten ],
     );
 
     Data::Dumper::Dumper( \%self );
