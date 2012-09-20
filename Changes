@@ -1,7 +1,5 @@
 Revision history for Perl extension Blosxom::Header.
 
-  - flatten() stringify CGI::Cookie objects
-
 0.06003 Aug 19th, 2012
   - push_p3p_tags() is obsolete and will be removed in 0.07
   - new() become a private method, not the alias of instance() any more

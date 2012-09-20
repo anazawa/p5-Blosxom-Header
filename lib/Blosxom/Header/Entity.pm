@@ -63,37 +63,15 @@ sub is_empty { not shift->SCALAR   }
 
 sub flatten {
     my $self = shift;
-
-    my @headers;
-    for my $field ( $self->field_names ) {
-        my $value = $self->FETCH( $field );
-
-        if ( $field eq 'Set-Cookie' ) {
-            my @cookies = ref $value eq 'ARRAY' ? @{ $value } : $value;
-
-            for my $cookie ( @cookies ) {
-                next unless ref $cookie eq 'CGI::Cookie';
-                $cookie = $cookie->as_string;
-            }
-
-            push @headers, map { $field, $_ } @cookies;
-
-            next;
-        }
-
-        push @headers, $field, $value;
-    }
-
-    @headers;
+    map { $_, $self->FETCH($_) } $self->field_names;
 }
 
 sub each {
     my ( $self, $callback ) = @_;
 
     if ( ref $callback eq 'CODE' ) {
-        my @headers = $self->flatten;
-        while ( my ($field, $value) = splice @headers, 0, 2 ) {
-            $callback->( $field, $value );
+        for my $field ( $self->field_names ) {
+            $callback->( $field, $self->FETCH($field) );
         }
     }
     else {
@@ -171,40 +149,41 @@ sub set_cookie {
 
     require CGI::Cookie;
 
+    my $cookies = $self->FETCH('Set-Cookie');
+
+    unless ( ref $cookies eq 'ARRAY' ) {
+        $cookies = $cookies ? [ $cookies ] : [];
+        $self->STORE( 'Set-Cookie' => $cookies );
+    }
+
     my $new_cookie = CGI::Cookie->new(do {
         my %args = ref $value eq 'HASH' ? %{ $value } : ( value => $value );
         $args{name} = $name;
         \%args;
     });
 
-    my @cookies;
-    if ( my $cookies = $self->FETCH('Set-Cookie') ) {
-        @cookies = ref $cookies eq 'ARRAY' ? @{ $cookies } : $cookies;
-        for my $cookie ( @cookies ) {
-            next unless ref $cookie eq 'CGI::Cookie';
-            next unless $cookie->name eq $name;
-            $cookie = $new_cookie;
-            undef $new_cookie;
-            last;
-        }
+    for my $cookie ( @{$cookies} ) {
+        next unless ref $cookie eq 'CGI::Cookie';
+        next unless $cookie->name eq $name;
+        $cookie = $new_cookie;
+        undef $new_cookie;
+        last;
     }
 
-    push @cookies, $new_cookie if $new_cookie;
-
-    $self->STORE( 'Set-Cookie' => @cookies > 1 ? \@cookies : $cookies[0] );
+    push @{ $cookies }, $new_cookie if $new_cookie;
 
     return;
 }
 
 sub get_cookie {
-    my $self   = shift;
-    my $name   = shift;
-    my $cookie = $self->FETCH( 'Set-Cookie' );
+    my ( $self, $name ) = @_;
+
+    my $cookies = $self->FETCH('Set-Cookie');
 
     my @values = grep {
         ref $_ eq 'CGI::Cookie' and $_->name eq $name
     } (
-        ref $cookie eq 'ARRAY' ? @{ $cookie } : $cookie,
+        ref $cookies eq 'ARRAY' ? @{ $cookies } : $cookies
     );
 
     wantarray ? @values : $values[0];
@@ -247,7 +226,7 @@ sub dump {
 
     my %self = (
         adaptee => $self->header,
-        adapter => [ $self->flatten ],
+        adapter => { $self->flatten },
     );
 
     Data::Dumper::Dumper( \%self );

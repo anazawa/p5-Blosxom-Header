@@ -30,13 +30,14 @@ subtest 'get_cookie()' => sub {
 subtest 'set_cookie()' => sub {
     %header = ();
     $header->set_cookie( foo => 'bar' );
-    my $got = $header{-cookie};
+    my $got = $header{-cookie}[0];
     isa_ok $got, 'CGI::Cookie';
     is $got->value, 'bar';
 
     %header = ();
     $header->set_cookie( foo => { value => 'bar' } );
-    $got = $header{-cookie};
+    #$got = $header{-cookie};
+    $got = $header{-cookie}[0];
     isa_ok $got, 'CGI::Cookie';
     is $got->value, 'bar';
 
@@ -47,7 +48,7 @@ subtest 'set_cookie()' => sub {
 
     %header = ( -cookie => $cookie );
     $header->set_cookie( foo => 'baz' );
-    $got = $header{-cookie};
+    $got = $header{-cookie}[0];
     isa_ok $got, 'CGI::Cookie';
     is $got->value, 'baz';
 
@@ -58,7 +59,7 @@ subtest 'set_cookie()' => sub {
 
     %header = ( -cookie => $cookie );
     $header->set_cookie( foo => { value => 'baz' } );
-    $got = $header{-cookie};
+    $got = $header{-cookie}[0];
     isa_ok $got, 'CGI::Cookie';
     is $got->value, 'baz';
 };

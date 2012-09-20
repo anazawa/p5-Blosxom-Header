@@ -14,7 +14,8 @@ sub as_string {
     my $result;
     $self->each(sub {
         my ( $field, $value ) = @_;
-        $result .= "$field: $value$CRLF";
+        my @values = ref $value eq 'ARRAY' ? @{ $value } : $value;
+        $result .= "$field: $_$CRLF" for @values;
     });
 
     $result ? "$result$CRLF" : $CRLF x 2;

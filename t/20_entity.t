@@ -3,7 +3,7 @@ use warnings;
 use Blosxom::Header::Entity;
 use CGI::Cookie;
 use CGI::Util 'expires';
-use Test::More tests => 19;
+use Test::More tests => 20;
 use Test::Warn;
 use Test::Exception;
 
@@ -20,6 +20,14 @@ can_ok $class, qw(
     status 
     UNTIE DESTROY
 );
+
+subtest 'new()' => sub {
+    my %header;
+    my $header = $class->new( \%header );
+    is $header->header, \%header;
+    $header = $class->new( -foo => 'bar' );
+    is_deeply $header->header, { -foo => 'bar' };
+};
 
 # initialize
 my %header;
@@ -140,8 +148,7 @@ subtest 'flatten()' => sub {
 
     my @expected = (
         'Status',         '304 Not Modified',
-        'Set-Cookie',     'foo=bar; path=/',
-        'Set-Cookie',     'bar=baz; path=/',
+        'Set-Cookie',      [ $cookie1, $cookie2 ],
         'Date',           expires(0, 'http'),
         'Content-length', '12345',
         'Content-Type',   'text/html; charset=ISO-8859-1',
@@ -202,9 +209,9 @@ subtest 'dump()' => sub {
     my $got = eval $header->dump;
 
     my %expected = (
-        adapter => [
+        adapter => {
             'Content-Type', 'text/plain; charset=ISO-8859-1',
-        ],
+        },
         adaptee => {
             '-type' => 'text/plain',
         },
