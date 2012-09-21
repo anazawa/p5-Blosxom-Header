@@ -5,19 +5,20 @@ use Carp qw/carp croak/;
 use List::Util qw/first/;
 use Scalar::Util qw/refaddr/;
 
-my %adaptee_of;
+my %header_of;
 
 sub TIEHASH {
-    my ( $class, $adaptee ) = @_;
+    my $class = shift;
+    my $header = ref $_[0] eq 'HASH' ? shift : { -type => q{} };
     my $self = bless \do { my $anon_scalar }, $class;
-    $adaptee_of{ refaddr $self } = $adaptee;
+    $header_of{ refaddr $self } = $header;
     $self;
 }
 
 sub FETCH {
     my $self   = shift;
     my $norm   = $self->_normalize( shift );
-    my $header = $adaptee_of{ refaddr $self };
+    my $header = $header_of{ refaddr $self };
 
     if ( $norm eq '-content_type' ) {
         my $type    = $header->{-type};
@@ -71,7 +72,7 @@ sub STORE {
     my $self   = shift;
     my $norm   = $self->_normalize( shift );
     my $value  = shift;
-    my $header = $adaptee_of{ refaddr $self };
+    my $header = $header_of{ refaddr $self };
 
     if ( $norm eq '-date' ) {
         if ( $self->_date_header_is_fixed ) {
@@ -104,7 +105,7 @@ sub DELETE {
     my $field   = shift;
     my $norm    = $self->_normalize( $field );
     my $deleted = defined wantarray && $self->FETCH( $field );
-    my $header  = $adaptee_of{ refaddr $self };
+    my $header  = $header_of{ refaddr $self };
 
     if ( $norm eq '-date' ) {
         if ( $self->_date_header_is_fixed ) {
@@ -126,7 +127,7 @@ sub DELETE {
 
 sub CLEAR {
     my $self = shift;
-    my $header = $adaptee_of{ refaddr $self };
+    my $header = $header_of{ refaddr $self };
     %{ $header } = ( -type => q{} );
     return;
 }
@@ -134,7 +135,7 @@ sub CLEAR {
 sub EXISTS {
     my $self   = shift;
     my $norm   = $self->_normalize( shift );
-    my $header = $adaptee_of{ refaddr $self };
+    my $header = $header_of{ refaddr $self };
 
     if ( $norm eq '-content_type' ) {
         return !defined $header->{-type} || $header->{-type} ne q{};
@@ -151,21 +152,21 @@ sub EXISTS {
 
 sub SCALAR {
     my $self = shift;
-    my $header = $adaptee_of{ refaddr $self };
+    my $header = $header_of{ refaddr $self };
     !defined $header->{-type} || first { $_ } values %{ $header };
 }
 
 sub DESTROY {
     my $self = shift;
-    delete $adaptee_of{ refaddr $self };
+    delete $header_of{ refaddr $self };
     return;
 }
 
-sub header { $adaptee_of{ refaddr shift } }
+sub header { $header_of{ refaddr shift } }
 
 sub field_names {
     my $self   = shift;
-    my $header = $adaptee_of{ refaddr $self };
+    my $header = $header_of{ refaddr $self };
     my %header = %{ $header }; # copy
 
     my @fields;
@@ -193,7 +194,7 @@ sub field_names {
 
 sub attachment {
     my $self   = shift;
-    my $header = $adaptee_of{ refaddr $self };
+    my $header = $header_of{ refaddr $self };
 
     if ( @_ ) {
         my $filename = shift;
@@ -209,7 +210,7 @@ sub attachment {
 
 sub expires {
     my $self   = shift;
-    my $header = $adaptee_of{ refaddr $self };
+    my $header = $header_of{ refaddr $self };
 
     if ( @_ ) {
         my $expires = shift;
@@ -229,7 +230,7 @@ sub expires {
 
 sub nph {
     my $self   = shift;
-    my $header = $adaptee_of{ refaddr $self };
+    my $header = $header_of{ refaddr $self };
     
     if ( @_ ) {
         my $nph = shift;
@@ -245,7 +246,7 @@ sub nph {
 
 sub p3p_tags {
     my $self   = shift;
-    my $header = $adaptee_of{ refaddr $self };
+    my $header = $header_of{ refaddr $self };
 
     if ( my @tags = @_ ) {
         $header->{-p3p} = @tags > 1 ? \@tags : $tags[0];
@@ -262,7 +263,7 @@ sub p3p_tags {
 sub push_p3p_tags {
     my $self   = shift;
     my @tags   = @_;
-    my $header = $adaptee_of{ refaddr $self };
+    my $header = $header_of{ refaddr $self };
 
     unless ( @tags ) {
         carp 'Useless use of push_p3p_tags() with no values';
@@ -281,7 +282,7 @@ sub push_p3p_tags {
 
 sub _date_header_is_fixed {
     my $self = shift;
-    my $header = $adaptee_of{ refaddr $self };
+    my $header = $header_of{ refaddr $self };
     $header->{-expires} || $header->{-cookie} || $header->{-nph};
 }
 

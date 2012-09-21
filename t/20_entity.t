@@ -3,7 +3,7 @@ use warnings;
 use Blosxom::Header::Entity;
 use CGI::Cookie;
 use CGI::Util 'expires';
-use Test::More tests => 20;
+use Test::More tests => 21;
 use Test::Warn;
 use Test::Exception;
 
@@ -12,7 +12,7 @@ my $class = 'Blosxom::Header::Entity';
 ok $class->isa( 'Blosxom::Header::Adapter' );
 
 can_ok $class, qw(
-    new clear delete exists get set is_empty
+    new clone clear delete exists get set is_empty
     dump as_hashref
     each flatten
     content_type type charset
@@ -27,6 +27,18 @@ subtest 'new()' => sub {
     is $header->header, \%header;
     $header = $class->new( -foo => 'bar' );
     is_deeply $header->header, { -foo => 'bar' };
+    $header = $class->new;
+    is_deeply $header->header, { -type => q{} };
+};
+
+subtest 'clone()' => sub {
+    my $expected = qr{^Can't clone non-object: Blosxom::Header::Entity};
+    throws_ok { $class->clone } $expected;
+    my $header = $class->new( -foo => 'bar' );
+    my $clone = $header->clone;
+    isnt $clone, $header;
+    isnt $clone->header, $header->header;
+    is_deeply $clone->header, $header->header;
 };
 
 # initialize

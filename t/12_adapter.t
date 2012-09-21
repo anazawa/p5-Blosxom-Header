@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use Blosxom::Header::Adapter;
-use Test::More tests => 17;
+use Test::More tests => 16;
 
 my $class = 'Blosxom::Header::Adapter';
 
@@ -13,10 +13,17 @@ can_ok $class, qw(
     _normalize _denormalize _date_header_is_fixed
 );
 
+subtest 'TIEHASH()' => sub {
+    my $got = $class->TIEHASH;
+    isa_ok $got, $class;
+    is_deeply $got->header, { -type => q{} };
+    my %adaptee;
+    $got = $class->TIEHASH( \%adaptee );
+    is $got->header, \%adaptee;
+};
+
 my %adaptee;
 my $adapter = tie my %adapter, $class, \%adaptee;
-ok $adapter->isa( $class );
-is $adapter->header, \%adaptee;
 
 # SCALAR
 %adaptee = ();

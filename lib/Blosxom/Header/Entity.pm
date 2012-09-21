@@ -6,17 +6,15 @@ use parent 'Blosxom::Header::Adapter';
 use Carp qw/carp croak/;
 use Scalar::Util qw/refaddr/;
 
-my %adapter_of;
+my %header_of;
 
 sub new {
     my $class = shift;
-    my $adaptee = ref $_[0] eq 'HASH' ? shift : { @_ };
-    my $self = tie my %adapter => $class => $adaptee;
-    $adapter_of{ refaddr $self } = \%adapter;
+    my $header = ( ref $_[0] eq 'HASH' && shift ) || ( @_ && { @_ } );
+    my $self = tie my %header => $class => $header;
+    $header_of{ refaddr $self } = \%header;
     $self;
 }
-
-sub as_hashref { $adapter_of{ refaddr shift } }
 
 sub get {
     my ( $self, @fields ) = @_;
@@ -79,6 +77,14 @@ sub each {
     }
 
     return;
+}
+
+sub as_hashref { $header_of{ refaddr shift } }
+
+sub clone {
+    my $self = shift;
+    my $class = ref $self or croak "Can't clone non-object: $self";
+    $class->new( %{ $self->header } );
 }
 
 sub charset {
@@ -234,7 +240,7 @@ sub dump {
 
 sub UNTIE {
     my $self = shift;
-    delete $adapter_of{ refaddr $self };
+    delete $header_of{ refaddr $self };
     return;
 }
 
