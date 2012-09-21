@@ -15,6 +15,7 @@ requires 'HTTP::Headers::Util' => '6.03';
 requires 'HTTP::Status' => '6.03';
 requires 'List::Util'   => '1.19';
 requires 'Scalar::Util' => '1.19';
+requires 'Storable';
 
 test_requires 'Test::Base'      => '0.60';
 test_requires 'Test::Exception' => '0.31';

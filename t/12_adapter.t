@@ -7,7 +7,7 @@ my $class = 'Blosxom::Header::Adapter';
 
 can_ok $class, qw(
     TIEHASH FETCH STORE DELETE EXISTS CLEAR SCALAR DESTROY
-    header field_names dump
+    clone header field_names
     p3p_tags push_p3p_tags expires nph attachment
     _normalize _denormalize _date_header_is_fixed
 );
@@ -106,11 +106,7 @@ subtest 'field_names()' => sub {
     is_deeply \@got, \@expected;
 };
 
-subtest 'dump()' => sub {
-    %adaptee = ( -type => 'text/plain' );
-    my $got = eval $adapter->dump;
-    is_deeply $got, \%adaptee;
-};
+subtest 'clone()' => sub { ok 1 };
 
 subtest 'DESTROY()' => sub {
     $adapter->DESTROY;

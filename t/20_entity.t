@@ -3,7 +3,7 @@ use warnings;
 use Blosxom::Header::Entity;
 use CGI::Cookie;
 use CGI::Util 'expires';
-use Test::More tests => 20;
+use Test::More tests => 21;
 use Test::Warn;
 use Test::Exception;
 
@@ -25,16 +25,6 @@ subtest 'new()' => sub {
     is $header->header, \%header;
     $header = $class->new( -foo => 'bar' );
     is_deeply $header->header, { -foo => 'bar' };
-};
-
-subtest 'clone()' => sub {
-    my $expected = qr{^Can't clone non-object: Blosxom::Header::Entity};
-    throws_ok { $class->clone } $expected;
-    my $header = $class->new( -foo => 'bar' );
-    my $clone = $header->clone;
-    isnt $clone, $header;
-    isnt $clone->header, $header->header;
-    is_deeply $clone->header, $header->header;
 };
 
 # initialize
@@ -211,6 +201,16 @@ subtest 'target()' => sub {
     is_deeply \%header, { -target => 'ResultsWindow' };
 };
 
+subtest 'clone()' => sub {
+    my $orig = $class->new( -foo => 'bar' );
+    my $clone = $orig->clone;
+    isnt $clone, $orig;
+    isnt $clone->header, $orig->header;
+    isnt $clone->as_hashref, $orig->as_hashref;
+    is tied %{ $clone }, $clone;
+    is_deeply $clone->header, $orig->header;
+};
+
 subtest 'UNTIE()' => sub {
     my $h = $class->new;
     $h->UNTIE;
@@ -223,16 +223,4 @@ subtest 'DESTROY()' => sub {
     $h->DESTROY;
     ok !$h->as_hashref;
     ok !$h->header;
-};
-
-use Storable 'dclone';
-
-subtest 'Storable-safe' => sub {
-    my $h = $class->new( -foo => 'bar' );
-    my $clone = dclone( $h );
-    is tied %{ $clone }, $clone;
-    is_deeply $clone->header, { -foo => 'bar' };
-    isnt $h, $clone;
-    isnt $h->header, $clone->header;
-    isnt $h->as_hashref, $clone->as_hashref;
 };

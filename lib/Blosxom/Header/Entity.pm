@@ -81,21 +81,6 @@ sub each {
 
 sub as_hashref { $header_of{ refaddr shift } }
 
-sub clone {
-    my $self = shift;
-    my $class = ref $self or croak "Can't clone non-object: $self";
-    my $header = eval $self->dump or croak $@;
-    $class->new( $header );
-}
-
-sub STORABLE_thaw {
-    my $self = shift;
-    require Tie::ToObject;
-    tie my %header, 'Tie::ToObject', $self;
-    $header_of{ refaddr $self } = \%header;
-    $self->SUPER::STORABLE_thaw( @_ );
-}
-
 sub charset {
     my $self = shift;
 
@@ -241,6 +226,14 @@ sub DESTROY {
     my $self = shift;
     $self->UNTIE;
     $self->SUPER::DESTROY;
+}
+
+sub STORABLE_thaw {
+    my $self = shift;
+    local *TIEHASH = sub { $self };
+    tie my %header, __PACKAGE__; # FIXME: Tie::ToObject is well-tested
+    $header_of{ refaddr $self } = \%header;
+    $self->SUPER::STORABLE_thaw( @_ );
 }
 
 1;
