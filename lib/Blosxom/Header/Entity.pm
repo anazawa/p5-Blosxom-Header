@@ -88,6 +88,14 @@ sub clone {
     $class->new( $header );
 }
 
+sub STORABLE_thaw {
+    my $self = shift;
+    require Tie::ToObject;
+    tie my %header, 'Tie::ToObject', $self;
+    $header_of{ refaddr $self } = \%header;
+    $self->SUPER::STORABLE_thaw( @_ );
+}
+
 sub charset {
     my $self = shift;
 
@@ -224,7 +232,7 @@ sub target {
 }
 
 sub UNTIE {
-    my $self = shift;
+    my ( $self, $count ) = @_;
     delete $header_of{ refaddr $self };
     return;
 }

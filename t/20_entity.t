@@ -211,8 +211,28 @@ subtest 'target()' => sub {
     is_deeply \%header, { -target => 'ResultsWindow' };
 };
 
+subtest 'UNTIE()' => sub {
+    my $h = $class->new;
+    $h->UNTIE;
+    ok !$h->as_hashref;
+    ok $h->header;
+};
+
 subtest 'DESTROY()' => sub {
-    $header->DESTROY;
-    ok !$header->as_hashref;
-    ok !$header->header;
+    my $h = $class->new;
+    $h->DESTROY;
+    ok !$h->as_hashref;
+    ok !$h->header;
+};
+
+use Storable 'dclone';
+
+subtest 'Storable-safe' => sub {
+    my $h = $class->new( -foo => 'bar' );
+    my $clone = dclone( $h );
+    is tied %{ $clone }, $clone;
+    is_deeply $clone->header, { -foo => 'bar' };
+    isnt $h, $clone;
+    isnt $h->header, $clone->header;
+    isnt $h->as_hashref, $clone->as_hashref;
 };

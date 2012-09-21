@@ -263,6 +263,10 @@ instead.
   values %{ $header };
   each %{ $header };
 
+=item $clone = $header->clone
+
+Returns a copy of this Blosxom::Header object.
+
 =back
 
 =head3 HANDLING COOKIES

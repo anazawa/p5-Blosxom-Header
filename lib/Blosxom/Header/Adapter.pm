@@ -127,8 +127,8 @@ sub DELETE {
 
 sub CLEAR {
     my $self = shift;
-    my $header = $header_of{ refaddr $self };
-    %{ $header } = ( -type => q{} );
+    my $this = refaddr $self;
+    %{ $header_of{$this} } = ( -type => q{} );
     return;
 }
 
@@ -166,8 +166,8 @@ sub header { $header_of{ refaddr shift } }
 
 sub field_names {
     my $self   = shift;
-    my $header = $header_of{ refaddr $self };
-    my %header = %{ $header }; # copy
+    my $this   = refaddr $self;
+    my %header = %{ $header_of{$this} }; # copy
 
     my @fields;
 
@@ -291,6 +291,17 @@ sub _date_header_is_fixed {
     my $self = shift;
     my $header = $header_of{ refaddr $self };
     $header->{-expires} || $header->{-cookie} || $header->{-nph};
+}
+
+sub STORABLE_freeze {
+    my ( $self, $cloning ) = @_;
+    ( q{}, $header_of{ refaddr $self } );
+}
+
+sub STORABLE_thaw {
+    my ( $self, $cloning, $serialized, $header ) = @_;
+    $header_of{ refaddr $self } = $header;
+    return;
 }
 
 my %norm_of = (
