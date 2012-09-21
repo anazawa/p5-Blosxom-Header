@@ -280,6 +280,13 @@ sub push_p3p_tags {
     scalar @tags;
 }
 
+sub dump {
+    my $self = shift;
+    require Data::Dumper;
+    local $Data::Dumper::Terse = 1;
+    Data::Dumper::Dumper( $header_of{ refaddr $self } );
+}
+
 sub _date_header_is_fixed {
     my $self = shift;
     my $header = $header_of{ refaddr $self };

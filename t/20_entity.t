@@ -3,7 +3,7 @@ use warnings;
 use Blosxom::Header::Entity;
 use CGI::Cookie;
 use CGI::Util 'expires';
-use Test::More tests => 21;
+use Test::More tests => 20;
 use Test::Warn;
 use Test::Exception;
 
@@ -12,23 +12,19 @@ my $class = 'Blosxom::Header::Entity';
 ok $class->isa( 'Blosxom::Header::Adapter' );
 
 can_ok $class, qw(
-    new clone clear delete exists get set is_empty
-    dump as_hashref
-    each flatten
-    content_type type charset
-    last_modified date
-    status 
+    new clone clear delete exists get set is_empty as_hashref each flatten
+    content_type type charset last_modified date status
     UNTIE DESTROY
 );
 
 subtest 'new()' => sub {
+    my $header = $class->new;
+    is_deeply $header->header, { -type => q{} };
     my %header;
-    my $header = $class->new( \%header );
+    $header = $class->new( \%header );
     is $header->header, \%header;
     $header = $class->new( -foo => 'bar' );
     is_deeply $header->header, { -foo => 'bar' };
-    $header = $class->new;
-    is_deeply $header->header, { -type => q{} };
 };
 
 subtest 'clone()' => sub {
@@ -213,23 +209,6 @@ subtest 'target()' => sub {
     $header->target( 'ResultsWindow' );
     is $header->target, 'ResultsWindow';
     is_deeply \%header, { -target => 'ResultsWindow' };
-};
-
-subtest 'dump()' => sub {
-    %header = ( -type => 'text/plain' );
-
-    my $got = eval $header->dump;
-
-    my %expected = (
-        adapter => {
-            'Content-Type', 'text/plain; charset=ISO-8859-1',
-        },
-        adaptee => {
-            '-type' => 'text/plain',
-        },
-    );
-
-    is_deeply $got, \%expected;
 };
 
 subtest 'DESTROY()' => sub {

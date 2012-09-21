@@ -84,7 +84,8 @@ sub as_hashref { $header_of{ refaddr shift } }
 sub clone {
     my $self = shift;
     my $class = ref $self or croak "Can't clone non-object: $self";
-    $class->new( %{ $self->header } );
+    my $header = eval $self->dump or croak $@;
+    $class->new( $header );
 }
 
 sub charset {
@@ -220,22 +221,6 @@ sub target {
     my $self = shift;
     return $self->STORE( 'Window-Target' => shift ) if @_;
     $self->FETCH( 'Window-Target' );
-}
-
-sub dump {
-    my $self = shift;
-
-    require Data::Dumper;
-
-    local $Data::Dumper::Terse  = 1;
-    local $Data::Dumper::Indent = 1;
-
-    my %self = (
-        adaptee => $self->header,
-        adapter => { $self->flatten },
-    );
-
-    Data::Dumper::Dumper( \%self );
 }
 
 sub UNTIE {

@@ -37,3 +37,5 @@ $header->status( 304 );
 $header->expires( '+3M' );
 
 is $header, CGI::header( $header->header );
+
+#warn $header->dump;
