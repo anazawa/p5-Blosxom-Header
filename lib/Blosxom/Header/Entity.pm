@@ -216,6 +216,20 @@ sub target {
     $self->FETCH( 'Window-Target' );
 }
 
+sub STORABLE_thaw {
+    my $self = shift;
+    my $this = refaddr $self;
+
+    # FIXME: tied() should be lvalue :-)
+    $header_of{ $this } = do {
+        local *TIEHASH = sub { $self };
+        tie my %header, __PACKAGE__;
+        \%header;
+    };
+
+    $self->SUPER::STORABLE_thaw( @_ );
+}
+
 sub UNTIE {
     my ( $self, $count ) = @_;
     delete $header_of{ refaddr $self };
@@ -226,14 +240,6 @@ sub DESTROY {
     my $self = shift;
     $self->UNTIE;
     $self->SUPER::DESTROY;
-}
-
-sub STORABLE_thaw {
-    my $self = shift;
-    local *TIEHASH = sub { $self };
-    tie my %header, __PACKAGE__; # FIXME: Tie::ToObject is well-tested
-    $header_of{ refaddr $self } = \%header;
-    $self->SUPER::STORABLE_thaw( @_ );
 }
 
 1;
