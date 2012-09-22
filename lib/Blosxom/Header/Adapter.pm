@@ -15,6 +15,8 @@ sub TIEHASH {
     $self;
 }
 
+BEGIN { *new = \&TIEHASH }
+
 sub FETCH {
     my $self   = shift;
     my $norm   = $self->_normalize( shift );
@@ -158,7 +160,6 @@ sub SCALAR {
 
 sub DESTROY {
     my $self = shift;
-    #warn "destroying $self";
     delete $header_of{ refaddr $self };
     return;
 }
@@ -300,7 +301,7 @@ sub STORABLE_freeze {
 sub STORABLE_thaw {
     my ( $self, $serialized, $cloning, $header ) = @_;
     $header_of{ refaddr $self } = $header;
-    return;
+    $self;
 }
 
 my %norm_of = (

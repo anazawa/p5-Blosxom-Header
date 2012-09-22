@@ -11,8 +11,7 @@ my %header_of;
 sub new {
     my $class = shift;
     my $header = ref $_[0] eq 'HASH' ? shift : { @_ };
-    my $self = $class->TIEHASH( $header );
-    #tie my %header => $class => $header;
+    my $self = $class->SUPER::new( $header );
     tie my %header => 'Blosxom::Header::Adapter' => $header;
     $header_of{ refaddr $self } = \%header;
     $self;
@@ -151,7 +150,7 @@ sub set_cookie {
 
     require CGI::Cookie;
 
-    my $cookies = $self->FETCH('Set-Cookie');
+    my $cookies = $self->FETCH( 'Set-Cookie' );
 
     unless ( ref $cookies eq 'ARRAY' ) {
         $cookies = $cookies ? [ $cookies ] : [];
@@ -180,13 +179,18 @@ sub set_cookie {
 sub get_cookie {
     my ( $self, $name ) = @_;
 
-    my $cookies = $self->FETCH('Set-Cookie');
+    my @cookies = do {
+        my $cookies = $self->FETCH( 'Set-Cookie' );
+        return unless $cookies;
+        ref $cookies eq 'ARRAY' ? @{ $cookies } : $cookies;
+    };
 
-    my @values = grep {
-        ref $_ eq 'CGI::Cookie' and $_->name eq $name
-    } (
-        ref $cookies eq 'ARRAY' ? @{ $cookies } : $cookies
-    );
+    my @values;
+    for my $cookie ( @cookies ) {
+        next unless ref $cookie eq 'CGI::Cookie';
+        next unless $cookie->name eq $name;
+        push @values, $cookie;
+    }
 
     wantarray ? @values : $values[0];
 }
@@ -219,17 +223,14 @@ sub target {
 }
 
 sub STORABLE_thaw {
-    my $self = shift;
-    $self->SUPER::STORABLE_thaw( @_ );
-    #tie my %header => ref $self => $self->header;
+    my $self = shift->SUPER::STORABLE_thaw( @_ );
     tie my %header => 'Blosxom::Header::Adapter' => $self->header;
     $header_of{ refaddr $self } = \%header;
-    return;
+    $self;
 }
 
 sub DESTROY {
     my $self = shift;
-    #warn "destroying $self";
     delete $header_of{ refaddr $self };
     $self->SUPER::DESTROY;
 }
