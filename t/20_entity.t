@@ -13,7 +13,7 @@ ok $class->isa( 'Blosxom::Header::Adapter' );
 
 can_ok $class, qw(
     new clone clear delete exists get set is_empty as_hashref each flatten
-    content_type type charset last_modified date status
+    content_type type charset date status
     DESTROY
 );
 

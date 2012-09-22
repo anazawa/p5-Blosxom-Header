@@ -43,6 +43,7 @@ $header->set(
 $header->attachment( 'genome.jpg' );
 $header->status( 304 );
 $header->expires( '+3M' );
+$header->p3p_tags( qw/CAO DSP LAW CURa/ );
 
 $header->set_cookie( foo => 'bar' );
 $header->set_cookie( bar => 'baz' );

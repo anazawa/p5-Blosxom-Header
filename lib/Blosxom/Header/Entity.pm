@@ -127,8 +127,7 @@ sub content_type {
 
 BEGIN { *type = \&content_type }
 
-sub date          { shift->_date_header( 'Date',          @_ ) }
-sub last_modified { shift->_date_header( 'Last-Modified', @_ ) }
+sub date { shift->_date_header( 'Date', @_ ) }
 
 sub _date_header {
     my ( $self, $field, $time ) = @_;

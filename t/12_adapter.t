@@ -8,7 +8,7 @@ my $class = 'Blosxom::Header::Adapter';
 can_ok $class, qw(
     TIEHASH FETCH STORE DELETE EXISTS CLEAR SCALAR DESTROY
     header field_names
-    p3p_tags push_p3p_tags expires nph attachment
+    p3p_tags expires nph attachment
     _normalize _denormalize _date_header_is_fixed
 );
 

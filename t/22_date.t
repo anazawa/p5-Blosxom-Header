@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use Blosxom::Header::Entity;
-use Test::More tests => 3;
+use Test::More tests => 2;
 
 my %header;
 my $header = Blosxom::Header::Entity->new( \%header );
@@ -13,15 +13,6 @@ subtest 'date()' => sub {
     $header->date( $now );
     is $header->date, $now;
     is $header{-date}, 'Sat, 07 Jul 2012 05:05:09 GMT';
-};
-
-subtest 'last_modified()' => sub {
-    %header = ();
-    is $header->last_modified, undef;
-    my $now = 1341637509;
-    $header->last_modified( $now );
-    is $header->last_modified, $now;
-    is $header{-last_modified}, 'Sat, 07 Jul 2012 05:05:09 GMT';
 };
 
 subtest 'expires()' => sub {

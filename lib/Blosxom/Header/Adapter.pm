@@ -201,7 +201,8 @@ sub field_names {
 
 sub attachment {
     my $self   = shift;
-    my $header = $header_of{ refaddr $self };
+    my $this   = refaddr $self;
+    my $header = $header_of{ $this };
 
     if ( @_ ) {
         my $filename = shift;
@@ -217,7 +218,8 @@ sub attachment {
 
 sub expires {
     my $self   = shift;
-    my $header = $header_of{ refaddr $self };
+    my $this   = refaddr $self;
+    my $header = $header_of{ $this };
 
     if ( @_ ) {
         my $expires = shift;
@@ -237,7 +239,8 @@ sub expires {
 
 sub nph {
     my $self   = shift;
-    my $header = $header_of{ refaddr $self };
+    my $this   = refaddr $self;
+    my $header = $header_of{ $this };
     
     if ( @_ ) {
         my $nph = shift;
@@ -253,10 +256,11 @@ sub nph {
 
 sub p3p_tags {
     my $self   = shift;
-    my $header = $header_of{ refaddr $self };
+    my $this   = refaddr $self;
+    my $header = $header_of{ $this };
 
-    if ( my @tags = @_ ) {
-        $header->{-p3p} = @tags > 1 ? \@tags : $tags[0];
+    if ( @_ ) {
+        $header->{-p3p} = @_ > 1 ? [ @_ ] : shift;
     }
     elsif ( my $tags = $header->{-p3p} ) {
         my @tags = ref $tags eq 'ARRAY' ? @{ $tags } : split ' ', $tags;
@@ -264,27 +268,6 @@ sub p3p_tags {
     }
 
     return;
-}
-
-# this method is obsolete and will be removed in 0.07
-sub push_p3p_tags {
-    my $self   = shift;
-    my @tags   = @_;
-    my $header = $header_of{ refaddr $self };
-
-    unless ( @tags ) {
-        carp 'Useless use of push_p3p_tags() with no values';
-        return;
-    }
-
-    if ( my $tags = $header->{-p3p} ) {
-        return push @{ $tags }, @tags if ref $tags eq 'ARRAY';
-        unshift @tags, $tags;
-    }
-
-    $header->{-p3p} = @tags > 1 ? \@tags : $tags[0];
-
-    scalar @tags;
 }
 
 sub _date_header_is_fixed {

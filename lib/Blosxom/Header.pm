@@ -40,6 +40,27 @@ sub instance {
     croak "$class hasn't been initialized yet";
 }
 
+sub last_modified { shift->_date_header( 'Last-Modified', @_ ) }
+
+# this method is obsolete and will be removed in 0.07
+sub push_p3p_tags {
+    my ( $self, @tags ) = @_;
+
+    unless ( @tags ) {
+        Carp::carp 'Useless use of push_p3p_tags() with no values';
+        return;
+    }
+
+    if ( my $tags = $self->header->{-p3p} ) {
+        return push @{ $tags }, @tags if ref $tags eq 'ARRAY';
+        unshift @tags, $tags;
+    }
+
+    $self->header->{-p3p} = @tags > 1 ? \@tags : $tags[0];
+
+    scalar @tags;
+}
+
 1;
 
 __END__
