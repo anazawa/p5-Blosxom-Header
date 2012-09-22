@@ -1,13 +1,13 @@
 use strict;
 use warnings;
 use Blosxom::Header::Adapter;
-use Test::More tests => 17;
+use Test::More tests => 16;
 
 my $class = 'Blosxom::Header::Adapter';
 
 can_ok $class, qw(
     TIEHASH FETCH STORE DELETE EXISTS CLEAR SCALAR DESTROY
-    clone header field_names
+    header field_names
     p3p_tags push_p3p_tags expires nph attachment
     _normalize _denormalize _date_header_is_fixed
 );
@@ -105,8 +105,6 @@ subtest 'field_names()' => sub {
 
     is_deeply \@got, \@expected;
 };
-
-subtest 'clone()' => sub { ok 1 };
 
 subtest 'DESTROY()' => sub {
     $adapter->DESTROY;

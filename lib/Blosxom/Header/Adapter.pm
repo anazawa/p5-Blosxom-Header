@@ -4,9 +4,6 @@ use warnings;
 use Carp qw/carp croak/;
 use List::Util qw/first/;
 use Scalar::Util qw/refaddr/;
-use Storable ();
-
-BEGIN { *clone = \&Storable::dclone }
 
 my %header_of;
 
@@ -161,11 +158,17 @@ sub SCALAR {
 
 sub DESTROY {
     my $self = shift;
+    #warn "destroying $self";
     delete $header_of{ refaddr $self };
     return;
 }
 
 sub header { $header_of{ refaddr shift } }
+
+BEGIN {
+    require Storable;
+    *clone = \&Storable::dclone;
+}
 
 sub field_names {
     my $self   = shift;

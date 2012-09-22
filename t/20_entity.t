@@ -3,7 +3,7 @@ use warnings;
 use Blosxom::Header::Entity;
 use CGI::Cookie;
 use CGI::Util 'expires';
-use Test::More tests => 21;
+use Test::More tests => 20;
 use Test::Warn;
 use Test::Exception;
 
@@ -14,12 +14,13 @@ ok $class->isa( 'Blosxom::Header::Adapter' );
 can_ok $class, qw(
     new clone clear delete exists get set is_empty as_hashref each flatten
     content_type type charset last_modified date status
-    UNTIE DESTROY
+    DESTROY
 );
 
 subtest 'new()' => sub {
     my $header = $class->new;
-    is_deeply $header->header, { -type => q{} };
+    #is_deeply $header->header, { -type => q{} };
+    is_deeply $header->header, {};
     my %header;
     $header = $class->new( \%header );
     is $header->header, \%header;
@@ -158,7 +159,7 @@ subtest 'flatten()' => sub {
 subtest 'as_hashref()' => sub {
     my $got = $header->as_hashref;
     ok ref $got eq 'HASH';
-    ok tied %{ $got } eq $header;
+    #ok tied %{ $got } eq $header;
 
     %header = ();
     $header->{Foo} = 'bar';
@@ -206,17 +207,15 @@ subtest 'clone()' => sub {
     my $clone = $orig->clone;
     isnt $clone, $orig;
     isnt $clone->header, $orig->header;
-    isnt $clone->as_hashref, $orig->as_hashref;
-    is tied %{ $clone }, $clone;
     is_deeply $clone->header, $orig->header;
 };
 
-subtest 'UNTIE()' => sub {
-    my $h = $class->new;
-    $h->UNTIE;
-    ok !$h->as_hashref;
-    ok $h->header;
-};
+#subtest 'UNTIE()' => sub {
+#    my $h = $class->new;
+#    $h->UNTIE;
+#    ok !$h->as_hashref;
+#    ok $h->header;
+#};
 
 subtest 'DESTROY()' => sub {
     my $h = $class->new;

@@ -10,8 +10,10 @@ my %header_of;
 
 sub new {
     my $class = shift;
-    my $header = ( ref $_[0] eq 'HASH' && shift ) || ( @_ && { @_ } );
-    my $self = tie my %header => $class => $header;
+    my $header = ref $_[0] eq 'HASH' ? shift : { @_ };
+    my $self = $class->TIEHASH( $header );
+    #tie my %header => $class => $header;
+    tie my %header => 'Blosxom::Header::Adapter' => $header;
     $header_of{ refaddr $self } = \%header;
     $self;
 }
@@ -218,27 +220,17 @@ sub target {
 
 sub STORABLE_thaw {
     my $self = shift;
-    my $this = refaddr $self;
-
-    # FIXME: tied() should be lvalue :-)
-    $header_of{ $this } = do {
-        local *TIEHASH = sub { $self };
-        tie my %header, __PACKAGE__;
-        \%header;
-    };
-
     $self->SUPER::STORABLE_thaw( @_ );
-}
-
-sub UNTIE {
-    my ( $self, $count ) = @_;
-    delete $header_of{ refaddr $self };
+    #tie my %header => ref $self => $self->header;
+    tie my %header => 'Blosxom::Header::Adapter' => $self->header;
+    $header_of{ refaddr $self } = \%header;
     return;
 }
 
 sub DESTROY {
     my $self = shift;
-    $self->UNTIE;
+    #warn "destroying $self";
+    delete $header_of{ refaddr $self };
     $self->SUPER::DESTROY;
 }
 
