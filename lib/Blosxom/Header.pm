@@ -2,7 +2,7 @@ package Blosxom::Header;
 use 5.008_009;
 use strict;
 use warnings;
-use parent 'Blosxom::Header::Entity';
+use parent 'CGI::Header';
 use Exporter 'import';
 use Carp qw/croak/;
 
