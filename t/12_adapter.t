@@ -1,7 +1,8 @@
 use strict;
 use warnings;
 use Blosxom::Header::Adapter;
-use Test::More tests => 16;
+#use Test::More tests => 16;
+use Test::More skip_all => 'obsolete';
 
 my $class = 'Blosxom::Header::Adapter';
 

@@ -13,6 +13,7 @@ requires 'Exporter'     => '5.63';
 requires 'List::Util'   => '1.19';
 requires 'Scalar::Util' => '1.19';
 requires 'Storable'     => '2.18';
+requires 'CGI::Header'  => '0.03';
 
 requires 'HTTP::Date'          => '6.02';
 requires 'HTTP::Headers::Util' => '6.03';

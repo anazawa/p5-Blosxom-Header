@@ -14,7 +14,7 @@ BEGIN {
 
 my $class = 'Blosxom::Header';
 can_ok $class, qw( instance has_instance new last_modified push_p3p_tags );
-ok $class->isa( 'Blosxom::Header::Entity' );
+ok $class->isa( 'CGI::Header' );
 
 subtest 'new()' => sub {
     my $expected = qr{^Private method 'new' called for Blosxom::Header};

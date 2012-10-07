@@ -1,6 +1,7 @@
 Revision history for Perl extension Blosxom::Header.
 
-  - Add clone() method
+  - target() is obsolete and will be removed in 0.07
+  - requires CGI::Header 0.03
 
 0.06003 Aug 19th, 2012
   - push_p3p_tags() is obsolete and will be removed in 0.07

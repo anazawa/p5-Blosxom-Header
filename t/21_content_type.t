@@ -1,10 +1,13 @@
 use strict;
 use warnings;
-use Blosxom::Header::Entity;
+#use Blosxom::Header::Entity;
+use Blosxom::Header;
 use Test::More tests => 2;
 
 my %adaptee;
-my $adapter = Blosxom::Header::Entity->new( \%adaptee );
+$blosxom::header = \%adaptee;
+#my $adapter = Blosxom::Header::Entity->new( \%adaptee );
+my $adapter = Blosxom::Header->instance;
 
 subtest 'charset()' => sub {
     %adaptee = ();

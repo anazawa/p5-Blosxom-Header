@@ -1,7 +1,8 @@
 use strict;
 use warnings;
 use Blosxom::Header::Adapter;
-use Test::More tests => 28;
+#use Test::More tests => 28;
+use Test::More skip_all => 'obsolete';
 
 my %adaptee;
 my $adapter = tie my %adapter, 'Blosxom::Header::Adapter', \%adaptee;

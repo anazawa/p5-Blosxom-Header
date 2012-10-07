@@ -1,10 +1,12 @@
 use strict;
 use warnings;
-use Blosxom::Header::Entity;
+#use Blosxom::Header::Entity;
+use Blosxom::Header;
 use Test::More tests => 2;
 
 my %header;
-my $header = Blosxom::Header::Entity->new( \%header );
+$blosxom::header = \%header;
+my $header = Blosxom::Header->instance;
 
 subtest 'date()' => sub {
     %header = ();
