@@ -1,12 +1,9 @@
 use strict;
-#use Blosxom::Header::Entity;
 use Blosxom::Header;
 use CGI::Cookie;
 use Test::More tests => 2;
 
-my %header;
-$blosxom::header = \%header;
-#my $header = Blosxom::Header::Entity->new( \%header );
+$blosxom::header = {};
 my $header = Blosxom::Header->instance;
 
 subtest 'get_cookie()' => sub {
@@ -20,28 +17,29 @@ subtest 'get_cookie()' => sub {
         -value => 'baz',
     );
 
-    %header = ( -cookie => $cookie1 );
+    $header->{Set_Cookie} = $cookie1;
     is $header->get_cookie('foo'), $cookie1;
     is $header->get_cookie('bar'), undef;
 
-    %header = ( -cookie => [$cookie1, $cookie2] );
+    $header->{Set_Cookie} = [ $cookie1, $cookie2 ];
     is $header->get_cookie('foo'), $cookie1;
     is $header->get_cookie('bar'), $cookie2;
     is $header->get_cookie('baz'), undef;
 };
 
 subtest 'set_cookie()' => sub {
-    %header = ();
+    delete $header->{Set_Cookie};
     $header->set_cookie( foo => 'bar' );
-    my $got = $header{-cookie}[0];
+    my $got = $header->{Set_Cookie}[0];
     isa_ok $got, 'CGI::Cookie';
+    is $got->name, 'foo';
     is $got->value, 'bar';
 
-    %header = ();
+    delete $header->{Set_Cookie};
     $header->set_cookie( foo => { value => 'bar' } );
-    #$got = $header{-cookie};
-    $got = $header{-cookie}[0];
+    $got = $header->{Set_Cookie}[0];
     isa_ok $got, 'CGI::Cookie';
+    is $got->name, 'foo';
     is $got->value, 'bar';
 
     my $cookie = CGI::Cookie->new(
@@ -49,10 +47,11 @@ subtest 'set_cookie()' => sub {
         -value => 'bar',
     );
 
-    %header = ( -cookie => $cookie );
+    $header->{Set_Cookie} = $cookie;
     $header->set_cookie( foo => 'baz' );
-    $got = $header{-cookie}[0];
+    $got = $header->{Set_Cookie}[0];
     isa_ok $got, 'CGI::Cookie';
+    is $got->name, 'foo';
     is $got->value, 'baz';
 
     $cookie = CGI::Cookie->new(
@@ -60,10 +59,11 @@ subtest 'set_cookie()' => sub {
         -value => 'bar',
     );
 
-    %header = ( -cookie => $cookie );
+    $header->{Set_Cookie} = $cookie;
     $header->set_cookie( foo => { value => 'baz' } );
-    $got = $header{-cookie}[0];
+    $got = $header->{Set_Cookie}[0];
     isa_ok $got, 'CGI::Cookie';
+    is $got->name, 'foo';
     is $got->value, 'baz';
 };
 

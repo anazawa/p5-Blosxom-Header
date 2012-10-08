@@ -1,69 +1,63 @@
 use strict;
 use warnings;
-#use Blosxom::Header::Entity;
 use Blosxom::Header;
 use Test::More tests => 2;
 
-my %adaptee;
-$blosxom::header = \%adaptee;
-#my $adapter = Blosxom::Header::Entity->new( \%adaptee );
-my $adapter = Blosxom::Header->instance;
+my %header;
+$blosxom::header = \%header;
+my $header = Blosxom::Header->instance;
 
 subtest 'charset()' => sub {
-    %adaptee = ();
-    is $adapter->charset, 'ISO-8859-1';
+    %header = ();
+    is $header->charset, 'ISO-8859-1';
 
-    %adaptee = ( -charset => q{} );
-    is $adapter->charset, undef;
+    $header->{Content_Type} = 'text/plain';
+    is $header->charset, undef;
 
-    %adaptee = ( -type => q{} );
-    is $adapter->charset, undef;
+    delete $header->{Content_Type};
+    is $header->charset, undef;
 
-    %adaptee = ( -type => 'text/html; charset=euc-jp' );
-    is $adapter->charset, 'EUC-JP';
+    $header->{Content_Type} = 'text/html; charset=euc-jp';
+    is $header->charset, 'EUC-JP';
 
-    %adaptee = ( -type => 'text/html; charset=iso-8859-1; Foo=1' );
-    is $adapter->charset, 'ISO-8859-1';
+    $header->{Content_Type} = 'text/html; charset=iso-8859-1; Foo=1';
+    is $header->charset, 'ISO-8859-1';
 
-    %adaptee = ( -type => 'text/html; charset="iso-8859-1"; Foo=1' );
-    is $adapter->charset, 'ISO-8859-1';
+    $header->{Content_Type} = 'text/html; charset="iso-8859-1"; Foo=1';
+    is $header->charset, 'ISO-8859-1';
 
-    %adaptee = ( -type => 'text/html; charset = "iso-8859-1"; Foo=1' );
-    is $adapter->charset, 'ISO-8859-1';
+    $header->{Content_Type} = 'text/html; charset = "iso-8859-1"; Foo=1';
+    is $header->charset, 'ISO-8859-1';
 
-    %adaptee = ( -type => 'text/html;\r\n charset = "iso-8859-1"; Foo=1' );
-    is $adapter->charset, 'ISO-8859-1';
+    $header->{Content_Type} = 'text/html;\r\n charset = "iso-8859-1"; Foo=1';
+    is $header->charset, 'ISO-8859-1';
 
-    %adaptee = ( -type => 'text/html;\r\n charset = iso-8859-1 ; Foo=1' );
-    is $adapter->charset, 'ISO-8859-1';
+    $header->{Content_Type} = 'text/html;\r\n charset = iso-8859-1 ; Foo=1';
+    is $header->charset, 'ISO-8859-1';
 
-    %adaptee = ( -type => 'text/html;\r\n charset = iso-8859-1 ' );
-    is $adapter->charset, 'ISO-8859-1';
+    $header->{Content_Type} = 'text/html;\r\n charset = iso-8859-1 ';
+    is $header->charset, 'ISO-8859-1';
 };
 
 subtest 'content_type()' => sub {
-    %adaptee = ();
-    is $adapter->content_type, 'text/html';
-    my @got = $adapter->content_type;
+    %header = ();
+    is $header->content_type, 'text/html';
+    my @got = $header->content_type;
     my @expected = ( 'text/html', 'charset=ISO-8859-1' );
     is_deeply \@got, \@expected;
 
-    %adaptee = ( -type => 'text/plain; charset=EUC-JP; Foo=1' );
-    is $adapter->content_type, 'text/plain';
-    @got = $adapter->content_type;
+    $header->{Content_Type} = 'text/plain; charset=EUC-JP; Foo=1';
+    is $header->content_type, 'text/plain';
+    @got = $header->content_type;
     @expected = ( 'text/plain', 'charset=EUC-JP; Foo=1' );
     is_deeply \@got, \@expected;
 
-    %adaptee = ();
-    $adapter->content_type( 'text/plain; charset=EUC-JP' );
-    is_deeply \%adaptee, {
-        -type    => 'text/plain; charset=EUC-JP',
-        -charset => q{},
-    };
+    $header->content_type( 'text/plain; charset=EUC-JP' );
+    is $header->{Content_Type}, 'text/plain; charset=EUC-JP';
 
-    %adaptee = ( -type => q{} );
-    is $adapter->content_type, q{};
+    delete $header->{Content_Type};
+    is $header->content_type, q{};
 
-    %adaptee = ( -type => '   TEXT  / HTML   ' );
-    is $adapter->content_type, 'text/html';
+    $header->{Content_Type} = '   TEXT  / HTML   ';
+    is $header->content_type, 'text/html';
 };

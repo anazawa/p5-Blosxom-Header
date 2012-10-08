@@ -2,6 +2,10 @@ Revision history for Perl extension Blosxom::Header.
 
   - target() is obsolete and will be removed in 0.07
   - requires CGI::Header 0.03
+  - Although this module shouldn't depend on a global variable
+    $blosxom::header (and also shouldn't be a singleton class),
+    Blosxom.pm doesn't exist on CPAN. I don't know how to solve
+    this problem :( How can I justify this module on CPAN?
 
 0.06003 Aug 19th, 2012
   - push_p3p_tags() is obsolete and will be removed in 0.07

@@ -1,9 +1,7 @@
 use strict;
 use warnings;
 use Blosxom::Header;
-use CGI::Cookie;
-use CGI::Util 'expires';
-use Test::More tests => 20;
+use Test::More tests => 10;
 use Test::Warn;
 use Test::Exception;
 
@@ -12,44 +10,20 @@ my $class = 'Blosxom::Header';
 ok $class->isa( 'CGI::Header' );
 
 can_ok $class, qw(
-    new clone clear delete exists get set is_empty as_hashref each flatten
+    new delete exists get set as_hashref
     content_type type charset date status
     DESTROY
 );
-
-subtest 'new()' => sub {
-    plan skip_all => 'obsolete';
-    my $header = $class->new;
-    #is_deeply $header->header, { -type => q{} };
-    is_deeply $header->header, {};
-    my %header;
-    $header = $class->new( \%header );
-    is $header->header, \%header;
-    $header = $class->new( -foo => 'bar' );
-    is_deeply $header->header, { -foo => 'bar' };
-};
 
 # initialize
 my %header;
 $blosxom::header = \%header;
 my $header = $class->instance( \%header );
 
-# exists()
-%header = ( -foo => 'bar' );
-ok $header->exists('Foo'), 'should return true';
-ok !$header->exists('Bar'), 'should return false';
-
 # get()
 %header = ( -foo => 'bar', -bar => 'baz' );
-is $header->get('Foo'), 'bar';
-is $header->get('Baz'), undef;
 is $header->get('Foo', 'Bar'), 'baz';
 is_deeply [ $header->get('Foo', 'Bar') ], [ 'bar', 'baz' ];
-
-# clear()
-%header = ( -foo => 'bar' );
-$header->clear;
-is_deeply \%header, { -type => q{} }, 'should be empty';
 
 subtest 'set()' => sub {
     my $expected = qr{^Odd number of elements passed to set\(\)};
@@ -73,13 +47,6 @@ subtest 'set()' => sub {
 };
 
 subtest 'delete()' => sub {
-    %header = ();
-    is $header->delete('Foo'), undef;
-
-    %header = ( -foo => 'bar' );
-    is $header->delete('Foo'), 'bar';
-    is_deeply \%header, {};
-
     %header = (
         -foo => 'bar',
         -bar => 'baz',
@@ -95,68 +62,6 @@ subtest 'delete()' => sub {
 
     ok $header->delete('Foo', 'Bar') eq 'baz';
     is_deeply \%header, {};
-};
-
-subtest 'each()' => sub {
-    my $expected = qr{^Must provide a code reference to each\(\)};
-    throws_ok { $header->each } $expected;
-
-    %header = (
-        -status         => '304 Not Modified',
-        -content_length => 12345,
-    );
-
-    my @got;
-    $header->each(sub {
-        my ( $field, $value ) = @_;
-        push @got, $field, $value;
-    });
-
-    my @expected = (
-        'Status',         '304 Not Modified',
-        'Content-length', '12345',
-        'Content-Type',   'text/html; charset=ISO-8859-1',
-    );
-
-    is_deeply \@got, \@expected;
-};
-
-subtest 'is_empty()' => sub {
-    %header = ();
-    ok !$header->is_empty;
-    %header = ( -type => q{} );
-    ok $header->is_empty;
-};
-
-subtest 'flatten()' => sub {
-    plan skip_all => 'obsolete';
-    my $cookie1 = CGI::Cookie->new(
-        -name  => 'foo',
-        -value => 'bar',
-    );
-
-    my $cookie2 = CGI::Cookie->new(
-        -name  => 'bar',
-        -value => 'baz',
-    );
-
-    %header = (
-        -status         => '304 Not Modified',
-        -content_length => 12345,
-        -cookie         => [ $cookie1, $cookie2 ],
-    );
-
-    my @got = $header->flatten;
-
-    my @expected = (
-        'Status',         '304 Not Modified',
-        'Set-Cookie',      [ $cookie1, $cookie2 ],
-        'Date',           expires(0, 'http'),
-        'Content-length', '12345',
-        'Content-Type',   'text/html; charset=ISO-8859-1',
-    );
-
-    is_deeply \@got, \@expected;
 };
 
 subtest 'as_hashref()' => sub {
@@ -204,22 +109,6 @@ subtest 'target()' => sub {
     is $header->target, 'ResultsWindow';
     is_deeply \%header, { -target => 'ResultsWindow' };
 };
-
-subtest 'clone()' => sub {
-    plan skip_all => 'obsolete';
-    my $orig = $class->new( -foo => 'bar' );
-    my $clone = $orig->clone;
-    isnt $clone, $orig;
-    isnt $clone->header, $orig->header;
-    is_deeply $clone->header, $orig->header;
-};
-
-#subtest 'UNTIE()' => sub {
-#    my $h = $class->new;
-#    $h->UNTIE;
-#    ok !$h->as_hashref;
-#    ok $h->header;
-#};
 
 subtest 'DESTROY()' => sub {
     plan skip_all => 'doesnt work';

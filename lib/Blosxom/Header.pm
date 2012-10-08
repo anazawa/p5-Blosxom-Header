@@ -3,7 +3,7 @@ use 5.008_009;
 use strict;
 use warnings;
 use parent 'CGI::Header';
-use overload '%{}' => 'as_hashref', 'fallback' => 1;
+use overload '%{}' => 'as_hashref', bool => 'boolify', fallback => 1;
 use Exporter 'import';
 use Carp qw/carp croak/;
 
@@ -46,10 +46,12 @@ my %header;
 sub as_hashref {
     my $self = shift;
     $header{ refaddr $self } ||= do {
-        tie my %header, ref $self, $self->header;
+        tie my %header, 'CGI::Header', $self->header;
         \%header;
     };
 }
+
+sub boolify { 1 }
 
 sub DESTROY {
     my $self = shift;
@@ -59,7 +61,7 @@ sub DESTROY {
 
 sub get {
     my ( $self, @fields ) = @_;
-    my @values = map { $self->SUPER::get($_) } @fields;
+    my @values = map { $self->FETCH($_) } @fields;
     wantarray ? @values : $values[-1];
 }
 
@@ -68,7 +70,7 @@ sub set {
 
     if ( @headers % 2 == 0 ) {
         while ( my ($field, $value) = splice @headers, 0, 2 ) {
-            $self->SUPER::set( $field => $value );
+            $self->STORE( $field => $value );
         }
     }
     else {
@@ -81,18 +83,16 @@ sub set {
 sub delete {
     my ( $self, @fields ) = @_;
 
-    my $delete = 'SUPER::delete';
-
     if ( wantarray ) {
-        return map { $self->$delete($_) } @fields;
+        return map { $self->DELETE($_) } @fields;
     }
     elsif ( defined wantarray ) {
-        my $deleted = @fields && $self->$delete( pop @fields );
-        $self->$delete( $_ ) for @fields;
-        return $deleted;
+        my $value = @fields && $self->DELETE( pop @fields );
+        $self->DELETE( $_ ) for @fields;
+        return $value;
     }
     else {
-        $self->$delete( $_ ) for @fields;
+        $self->DELETE( $_ ) for @fields;
     }
 
     return;
@@ -162,8 +162,19 @@ sub content_type {
 
 BEGIN { *type = \&content_type }
 
-sub date          { shift->_date_header( 'Date', @_ )          }
+sub date          { shift->_date_header( 'Date',          @_ ) }
 sub last_modified { shift->_date_header( 'Last-Modified', @_ ) }
+
+sub expires {
+    my $self = shift;
+
+    if ( @_ ) {
+        $self->SUPER::expires( shift );
+        return;
+    }
+
+    $self->_date_header( 'Expires' );
+}
 
 sub _date_header {
     my ( $self, $field, $time ) = @_;
@@ -256,26 +267,6 @@ sub target {
     my $self = shift;
     return $self->STORE( 'Window-Target' => shift ) if @_;
     $self->FETCH( 'Window-Target' );
-}
-
-sub expires {
-    my $self   = shift;
-    my $header = $self->header;
-
-    if ( @_ ) {
-        my $expires = shift;
-
-        # CGI::header() automatically adds the Date header
-        delete $header->{-date};
-
-        $header->{-expires} = $expires;
-    }
-    elsif ( my $expires = $self->FETCH('Expires') ) {
-        require HTTP::Date;
-        return HTTP::Date::str2time( $expires );
-    }
-
-    return;
 }
 
 1;

@@ -66,20 +66,19 @@ subtest 'last_modified()' => sub {
 
 # this method is obsolete and will be removed in 0.07
 subtest 'push_p3p_tags()' => sub {
-    my %header;
-    local $blosxom::header = \%header;
+    local $blosxom::header = {};
     local $Blosxom::Header::INSTANCE;
 
     my $header = $class->instance;
 
     is $header->push_p3p_tags( 'foo' ), 1;
-    is $header{-p3p}, 'foo';
+    is_deeply [ $header->p3p_tags ], [ 'foo' ];
 
     is $header->push_p3p_tags( 'bar' ), 2;
-    is_deeply $header{-p3p}, [ 'foo', 'bar' ];
+    is_deeply [ $header->p3p_tags ], [ 'foo', 'bar' ];
 
     is $header->push_p3p_tags( 'baz' ), 3;
-    is_deeply $header{-p3p}, [ 'foo', 'bar', 'baz' ];
+    is_deeply [ $header->p3p_tags ], [ 'foo', 'bar', 'baz' ];
 };
 
 subtest 'functions' => sub {
