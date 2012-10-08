@@ -11,7 +11,7 @@ requires 'CGI::Cookie'  => '1.29';
 requires 'CGI::Header'  => '0.03';
 #requires 'CGI::Util'    => '1.5';
 requires 'Exporter'     => '5.63';
-requires 'List::Util'   => '1.19';
+#requires 'List::Util'   => '1.19';
 requires 'Scalar::Util' => '1.19';
 #requires 'Storable'     => '2.18';
 

@@ -67,3 +67,6 @@ subtest 'set_cookie()' => sub {
     is $got->value, 'baz';
 };
 
+#use Data::Dumper;
+#warn Dumper(\@Blosxom::Header::ISA);
+$header->DESTROY;

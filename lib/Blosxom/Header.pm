@@ -4,8 +4,9 @@ use strict;
 use warnings;
 use parent 'CGI::Header';
 use overload '%{}' => 'as_hashref', bool => 'boolify', fallback => 1;
-use Exporter 'import';
 use Carp qw/carp croak/;
+use Exporter 'import';
+use Scalar::Util qw/refaddr/;
 
 our $VERSION = '0.06003';
 
@@ -41,6 +42,8 @@ sub instance {
     croak "$class hasn't been initialized yet";
 }
 
+sub boolify { 1 }
+
 my %header;
 
 sub as_hashref {
@@ -51,12 +54,10 @@ sub as_hashref {
     };
 }
 
-sub boolify { 1 }
-
 sub DESTROY {
     my $self = shift;
     delete $header{ refaddr $self };
-    return;
+    $self->SUPER::DESTROY;
 }
 
 sub get {
